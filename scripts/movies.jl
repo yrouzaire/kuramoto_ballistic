@@ -29,7 +29,7 @@ function movies(params,every,tmax,dt;coarsegrain=false)
     return anim
 end
 
-N = Int(1E4)
+N = Int(1E3)
     rho = 1
     T = 0.1 # temperature for angle diffusion
     v = 1 # norm of individual velocities
