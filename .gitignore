@@ -1,0 +1,9 @@
+data/*
+films/*
+
+archives/data/*
+archives/films/*
+
+*.mp4
+*.jld
+*.jld2
