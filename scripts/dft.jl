@@ -72,8 +72,4 @@ plot()
     plot!(msdm[2:end])
 
 
-mean_distance_to_annihilator(dft,L)
-plot()
-    plot!(msdall[2:end],axis=:log,m=:circle)
-    plot!(msdp[2:end])
-    plot!(msdm[2:end])
+plot(mean_distance_to_annihilator(dft,L)[1],rib=mean_distance_to_annihilator(dft,L)[2])

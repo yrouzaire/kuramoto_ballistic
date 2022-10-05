@@ -502,21 +502,19 @@ function find_closest_before_annihilation(dt,L,old_loc_defect)
     end
     if ID_antidefect == -1
         #= Comments :
-        I don't know why this error occurs. I basically means that the algo
-        couldn't find the annihilator of the defect just annihilated. That's not
-        too important since this only occurs from times to times, so let's just
-        make the whole process resistant to
+        This error seems to occur when a defect disappears without any proper
+        annihilation event (leaving a different number of defects + and - ) .
+        This is why the algo cannot find the annihilator.
+        Adding a small relaxation at T=0 before spotting defects seems to
+        resolve the issue.
         =#
-        println("Something has gone wrong...")
-        println([dt.defectsN[i].annihilation_time == dt.current_time for i in 1:number_defectsN(dt)])
-        println()
-        println([dt.defectsN[i].annihilation_time for i in 1:number_defectsN(dt)])
-        println("current time = ",round(dt.current_time,digits=1))
-        println("smallest distance = ",distance)
-        println("#def = ",number_defects(pos,thetas,N,L))
-        display(plot(pos,thetas,defects=true))
+        println("Something has gone wrong... probably a defect has disappeared without any proper
+        annihilation event.")
+        println("Number of defects = ",number_defects(pos,thetas,N,L))
+        return -1,(-1,-1) # dummies to signal that sth has gone wrong without interrupting the algo
+    else
+        return ID_antidefect,last_loc(dt.defectsN[ID_antidefect])
     end
-    return ID_antidefect,last_loc(dt.defectsN[ID_antidefect])
 end
 
 function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,L)
