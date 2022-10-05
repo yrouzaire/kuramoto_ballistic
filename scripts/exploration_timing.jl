@@ -11,7 +11,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 ## Reprendre ses marques
 N = Int(1E4)
     rho = 1
-    v0 = 0.5
+    v0 = 5
     σ  = 0.
     L  = round(Int,sqrt(N/rho))
     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0

@@ -28,11 +28,11 @@ z = @elapsed for a in eachindex(Ns) , i in eachindex(rhos) , j in eachindex(Ts) 
 
     # m += 1 ; println("Simulation $m/$M with dt = $(round(dt,digits=2))")
 
-    pos,vel_angles,thetas,omegas = initialisation(N,L,σ)
+    pos,thetas,psis,omegas = initialisation(N,L,σ)
     t = 0.0 ; token = 1
     while t < tmax
         t += dt
-        pos,thetas = update(pos,vel_angles,thetas,omegas,T,v0,N,L,dt)
+        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
         if t ≥ times_log[token]
             P[a,i,j,k,q,token]   = polarOP(thetas)[1]
             n[a,i,j,k,q,token]   = number_defects(pos,thetas,N,L)

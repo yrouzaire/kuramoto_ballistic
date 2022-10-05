@@ -14,6 +14,16 @@ nanmean(x,y) = mapslices(nanmean,x,dims=y)
 nanstd(x) = std(filter(!isnan,x))
 nanstd(x,y) = mapslices(nanstd,x,dims=y)
 
+function vector_of_vector2matrix(x::Vector{Vector{T}}) where T<:AbstractFloat
+    maxlength = maximum([length(x[i]) for i in eachindex(x)])
+    matrice = NaN*zeros(T,maxlength,length(x))
+    for i in eachindex(x)
+        matrice[1:length(x[i]),i] = x[i]
+    end
+    return matrice
+end
+
+
 function dist(a::Vector{T},b::Vector{T},L) where T<:AbstractFloat  # euclidian distance with Periodic BCs
     dx = abs(a[1] - b[1]) ; dx = min(dx,L-dx)
     dy = abs(a[2] - b[2]) ; dy = min(dy,L-dy)
@@ -314,11 +324,15 @@ function get_vorticity(thetas_mat::Matrix{T},i::Int,j::Int,L::Int)::T where T<:A
 end
 
 number_defects(pos,thetas,N,L) = sum(length,spot_defects(pos,thetas,N,L))
+number_defectsP(pos,thetas,N,L) = length(spot_defects(pos,thetas,N,L)[1])
+number_defectsN(pos,thetas,N,L) = length(spot_defects(pos,thetas,N,L)[2])
 function spot_defects(pos::Matrix{T},thetas::Vector{T},N,L) where T<:AbstractFloat
     vortices_plus  = Tuple{Int,Int,T}[]
     vortices_minus = Tuple{Int,Int,T}[]
 
     thetasmod = mod.(cg(pos,thetas,N,L),2π)
+    relax!(thetasmod)
+
     for i in 1:L
         for j in 1:L
             q = get_vorticity(thetasmod,i,j,L)
@@ -332,6 +346,30 @@ function spot_defects(pos::Matrix{T},thetas::Vector{T},N,L) where T<:AbstractFlo
 
     return vortices_plus_no_duplicates,vortices_minus_no_duplicates
 end
+
+function relax!(thetas::Matrix{FT},trelax=0.3) where FT<:AbstractFloat
+    t = 0.0
+    dt = 1E-2
+    # T = 0.05
+    L = size(thetas,1)
+
+    thetas_old = copy(thetas)
+
+    while t<trelax
+        t += dt
+        for j in 1:L
+            for i in 1:L
+                θ = thetas_old[i,j]
+                angle_neighbours = get_neighbours(thetas_old,i,j,is_in_bulk(i,j,L))
+                thetas[i,j] += dt*sum(sin,angle_neighbours .- θ)
+                # thetas[i,j] += dt*sum(sin,angle_neighbours .- θ) + sqrt(2T*dt)*randn(FT)
+            end
+        end
+    end
+
+    return thetas
+end
+
 
 function merge_duplicates(list,L;radius=3)
     #= In this list, there might be doubles/triples (2/3 locations for the
@@ -453,7 +491,8 @@ end
 function find_closest_before_annihilation(dt,L,old_loc_defect)
     distance = Inf ; ID_antidefect = -1 # dummy
     for i in each(dt.defectsN)
-        if round(dt.defectsN[i].annihilation_time,digits=2) == round(dt.current_time,digits=2) # it has just annihilated
+        isnothing(dt.defectsN[i].annihilation_time) ? annihilation_time_defect = nothing : annihilation_time_defect = round(dt.defectsN[i].annihilation_time,digits=2)
+        if annihilation_time_defect == round(dt.current_time,digits=2) # it has just annihilated
             tmp = dist(old_loc_defect,last_loc(dt.defectsN[i]),L)
             if tmp < distance
                 distance = tmp
@@ -472,8 +511,10 @@ function find_closest_before_annihilation(dt,L,old_loc_defect)
         println([dt.defectsN[i].annihilation_time == dt.current_time for i in 1:number_defectsN(dt)])
         println()
         println([dt.defectsN[i].annihilation_time for i in 1:number_defectsN(dt)])
-        println("current time = ",dt.current_time)
+        println("current time = ",round(dt.current_time,digits=1))
         println("smallest distance = ",distance)
+        println("#def = ",number_defects(pos,thetas,N,L))
+        display(plot(pos,thetas,defects=true))
     end
     return ID_antidefect,last_loc(dt.defectsN[ID_antidefect])
 end
@@ -499,7 +540,7 @@ function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT}
         t += dt
         pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
         if t ≥ next_tracking_time || t ≥ tmax # second condition to end at the same time than the model
-            println("t = ",t)
+            println("t = ",round(t,digits=1))
             next_tracking_time += every
             update_DefectTracker!(dft,pos,thetas,N,L,t)
         end
@@ -702,6 +743,45 @@ function square_displacement(d::Defect,L)
     loc_t0 = first_loc(d)
     return [dist(loc,loc_t0,L) for loc in d.pos] .^ 2
 end
+
+## Defects Analysis : Distance between defects
+function interdefect_distance(dft::DefectTracker,defect1::Defect,defect2::Defect,L)
+    # TODO take care of case with creation and/or annihilation time different.
+    # So far, this care is left to the user...
+    # @assert defect1.creation_time == defect2.creation_time
+    # @assert defect1.annihilation_time == defect2.annihilation_time
+    tmax = min(length(defect1.pos),length(defect2.pos))
+    R = [dist(defect1.pos[t],defect2.pos[t],L) for t in 1:tmax]
+    return R
+end
+
+function mean_distance_to_annihilator(dfts::Vector{Union{Missing,DefectTracker}},L)
+    indices = [] # indices of dft defined (is simulation not finished, dfts[i] == missing)
+    for i in 1:length(dfts)
+        if !ismissing(dfts[i]) push!(indices,i) end
+    end
+    Rs = [mean_distance_to_annihilator(dfts[indices[n]],L) for n in 1:length(indices)]
+    Rs_matrix = vector_of_vector2matrix(Rs)
+    return nanmean(Rs_matrix,2)[:,1]
+end
+
+function mean_distance_to_annihilator(dft::DefectTracker,L)
+    nP = number_defectsP(dft)
+    Rs = [distance_to_annihilator(dft,n,L) for n in 1:nP]
+    Rs_matrix = vector_of_vector2matrix(Rs)
+    return nanmean(Rs_matrix,2)[:,1],nanstd(Rs_matrix,2)[:,1]
+end
+
+function distance_to_annihilator(dft::DefectTracker,id1::Int,L;reversed=true)
+    if isnothing(dft.defectsP[id1].id_annihilator) # not yet annihilated
+        return [NaN]
+    else
+        R = interdefect_distance(dft,dft.defectsP[id1],dft.defectsN[dft.defectsP[id1].id_annihilator],L)
+        if reversed reverse!(R) end
+        return R
+    end
+end
+
 ## Auxiliary function
 function mean_2_positions(pos1,pos2,L,should_take_mod::Bool=true)
     a,b = pos1 ; x,y = pos2
@@ -749,23 +829,55 @@ function remove_negative(input)
     return array
 end
 
+## Plotting methods
+import Plots.plot
+function plot(pos,thetas;particles=false,vertical=false,size=(512,512),defects=false)
+    cols = cgrad([:black,:blue,:green,:orange,:red,:black])
+    if particles
+        if vertical
+            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
+            thetas_cg = cg(pos,thetas,N,L)
+            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
+            if defects
+                defects_p,defects_m = spot_defects(pos,thetas,N,L)
+                locP = [defects_p[i][1:2] for i in each(defects_p)]
+                locN = [defects_m[i][1:2] for i in each(defects_m)]
+                highlight_defects!(p2,L,locP,locN)
+            end
+            return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]))
+        else
+            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
+            thetas_cg = cg(pos,thetas,N,L)
+            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
+            if defects
+                defects_p,defects_m = spot_defects(pos,thetas,N,L)
+                locP = [defects_p[i][1:2] for i in each(defects_p)]
+                locN = [defects_m[i][1:2] for i in each(defects_m)]
+                highlight_defects!(p2,L,locP,locN)
+            end
+            return plot(p1,p2,size=(2*size[1],size[2]))
+        end
+    else
+        thetas_cg = cg(pos,thetas,N,L)
+        p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
+        if defects
+            defects_p,defects_m = spot_defects(pos,thetas,N,L)
+            locP = [defects_p[i][1:2] for i in each(defects_p)]
+            locN = [defects_m[i][1:2] for i in each(defects_m)]
+            highlight_defects!(p2,L,locP,locN)
+        end
+        return p2
+    end
+end
 
-# function movies(params,every,tmax,dt)
-#     rho,T,v0,N,L,σ = params
-#
-#     pos,vel_angles,thetas,omegas = initialisation(N,L,σ)
-#     times = 1:every*dt:round(Int,tmax)
-#     Q = zeros(length(times)) ; P = zeros(length(times))
-#     anim = @animate for i in 1:length(times)
-#         P[i] = polarOP(thetas)[1]
-#         Q[i] = nematicOP(thetas)[1]
-#         println("$(round(i/length(times)*100,digits=2)) %")
-#         for j in 1:every pos,thetas = update(pos,vel_angles,thetas,omegas,T,v0,N,L,rho,σ,dt) end
-#         p1 = scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2π),color=cols,clims=(0,2π),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
-#         p2 = plot(ylims=(0,1),size=(512,512))
-#             plot!(times,P,c=1,label="Polar",legend=:topleft)
-#             plot!(times,Q,c=2,label="Nematic")
-#         p = plot(p1,p2,size=(1024,512))
-#         end
-#     return anim
-# end
+function highlight_defects!(p,L,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
+    for defect in defects_p
+        scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
+    end
+    for defect in defects_m
+        scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
+    end
+    xlims!((1,L))
+    ylims!((1,L))
+    return p
+end
