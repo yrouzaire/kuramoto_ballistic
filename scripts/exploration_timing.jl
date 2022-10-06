@@ -11,7 +11,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 ## Reprendre ses marques
 N = Int(1E4)
     rho = 1
-    v0 = 5
+    v0 = 0.05
     σ  = 0.
     L  = round(Int,sqrt(N/rho))
     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
@@ -20,19 +20,19 @@ N = Int(1E4)
 t = 0.0
 params_init = ["hightemp",L/2]
 pos,thetas,psis,omegas = initialisation(N,L,σ,params_init)
-    scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
+    # scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
+    # plot(corr_fast(pos,thetas,N,L,0.5))
 
-z = @elapsed while t<40
+
+z = @elapsed while t<300
     t += dt
     global pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
 end
+    plot(pos,thetas,particles=true)
 prinz(z)
-scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
 
 spot_defects(pos,thetas,N,L)
 
-thetas_cg = cg(pos,thetas,N,L)
-    heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cgrad([:black,:blue,:green,:orange,:red,:black]),size=(400,400))
 
 ## Timing
 N = Int(1E4)
