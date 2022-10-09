@@ -8,13 +8,14 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
+## Generation of many realisation for a given parameter set
 Ns = Int.(1E4)
     rhos = [1]
     Ts     = 0.1
     # v0s    = [0.0,0.01,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4,6.3]
     # v0s    = [0.01,0.02,0.03,0.04,0.05,0.1,0.2,0.3,0.5,1,2,3,5]
-    v0s    = [5]
-    sigmas = [0.2]
+    v0s    = [2]
+    sigmas = [0]
     inits  = ["disordered"]
     R = 50
 
@@ -72,20 +73,43 @@ z = @elapsed for a in eachindex(Ns)
 end
 prinz(z)
 
-jldsave("data/looking_for_spinwaves/SPINWAVE_N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
-# jldsave("data/looking_for_spinwaves/N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
+# jldsave("data/looking_for_spinwaves/SPINWAVE_N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
+jldsave("data/looking_for_spinwaves/N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
 
 ro = 1
     sig= 1
     vo = 1
     plot(vec(P[1,ro,1,vo,sig,1,:]),ylims=(0,1))
 
-real = 20
-plot(pos_saved[:,:,1,1,1,1,1,real],thetas_saved[:,1,1,1,1,1,real],Ns,sqrt(Ns/rhos[1]))
-pos = pos_saved[:,:,1,1,1,1,1,real]
-thetas = thetas_saved[:,1,1,1,1,1,real]
-psis = psis_saved[:,1,1,1,1,1,real]
-omegas = omegas_saved[:,1,1,1,1,1,real]
+## Investigation
+filename = "data/looking_for_spinwaves/" ;
+@unpack R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax = load(filename)
+N = Ns[1] ; L = round(Int,sqrt(N/rhos[1])) ; σ = sigmas[1]
+rea = 2
+    pos    = Float32.(pos_saved[:,:,1,1,1,1,1,rea])
+    thetas = Float32.(mod.(thetas_saved[:,1,1,1,1,1,rea] + 0randn(N),2π))
+    psis   = Float32.(psis_saved[:,1,1,1,1,1,rea])
+    omegas = Float32.(omegas_saved[:,1,1,1,1,1,rea])
+    plot(pos,thetas,Ns,sqrt(Ns/rhos[1]))
 
-# for i in 1:1000 pos,thetas = update(pos,thetas,psis,omegas,0.1,5,Int(1E4),100,0.05) end
-#     plot(pos,thetas,Int(1E4),100)
+# psis   = Float32.(2π*rand(N))
+# omegas = Float32.(1*randn(N))
+for i in 1:500 pos,thetas = update(pos,thetas,psis,omegas,0.1,v0s[1],N,L,0.05) end
+    plot(pos,thetas,N,L,particles=false)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&
