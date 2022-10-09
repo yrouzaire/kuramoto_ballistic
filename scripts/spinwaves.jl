@@ -82,11 +82,7 @@ ro = 1
     plot(vec(P[1,ro,1,vo,sig,1,:]),ylims=(0,1))
 
 ## Investigation
-<<<<<<< HEAD
 filename = "data/looking_for_spinwaves/" ;
-=======
-filename = "data/looking_for_spinwaves/N" ;
->>>>>>> da13105fdef64ae34bcd4137a28f6304029630b6
 @unpack R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax = load(filename)
 N = Ns[1] ; L = round(Int,sqrt(N/rhos[1])) ; σ = sigmas[1]
 rea = 2
