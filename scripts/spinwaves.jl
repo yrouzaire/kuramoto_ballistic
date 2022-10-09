@@ -1,0 +1,91 @@
+cd("D:/Documents/Research/projects/kuramoto_ballistic")
+    using JLD2,StatsBase,Distributions,LinearAlgebra,Parameters,Random,BenchmarkTools,Hungarian
+    include("../methods.jl")
+    global const R0 = 1
+    using Plots,ColorSchemes,LaTeXStrings
+    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
+    plot()
+&
+
+Ns = Int.(1E4)
+    rhos = [1]
+    Ts     = 0.1
+    # v0s    = [0.0,0.01,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4,6.3]
+    # v0s    = [0.01,0.02,0.03,0.04,0.05,0.1,0.2,0.3,0.5,1,2,3,5]
+    v0s    = [5]
+    sigmas = [0.2]
+    inits  = ["disordered"]
+    R = 50
+
+    tmax = 1E2; #times_log = logspace(0.1,tmax,1)
+
+    P  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)#,length(times_log))
+    n  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)#,length(times_log))
+    # @assert length(Ns) == 1
+    # @assert length(rhos) == 1
+    # dr = 0.5 ; C = zeros(length(0:dr:round(Int,sqrt(Ns)/2)),length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
+
+    pos_saved  = zeros(Float16,2,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
+    thetas_saved = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
+    psis_saved   = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
+    omegas_saved = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
+
+    m = 0 ; M = length(P)
+
+z = @elapsed for a in eachindex(Ns)
+    for i in eachindex(rhos) , j in eachindex(Ts) , k in eachindex(v0s) , q in eachindex(sigmas) , ini in eachindex(inits) , r in 1:R
+    N = Ns[a] ; rho = rhos[i] ; T = Ts[j] ; v0 = v0s[k] ; σ = sigmas[q] ; init = inits[ini]
+
+    L = round(Int,sqrt(N/rho))
+    dt = determine_dt(T,σ,v0,N,rho)
+    # params = Any[T,v0,N,L,rho,σ]
+    # m += 1 ; println("Simu $m/$M")
+
+
+    pos,thetas,psis,omegas = initialisation(N,L,σ,[init])
+    t = 0.0 ; token = 1
+    while t < tmax
+        t += dt
+        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+        # if t ≥ times_log[token]
+        #     P[a,i,j,k,q,ini,token]   = polarOP(thetas)[1]
+        #     n[a,i,j,k,q,ini,token]   = number_defects(pos,thetas,N,L)
+        #     # C[:,a,i,j,k,q,ini,token] = corr_fast(pos,thetas,N,L,dr)
+        #     token = min(token+1,length(times_log))
+        # end
+    end
+        P[a,i,j,k,q,ini,r]   = polarOP(thetas)[1]
+        n[a,i,j,k,q,ini,r]   = number_defects(pos,thetas,N,L)
+
+
+    pos_saved[:,:,i,j,k,q,ini,r]  = pos
+    thetas_saved[:,i,j,k,q,ini,r] = thetas
+    psis_saved[:,i,j,k,q,ini,r]   = psis
+    omegas_saved[:,i,j,k,q,ini,r] = omegas
+
+    p=plot(pos,thetas,N,L)
+    title!("r=$r, σ=$σ, v=$v0")
+    display(p)
+
+   end
+end
+prinz(z)
+
+jldsave("data/looking_for_spinwaves/SPINWAVE_N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
+# jldsave("data/looking_for_spinwaves/N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
+
+ro = 1
+    sig= 1
+    vo = 1
+    plot(vec(P[1,ro,1,vo,sig,1,:]),ylims=(0,1))
+
+real = 20
+plot(pos_saved[:,:,1,1,1,1,1,real],thetas_saved[:,1,1,1,1,1,real],Ns,sqrt(Ns/rhos[1]))
+pos = pos_saved[:,:,1,1,1,1,1,real]
+thetas = thetas_saved[:,1,1,1,1,1,real]
+psis = psis_saved[:,1,1,1,1,1,real]
+omegas = omegas_saved[:,1,1,1,1,1,real]
+
+# for i in 1:1000 pos,thetas = update(pos,thetas,psis,omegas,0.1,5,Int(1E4),100,0.05) end
+#     plot(pos,thetas,Int(1E4),100)

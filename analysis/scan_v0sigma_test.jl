@@ -9,8 +9,11 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 &
 
 filename = "data/bigscan_v0_sigma_N1E3_tmax1E4.jld2"
-filename = "data/scan_v0_sigma_N1E4_rho1_tmax100000.0.jld2"
+filename = "data/scan_v0_sigma_rho1_N1E4_tmax1E4.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
+
+
+1.25/18*
 
 histogram(runtimes/3600/24,bins=20)
 Ps_avg = nanmean(Ps,7) # N rho T v0 sigma t R
@@ -21,16 +24,15 @@ Cs_avg = nanmean(Cs,8)
 plot(Ps[1,1,1,end,1,:,1])
 
 # Over time
-lss = [:solid,:dash]
-p=plot(legend=:bottomright)
-    for i in each(v0s) , j in each(sigmas)
+lss = [:solid,:dash,:dot]
+p=plot(legend=false)#:bottomright)
+    for i in 4 , j in each(sigmas)
         plot!(times_log,Ps_avg[1,1,1,i,j,:,1],axis=:log,rib=0Ps_std[1,1,1,i,j,:,1],
         label="v = $(v0s[i]), σ = $(sigmas[j])",c=i,line=lss[j])
     end
-    # plot!(x->1E-2sqrt(x))
+    plot!(x->1E-2x^0.25,c=:black)
     # plot!(x->0.8)
     p
-
 
 p=plot(legend=false)#:bottomright)
     for i in 2:length(v0s) , j in 2# each(sigmas)
@@ -43,7 +45,10 @@ p=plot(legend=false)#:bottomright)
 
 
 p=plot(legend=false)#:bottomright)
-    for i in each(v0s) , j in each(sigmas)
-        plot!(times_log,ns_avg[1,1,1,i,j,:,1].+1,axis=:log,label="v = $(v0s[i]), σ = $(sigmas[j])",c=i,line=:auto)
+    for i in each(v0s) , j in 1#each(sigmas)
+        plot!(times_log,ns_avg[1,1,1,i,j,:,1].+1,axis=:log,label="v = $(v0s[i]), σ = $(sigmas[j])",c=i,line=lss[j])
     end
+    plot!(times_log[7:end],5E2*log.(times_log[7:end]) ./ times_log[7:end],c=:black)
+    # plot!(x->1E2log(x)/x)
+
     p
