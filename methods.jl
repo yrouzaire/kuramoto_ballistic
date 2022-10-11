@@ -1,5 +1,5 @@
 "Copyright (c) 2022 Y.Rouzaire All Rights Reserved."
-logspace(x1, x2, n) = unique!(round.([10.0 ^y for y in range(log10(x1), log10(x2), length=n)],digits=1))
+logspace(x1, x2, n;digits=1) = unique!(round.([10.0 ^y for y in range(log10(x1), log10(x2), length=n)],digits=digits))
 
 function prinz(z)
     println("Runtime : $(round(Int,z)) seconds = $(round(z/60,digits=2)) minutes = $(round(z/3600,digits=2)) hours.")
@@ -510,12 +510,41 @@ function find_closest_before_annihilation(dt,L,old_loc_defect)
         =#
         println("Something has gone wrong... probably a defect has disappeared without any proper
         annihilation event.")
-        println("Number of defects = ",number_defects(pos,thetas,N,L))
-        return -1,(-1,-1) # dummies to signal that sth has gone wrong without interrupting the algo
+        println("Number of defects = ",number_active_defectsP(dft)," + ",number_active_defectsN(dft))
+        return -1,(-1,-1)
     else
         return ID_antidefect,last_loc(dt.defectsN[ID_antidefect])
     end
 end
+
+function delete_defect(dft::DefectTracker,id::Int,charge::String)
+    if charge == "+"
+        popat!(dft.defectsP,id)
+    else
+        popat!(dft.defectsN,id)
+    end
+    decrease_annihilation_ids!(dft,id,charge)
+    return dft
+end
+
+function decrease_annihilation_ids!(dft::DefectTracker,id::Int,charge::String)
+    # the id and the charge are those of the defect that was deleted
+    if charge == "+"
+        for def in dft.defectsN
+            if def.id_annihilator > id
+                def.id_annihilator -= 1
+            end
+        end
+    else
+        for def in dft.defectsP
+            if def.id_annihilator > id
+                def.id_annihilator -= 1
+            end
+        end
+    end
+    return dft
+end
+
 
 function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,L)
     for i in ids_annihilated_defects
@@ -523,24 +552,32 @@ function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,L)
         ID_antivortex,old_loc_antivortex = find_closest_before_annihilation(dt,L,old_loc_vortex)
 
         dt.defectsP[i].id_annihilator = ID_antivortex
-        dt.defectsN[ID_antivortex].id_annihilator = i
+        try dt.defectsN[ID_antivortex].id_annihilator = i
+        catch
+            dt.defectsN[ID_antivortex].id_annihilator = -1
+        end
 
         estimate = mean_2_positions(old_loc_vortex,old_loc_antivortex,L)
         update_position!(dt.defectsP[i],estimate)
-        update_position!(dt.defectsN[ID_antivortex],estimate)
+        try update_position!(dt.defectsN[ID_antivortex],estimate)
+        catch ; end
     end
     return dt
 end
 
-function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,L::Int,dt::Number,t::Number,every::Number,tmax::Number) where FT<:AbstractFloat
-    next_tracking_time = t
+function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,L::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
+    token = 1
     while t < tmax
         t += dt
         pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
-        if t ≥ next_tracking_time || t ≥ tmax # second condition to end at the same time than the model
-            println("t = ",round(t,digits=1))
-            next_tracking_time += every
+        if t ≥ times[token]
+            if number_active_defects(dft) == 0
+                println("Simulation stopped, there is no defects left.")
+                break
+            end
+            println("t = ",round(t,digits=1)," & n(t) = ",number_active_defectsP(dft)," + ",number_active_defectsN(dft))
             update_DefectTracker!(dft,pos,thetas,N,L,t)
+            token = min(token+1,length(times))
         end
     end
     return dft,pos,thetas,t
@@ -676,14 +713,19 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
                     push!(ID_annihilated_antivortices,i)
                 end
             end
-            dt = annihilate_defects(dt,ID_annihilated_vortices,L)
+            if length(ID_annihilated_antivortices) >= length(ID_annihilated_vortices)
+                dt = annihilate_defects(dt,ID_annihilated_vortices,L)
+            else
+                dt = annihilate_defects(dt,ID_annihilated_antivortices,L)
+            end
+
         end # end of general treatment
     end # end of special cases & general treatment
     return dt
 end
 
 ## Defects Analysis : MSD
-function MSD(dfts::Vector{Union{Missing,DefectTracker}},L)
+function MSD(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracker}}},L)
     indices = [] # indices of dft defined (is simulation not finished, dfts[i] == missing)
     for i in 1:length(dfts)
         if !ismissing(dfts[i]) push!(indices,i) end
@@ -753,7 +795,7 @@ function interdefect_distance(dft::DefectTracker,defect1::Defect,defect2::Defect
     return R
 end
 
-function mean_distance_to_annihilator(dfts::Vector{Union{Missing,DefectTracker}},L)
+function mean_distance_to_annihilator(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracker}}},L)
     indices = [] # indices of dft defined (is simulation not finished, dfts[i] == missing)
     for i in 1:length(dfts)
         if !ismissing(dfts[i]) push!(indices,i) end
@@ -827,55 +869,55 @@ function remove_negative(input)
     return array
 end
 
-# ## Plotting methods
-# import Plots.plot
-# function plot(pos,thetas,N,L;particles=false,vertical=false,size=(512,512),defects=false)
-#     cols = cgrad([:black,:blue,:green,:orange,:red,:black])
-#     if particles
-#         if vertical
-#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
-#             thetas_cg = cg(pos,thetas,N,L)
-#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
-#             if defects
-#                 defects_p,defects_m = spot_defects(pos,thetas,N,L)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2,L,locP,locN)
-#             end
-#             return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]))
-#         else
-#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
-#             thetas_cg = cg(pos,thetas,N,L)
-#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
-#             if defects
-#                 defects_p,defects_m = spot_defects(pos,thetas,N,L)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2,L,locP,locN)
-#             end
-#             return plot(p1,p2,size=(2*size[1],size[2]))
-#         end
-#     else
-#         thetas_cg = cg(pos,thetas,N,L)
-#         p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
-#         if defects
-#             defects_p,defects_m = spot_defects(pos,thetas,N,L)
-#             locP = [defects_p[i][1:2] for i in each(defects_p)]
-#             locN = [defects_m[i][1:2] for i in each(defects_m)]
-#             highlight_defects!(p2,L,locP,locN)
-#         end
-#         return p2
-#     end
-# end
-#
-# function highlight_defects!(p,L,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
-#     for defect in defects_p
-#         scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
-#     end
-#     for defect in defects_m
-#         scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
-#     end
-#     xlims!((1,L))
-#     ylims!((1,L))
-#     return p
-# end
+## Plotting methods
+import Plots.plot
+function plot(pos,thetas,N,L;particles=false,vertical=false,size=(512,512),defects=false)
+    cols = cgrad([:black,:blue,:green,:orange,:red,:black])
+    if particles
+        if vertical
+            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
+            thetas_cg = cg(pos,thetas,N,L)
+            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
+            if defects
+                defects_p,defects_m = spot_defects(pos,thetas,N,L)
+                locP = [defects_p[i][1:2] for i in each(defects_p)]
+                locN = [defects_m[i][1:2] for i in each(defects_m)]
+                highlight_defects!(p2,L,locP,locN)
+            end
+            return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]))
+        else
+            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
+            thetas_cg = cg(pos,thetas,N,L)
+            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
+            if defects
+                defects_p,defects_m = spot_defects(pos,thetas,N,L)
+                locP = [defects_p[i][1:2] for i in each(defects_p)]
+                locN = [defects_m[i][1:2] for i in each(defects_m)]
+                highlight_defects!(p2,L,locP,locN)
+            end
+            return plot(p1,p2,size=(2*size[1],size[2]))
+        end
+    else
+        thetas_cg = cg(pos,thetas,N,L)
+        p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
+        if defects
+            defects_p,defects_m = spot_defects(pos,thetas,N,L)
+            locP = [defects_p[i][1:2] for i in each(defects_p)]
+            locN = [defects_m[i][1:2] for i in each(defects_m)]
+            highlight_defects!(p2,L,locP,locN)
+        end
+        return p2
+    end
+end
+
+function highlight_defects!(p,L,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
+    for defect in defects_p
+        scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
+    end
+    for defect in defects_m
+        scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
+    end
+    xlims!((1,L))
+    ylims!((1,L))
+    return p
+end

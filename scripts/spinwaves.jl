@@ -82,19 +82,19 @@ ro = 1
     plot(vec(P[1,ro,1,vo,sig,1,:]),ylims=(0,1))
 
 ## Investigation
-filename = "data/looking_for_spinwaves/" ;
+filename = "data/looking_for_spinwaves/SPINWAVE_N10000_rho1_v5_disordered_σ0.2.jld2" ;
 @unpack R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax = load(filename)
 N = Ns[1] ; L = round(Int,sqrt(N/rhos[1])) ; σ = sigmas[1]
-rea = 2
+rea = 4
     pos    = Float32.(pos_saved[:,:,1,1,1,1,1,rea])
     thetas = Float32.(mod.(thetas_saved[:,1,1,1,1,1,rea] + 0randn(N),2π))
     psis   = Float32.(psis_saved[:,1,1,1,1,1,rea])
     omegas = Float32.(omegas_saved[:,1,1,1,1,1,rea])
-    plot(pos,thetas,Ns,sqrt(Ns/rhos[1]))
+    plot(pos,thetas,Ns,sqrt(Ns/rhos[1]),particles=false)
 
-# psis   = Float32.(2π*rand(N))
-# omegas = Float32.(1*randn(N))
-for i in 1:500 pos,thetas = update(pos,thetas,psis,omegas,0.1,v0s[1],N,L,0.05) end
+psis   = Float32.(2π*rand(N))
+omegas = Float32.(0*randn(N))
+for i in 1:200 pos,thetas = update(pos,thetas,psis,omegas,0.1,0.01,N,L,0.05) end
     plot(pos,thetas,N,L,particles=false)
 
 

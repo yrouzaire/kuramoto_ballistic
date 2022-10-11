@@ -6,13 +6,12 @@ indices = [] ; for r in 1:R  if isfile(base_filename*"_r$r.jld2") push!(indices,
 println("There are $(length(indices))/$R files.")
 
 ## Phase Diagram
-@load base_filename*"_r$(indices[1]).jld2" Ts Ns v0s rhos sigmas times_log tmax comments
+@load base_filename*"_r$(indices[1]).jld2" Ts inits Ns v0s rhos sigmas times_log tmax comments
 
-P_fusion = NaN*zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(times_log),R)
-n_fusion = NaN*zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(times_log),R)
-C_fusion = NaN*zeros(length(0:0.5:round(Int,sqrt(Ns)/2)),length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(times_log),R)
+P_fusion = NaN*zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log),R)
+n_fusion = NaN*zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log),R)
+C_fusion = NaN*zeros(length(0:0.5:round(Int,sqrt(Ns)/2)),length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log),R)
 
-inits  = ["ordered","disordered"]
 pos_saveds  = zeros(Float16,2,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
 thetas_saveds = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
 psis_saveds   = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)
@@ -23,13 +22,13 @@ runtimes = NaN*zeros(R)
 for r in indices
     println("r = $r")
     @load base_filename*"_r$r.jld2" P n pos_saved thetas_saved psis_saved omegas_saved runtime
-    P_fusion[:,:,:,:,:,:,r] = P
-    n_fusion[:,:,:,:,:,:,r] = n
+    P_fusion[:,:,:,:,:,:,:,r] = P
+    n_fusion[:,:,:,:,:,:,:,r] = n
     # C_fusion[:,:,:,:,:,:,:,r] = C
 
     pos_saveds[:,:,:,:,:,:,:,r]  = pos_saved
     thetas_saveds[:,:,:,:,:,:,r] = thetas_saved
-    psiss_saveds[:,:,:,:,:,:,r]  = psiss_saved
+    psis_saveds[:,:,:,:,:,:,r]  = psis_saved
     omegas_saveds[:,:,:,:,:,:,r] = omegas_saved
 
     runtimes[r] = runtime

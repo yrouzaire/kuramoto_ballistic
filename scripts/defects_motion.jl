@@ -8,68 +8,100 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
-N = Int(5E3)
+
+#= This file investigates the motion of defects.
+1. Departure from XY model as v varies at fixed T
+2. Departure from XY model as T varies at fixed v
+3. Departure from AXY model as v varies at fixed T, sigma
+4. Departure from AXY model as sigma varies at fixed v,T
+
+Basically consists in scan on two parameters, v and sigma
+=#
+N = Int(1E4)
     rho = 1
-    v0 = 0.5
-    σ  = 0.
+    v0s = [1]
+    σs  = [0.2]
     L  = round(Int,sqrt(N/rho))
     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
-    tmax = 40 ; dt = determine_dt(T,σ,v0,N,rho)
+    R = 2
+    transients = 1 ; tmax = 2000 ;
+    times = logspace(round(Int,transients),tmax,50,digits=1)
 
-t = 0.0
-params_init = ["hightemp",L/2]
-pos,thetas,psis,omegas = initialisation(N,L,σ,params_init)
-    scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
+dfts = Array{DefectTracker,3}(undef,length(v0s),length(σs),R)
+z = @elapsed for i in each(v0s)
+    for j in each(σs)
+        σ = σs[j] ; v0 = v0s[i]
+        for r in 1:R
+            dt = determine_dt(T,σ,v0,N,rho)
+            t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["pair",round(Int,L/2)])
+            while t<transients
+                t += dt
+                pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+            end
+            dft = DefectTracker(pos,thetas,N,L,t)
+            dft,pos,thetas,t = update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,L,dt,t,times)
+            dfts[i,j,r] = dft
+        end
+    end
+end
 
-z = @elapsed while t<10
+msda = Array{Number,3}(undef,length(v0s),length(σs),length(times)+1)
+msdp = Array{Number,3}(undef,length(v0s),length(σs),length(times)+1)
+msdn = Array{Number,3}(undef,length(v0s),length(σs),length(times)+1)
+for i in each(v0s)
+    for j in each(σs)
+        msda[i,j,:],msdp[i,j,:],msdn[i,j,:] = MSD(dfts[i,j,:],L)
+    end
+end
+
+# findfirst(!iszero,msdm[1,1,:])
+# ind_start = max(findfirst(!iszero,msdp[1,1,:]),findfirst(!iszero,msdm[1,1,:]))
+
+p=plot(legend=false,axis=:log)
+    for i in each(v0s)
+        for j in each(σs)
+            ind_start = max(findfirst(!iszero,msdp[i,j,:]),findfirst(!iszero,msdn[i,j,:]))
+            plot!(times[ind_start:end],msda[i,j,ind_start:end-1].+1)
+            plot!(times[ind_start:end],msdp[i,j,ind_start:end-1].+1)
+            plot!(times[ind_start:end],msdn[i,j,ind_start:end-1].+1)
+        end
+    end
+    p
+plot!(x->x/5)
+
+plot(mean_distance_to_annihilator(dfts[1,1,:],L)[1],rib=0)
+
+# Old version, without different i,j,r
+t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["pair",round(Int,L/3)])
+# t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["single",+1])
+plot(pos,thetas,N,L)
+
+z = @elapsed while t<1
     t += dt
     global pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
 end
-prinz(z)
-# scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
-
-thetas_cg = cg(pos,thetas,N,L)
-    heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cgrad([:black,:blue,:green,:orange,:red,:black]),size=(400,400))
-
-## Trying to resolve the problem of [-1]
-N = Int(1E5)
-    rho = 1
-    v0 = 0.5
-    σ  = 0.
-    L  = round(Int,sqrt(N/rho))
-    T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
-    tmax = 40 ; dt = determine_dt(T,σ,v0,N,rho)
-
-# Relax a bit so there is not too many defects
-t = 0.
-pos,thetas,psis,omegas = initialisation(N,L,σ,["hightemp"])
-plot(pos,thetas)
-
-z = @elapsed while t<250
-    t += dt
-    global pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
-end
+    plot(pos,thetas,N,L)
 number_defects(pos,thetas,N,L)
-number_defectsP(pos,thetas,N,L)
-number_defectsN(pos,thetas,N,L)
-plot(pos,thetas,defects=false)
-plot(pos,thetas,defects=true)
-plot(pos,thetas,defects=false,particles=true)
-
-spot_defects(pos,thetas,N,L)
+# number_defectsP(pos,thetas,N,L)
+# number_defectsN(pos,thetas,N,L)
+# plot(pos,thetas,defects=true)
+# plot(pos,thetas,defects=false,particles=true)
 
 dft = DefectTracker(pos,thetas,N,L,t)
-every = 10; tmax = 500
-dft,pos,thetas,t = update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,L,dt,t,every,tmax)
-d=dft.defectsP[1]
-plot(rand(10))
+tmax = 1000
+# every = 1 ; times = round(Int,t):every:tmax
+times = logspace(round(Int,t),tmax,40,digits=1)
+dft,pos,thetas,t = update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,L,dt,t,times)
+# d=dft.defectsP[1]
 
 
 msdall,msdp,msdm = MSD(dft,L)
 plot()
-    plot!(msdall[2:end],axis=:log,m=:circle)
-    plot!(msdp[2:end])
-    plot!(msdm[2:end])
+    ind_start = max(findfirst(!iszero,msdp),findfirst(!iszero,msdm))
+    plot!(msdall[ind_start:end].+1,yaxis=:log,m=:circle)
+    plot!(msdp[ind_start:end].+1)
+    plot!(msdm[ind_start:end].+1)
+    plot!(x->1E-1x^2)
 
 
 plot(mean_distance_to_annihilator(dft,L)[1],rib=mean_distance_to_annihilator(dft,L)[2])
