@@ -1,8 +1,10 @@
 data/*
 films/*
+figures/*
 
 archives/data/*
 archives/films/*
+archives/figures
 
 *.mp4
 *.jld

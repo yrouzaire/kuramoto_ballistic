@@ -13,6 +13,12 @@ filename = "data/scan_v0_sigma_rho1_N1E4_tmax1E4.jld2"
 filename = "data/scan_for_discussion_Parisa_v0_sigma_rho_N1E3_tmax2E3.jld2"
 @load filename Ps ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 
+v0s
+sigmas
+histogram(runtimes/3600/24/16/11*20*10,bins=20)
+
+
+
 histogram(runtimes/3600/24,bins=20)
 Ps_avg = nanmean(Ps,8) # N rho T v0 sigma t init R
 Ps_std = nanstd(Ps,8) # N rho T v0 sigma t init R
@@ -21,9 +27,11 @@ Cs_avg = nanmean(Cs,9)
 
 
 # Heatmap of P at final time
-p=plot(xlabel=L"v_0",ylabel=L"\sigma")
-    heatmap!(v0s[2:end],sigmas,Ps_avg[1,1,1,2:end,:,1,end,1]',xaxis=:log,c=cgrad([:red,:orange,:green]),clims=(0,1))
+p=plot(xlabel=L"v_0",ylabel=L"\sigma",colorbartitle="P",size=(500,400))
+    heatmap!(v0s[2:end],sigmas,Ps_avg[1,2,1,2:end,:,1,end,1]',xaxis=:log,c=cgrad([:red,:orange,:green]),clims=(0,1))
     # plot!(x->0.25(x-0.1)^0.5,xlims=(v0s[2],v0s[end]),ylims=(0,sigmas[end]),c=:black)
+savefig("figures/heatmap_sigmav0_rho2.png")
+
 # Animation of Heatmap over time
 anim = @animate for t in each(times_log)
     p_low=plot(xlabel=L"v_0",ylabel=L"\sigma",title="t = $(times_log[t])")
@@ -35,9 +43,10 @@ end
 mp4(anim,"figures/animation_phasespace_v0σ_N1E3_rho2.mp4",fps=10)
 
 # Heatmap of N at final time
-p=plot(xlabel=L"v_0",ylabel=L"\sigma")
+p=plot(xlabel=L"v_0",ylabel=L"\sigma",colorbartitle=L"\log_{10}(n+1)",size=(500,400))
     heatmap!(v0s[2:end],sigmas,log10.(ns_avg[1,2,1,2:end,:,1,end,1]' .+1),xaxis=:log,c=cgrad([:green,:orange,:red]))
     # plot!(x->0.25(x-0.1)^0.5,xlims=(v0s[2],v0s[end]),ylims=(0,sigmas[end]),c=:black)
+savefig("figures/heatmapN_sigmav0_rho2.png")
 
 # Animation of Heatmap over time
 anim = @animate for t in each(times_log)
@@ -53,16 +62,17 @@ mp4(anim,"figures/animation_phasespaceN_v0σ_N1E3.mp4",fps=10)
 ind = 11
     plot(v0s[2:end],Ps_avg[1,1,1,2:end,ind,1,end,1].*(ns_avg[1,1,1,2:end,ind,1,end,1].+1),uaxis=:log)
 
-p=plot(legend=false)
-    for indv in each(v0s)
-        for inds in 10# each(sigmas)
+p=plot(xlabel="t",ylabel="P(t) / n(t)",legend=false)
+    for indv in 7# each(v0s)
+        for inds in each(sigmas)
             if ns_avg[1,1,1,indv,inds,1,end,1] > 2
                 plot!(times_log,Ps_avg[1,1,1,indv,inds,1,:,1].*(ns_avg[1,1,1,indv,inds,1,:,1]),uaxis=:log,label="v=$(v0s[indv])")
             end
         end
     end
     p
-
+# savefig("figures/PsurN_diffv0_onesigma.png")
+# savefig("figures/PsurN_diffsigma_onev0.png")
 # Determination of critical sigma as a function of v0
 sigmac = zeros(length(v0s))
 seuil = 0.2
@@ -112,3 +122,19 @@ p=plot(legend=false)#:bottomright)
     # plot!(x->1E2log(x)/x)
 
     p
+
+## No hysteresis : lowtemp and hightemp init lead to similar results.
+Ps_avg = nanmean(Ps,8) # N rho T v0 sigma t init R
+
+indss = [(1,1),(4,10),(10,4),(10,7)]
+    p=plot(xlabel="t",ylabel="P(t)",legend=:bottomright)
+    for i in each(indss)
+        indv,inds = indss[i]
+        plot!(times_log,Ps_avg[1,1,1,indv,inds,1,:,1],line=:solid,c=i,axis=:log)
+        plot!(times_log,Ps_avg[1,1,1,indv,inds,2,:,1],line=:dash,c=i,axis=:log)
+    end
+    plot!([NaN,NaN],label="Ordered",line=:solid,c=:grey)
+    plot!([NaN,NaN],label="Disordered",line=:dash,c=:grey)
+    plot!(times_log[5:end-5],4E-2sqrt.(times_log[5:end-5]),c=:black,label="√t")
+    p
+savefig("figures/no_difference_lowtemp_hightemp_loglog.png")

@@ -8,7 +8,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
-## Generation of many realisation for a given parameter set
+## Generation of many realisations for a given parameter set
 Ns = Int.(1E4)
     rhos = [1]
     Ts     = 0.1
@@ -92,10 +92,12 @@ rea = 4
     omegas = Float32.(omegas_saved[:,1,1,1,1,1,rea])
     plot(pos,thetas,Ns,sqrt(Ns/rhos[1]),particles=false)
 
+# savefig("figures/spinwaveR$(rea)_N10000_rho1_v5_σ0.2.png")
 psis   = Float32.(2π*rand(N))
-omegas = Float32.(0*randn(N))
-for i in 1:200 pos,thetas = update(pos,thetas,psis,omegas,0.1,0.01,N,L,0.05) end
+omegas = Float32.(2*randn(N))
+for i in 1:500 pos,thetas = update(pos,thetas,psis,omegas,0.1,0.01,N,L,0.05) end
     plot(pos,thetas,N,L,particles=false)
+savefig("figures/spinwaveR$(rea)_perturb1.png")
 
 
 
