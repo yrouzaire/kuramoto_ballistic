@@ -4,23 +4,23 @@ using JLD2,LinearAlgebra,Statistics
 include("methods.jl");
 global const R0 = 1
 
-## Phase Diagram
-Ns = Int.(1E3)
-    rhos = [1,2]
-    Ts     = 0.1
-    v0s    = [0.0,0.01,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4,6.3]
-    # v0s    = [0.01,0.02,0.03,0.04,0.05,0.1,0.2,0.3,0.5,1,2,3,5]
-    sigmas = collect(0:0.05:0.5)
-    inits  = ["ordered","disordered"]
 
-    tmax = 2E3; times_log = logspace(0.1,tmax,27)
+## Phase Diagram
+Ns = Int.(1E4)
+    rhos = [1]
+    Ts     = 0.1
+    v0s    = [0.0,0.01,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4]
+    sigmas = collect(0:0.05:0.5)
+    inits  = ["disordered"]
+
+    tmax = 1E4; times_log = logspace(0.1,tmax,31)
 
     P  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
     n  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
-    # @assert length(Ns) == 1
-    # @assert length(rhos) == 1
-    # dr = 0.5 ; C = zeros(length(0:dr:round(Int,sqrt(Ns)/2)),length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
 
+    @assert length(Ns) == 1
+    @assert length(rhos) == 1
+    dr = 0.5 ; C = zeros(length(0:dr:round(Int,sqrt(Ns)/2)),length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
     pos_saved  = zeros(Float16,2,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits))
     thetas_saved = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits))
     psis_saved   = zeros(Float16,Ns[1],length(rhos),length(Ts),length(v0s),length(sigmas),length(inits))
@@ -42,7 +42,7 @@ z = @elapsed for a in eachindex(Ns) , i in eachindex(rhos) , j in eachindex(Ts) 
         if t ≥ times_log[token]
             P[a,i,j,k,q,ini,token]   = polarOP(thetas)[1]
             n[a,i,j,k,q,ini,token]   = number_defects(pos,thetas,N,L)
-            # C[:,a,i,j,k,q,ini,token] = corr_fast(pos,thetas,N,L,dr)
+            C[:,a,i,j,k,q,ini,token] = corr_fast(pos,thetas,N,L,dr)
             token = min(token+1,length(times_log))
         end
     end
@@ -54,7 +54,56 @@ z = @elapsed for a in eachindex(Ns) , i in eachindex(rhos) , j in eachindex(Ts) 
 end
 prinz(z)
 
-comments = "No C(r,t) here."
-filename = "data/scan_for_discussion_Parisa_v0_sigma_rho_N1E3_tmax1E4_r$real.jld2"
-JLD2.@save filename P n Ts Ns v0s rhos inits sigmas times_log tmax runtime=z comments pos_saved thetas_saved psis_saved omegas_saved
+comments = ""
+filename = "data/bigscan_v0s_sigmas_rho1_N1E4_tmax1E4_r$real.jld2"
+JLD2.@save filename P C n Ts Ns v0s rhos inits sigmas times_log tmax runtime=z comments pos_saved thetas_saved psis_saved omegas_saved
 # WARNING : "C" n'est plus dans les variables saved, il faut la remettre !
+
+
+## FSS
+# Ns = round.(Int,logspace(1E2,3E4,15,digits=0))
+# rho = 1
+# T = 0.1
+# v0s    = reverse(logspace(0.01,4,30,digits=2))
+# sigmas = 0:0.1:0.5
+# tmax = 1E3
+#
+# vc = zeros(length(Ns),length(sigmas))
+# seuil_break = 0.8
+# seuil_crit = 0.3
+# times_break = range(1, stop=tmax, length=20)
+#
+# z = @elapsed for j in each(sigmas)
+#     σ = sigmas[j]
+#     for n in each(Ns)
+#         N = Ns[n] ; L = round(Int,sqrt(N/rho))
+#         for i in each(v0s)
+#             v0 = v0s[i]
+#             println("σ = $σ, N = $N, v0 = $v0")
+#             dt = determine_dt(T,σ,v0,N,rho)
+#             t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["hightemp"])
+#             token = 1
+#             while t<tmax
+#                 t += dt
+#                 pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+#                 if t ≥ times_break[token]
+#                     if polarOP(thetas)[1] > seuil_break
+#                         println("Simu stopped because P>$(seuil_break) : v0 > vc")
+#                         break # stop this simulation, pass to the next v0
+#                     end
+#                     token = min(token+1,length(times_break))
+#                 end
+#             end
+#             if polarOP(thetas)[1] < seuil_crit
+#                 vc[n,j] = v0
+#                 println("Critical velocity because P<$(seuil_crit) : v0 < vc")
+#                 break # you found the critical velocity
+#             end
+#         end
+#     end
+# end
+# prinz(z)
+#
+# comments = "Study the scaling of vc the critical velocity against N, for different sigmas"
+# filename = "data/criticalv0_r$real.jld2"
+# JLD2.@save filename vc Ns rho seuil_break seuil_crit times_break v0s T sigmas tmax

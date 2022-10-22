@@ -8,22 +8,23 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
-filename = "data/bigscan_v0_sigma_N1E3_tmax1E4.jld2"
-filename = "data/scan_v0_sigma_rho1_N1E4_tmax1E4.jld2"
 filename = "data/scan_for_discussion_Parisa_v0_sigma_rho_N1E3_tmax2E3.jld2"
-@load filename Ps ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
-
-v0s
-sigmas
-histogram(runtimes/3600/24/16/11*20*10,bins=20)
-
-
+filename = "data/XIN_during_coarsening_v0_sigma_N1E4_tmax2E3.jld2"
+filename = "data/scan_v0_sigma_rho1_N1E4_tmax1E4.jld2"
+@load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 
 histogram(runtimes/3600/24,bins=20)
-Ps_avg = nanmean(Ps,8) # N rho T v0 sigma t init R
-Ps_std = nanstd(Ps,8) # N rho T v0 sigma t init R
-ns_avg = nanmean(ns,8) # N rho T v0 sigma t init R
+Ps_avg = nanmean(Ps,7) # N rho T v0 sigma t init R
+Ps_std = nanstd(Ps,7) # N rho T v0 sigma t init R
+ns_avg = nanmean(ns,7) # N rho T v0 sigma t init R
 Cs_avg = nanmean(Cs,9)
+xis_avg = zeros(length(v0s),length(sigmas),length(times_log))
+for i in each(v0s) , j in each(sigmas) , t in each(times_log)
+    xis_avg[i,j,t] = corr_length(Cs_avg[:,1,1,1,i,j,1,t,1],0:0.5:50)
+end
+
+
+plot(times_log,Ps_avg[1,1,1,end,1,:,1],axis=:log,rib=0)
 
 
 # Heatmap of P at final time
@@ -73,6 +74,7 @@ p=plot(xlabel="t",ylabel="P(t) / n(t)",legend=false)
     p
 # savefig("figures/PsurN_diffv0_onesigma.png")
 # savefig("figures/PsurN_diffsigma_onev0.png")
+
 # Determination of critical sigma as a function of v0
 sigmac = zeros(length(v0s))
 seuil = 0.2
@@ -90,11 +92,11 @@ plot(v0s[2:end],sigmac[2:end],xaxis=:log)
     plot!(x->0.5sqrt(x))
 
 # Over time
-lss = [:solid,:dash,:dot]
+lss = [:solid,:dash,:dot,:solid]
 p=plot(legend=false)#:bottomright)
     for i in each(v0s)
         for j in each(sigmas)
-            plot!(times_log,Ps_avg[1,1,1,i,j,1,:,1],axis=:log,rib=0Ps_std[1,1,1,i,j,1,:,1],
+            plot!(times_log,Ps_avg[1,1,1,i,j,1,:,1],axis=:log,rib=0,
             label="v = $(v0s[i]), σ = $(sigmas[j])",c=i,line=lss[j])
         end
     end
@@ -138,3 +140,17 @@ indss = [(1,1),(4,10),(10,4),(10,7)]
     plot!(times_log[5:end-5],4E-2sqrt.(times_log[5:end-5]),c=:black,label="√t")
     p
 savefig("figures/no_difference_lowtemp_hightemp_loglog.png")
+
+## Does xi \sqrt(n) ~ cst hold ?
+# D'un côté, pas hyper clair mais oui, ca a l'air constant (on arrive au terme du coarsening)
+# De l'autre, non pas constant ca augmente lentement mais surement...
+p=plot()
+    for i in 2# each(v0s)
+        for j in 1#each(sigmas)
+            plot!(times_log,xis_avg[i,j,:],m=true,axis=:log)
+            plot!(times_log,sqrt.(ns_avg[1,1,1,i,j,1,:,1]),m=true,axis=:log)
+            plot!(times_log,xis_avg[i,j,:] .* sqrt.(ns_avg[1,1,1,i,j,1,:,1]),m=true,axis=:log)
+        end
+    end
+    p
+    plot!(x->x^0.5)

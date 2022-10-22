@@ -3,7 +3,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
-    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
@@ -12,14 +12,16 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 a test particles interacts with over time. Underlying idea: understanding
 the relation between moving particles and MF approximation.
 =#
+plot(legend=:bottomright,xlabel="Time (arb. units)",ylabel="n(t)/N",ylims=(0,1))
+
 N = Int(4E2)
-    rho = 4
+    rho = 5
     L = round(Int,sqrt(N/rho))
 
     pos,~,psis,~ = initialisation(N,L,0)
     v0 = 1
 
-    Niter = Int(1E3)
+    Niter = Int(3E3)
     ID_interactions = [Int[] for i in 1:N]
     number_interactions = zeros(N,Niter)
 
@@ -68,11 +70,15 @@ N = Int(4E2)
     end
     prinz(z)
     nintavg = mean(number_interactions,dims=1)[1,:]
-    plot!(nintavg[1:end]/N,m=:circle)
+    plot!(nintavg[1:100:end]/N,m=:circle,label="ρ = $rho")
     # plot!(x->2/pi*atan(x/28))
 
-plot(nintavg[1:end]/N,m=:circle)
-plot!(x->2/pi*atan(x/2100*4),c=:black)
+savefig("figures/number_visited_particles_rho.png")
+
+plot!(x->2/pi*atan((x-1)/21*1),c=:black)
+plot!(x->2/pi*atan((x-1)/21*2),c=:black)
+plot!(x->2/pi*atan((x-1)/21*3),c=:black)
+plot!(x->2/pi*atan((x-1)/21*5),c=:black)
 
 
 
