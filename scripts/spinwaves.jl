@@ -14,12 +14,12 @@ Ns = Int.(1E4)
     Ts     = 0.1
     # v0s    = [0.0,0.01,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4,6.3]
     # v0s    = [0.01,0.02,0.03,0.04,0.05,0.1,0.2,0.3,0.5,1,2,3,5]
-    v0s    = [2]
-    sigmas = [0]
+    v0s    = [5]
+    sigmas = [0.2]
     inits  = ["disordered"]
     R = 50
 
-    tmax = 1E2; #times_log = logspace(0.1,tmax,1)
+    tmax = 50; #times_log = logspace(0.1,tmax,1)
 
     P  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)#,length(times_log))
     n  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),R)#,length(times_log))
@@ -43,7 +43,7 @@ z = @elapsed for a in eachindex(Ns)
     # params = Any[T,v0,N,L,rho,σ]
     # m += 1 ; println("Simu $m/$M")
 
-
+    Random.seed!(r+100)
     pos,thetas,psis,omegas = initialisation(N,L,σ,[init])
     t = 0.0 ; token = 1
     while t < tmax
@@ -80,6 +80,23 @@ ro = 1
     sig= 1
     vo = 1
     plot(vec(P[1,ro,1,vo,sig,1,:]),ylims=(0,1))
+
+## Make movies from promising seeds
+promising_seeds = [112,133,122,127,109,101]
+N = Int.(1E4) ; rho = 1 ; T = 0.1 ; v0 = 5 ; sigma = 0.2
+L = round(Int,sqrt(N/rho));
+Tmax = 5000
+dt = 0.04
+z = @elapsed for seeed in promising_seeds
+    Random.seed!(seeed)
+    pos,thetas,psis,omegas = initialisation(N,L,sigma,["disordered"])
+    animation = @animate for i in 1:25:Tmax
+        for j in 1:25 pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt) end
+        p=plot(pos,thetas,N,L)
+    end
+    mp4(animation,"films/looking_for_spinwaves/promising_seeds/$(seeed).mp4")
+end
+prinz(z)
 
 ## Investigation
 filename = "data/looking_for_spinwaves/SPINWAVE_N10000_rho1_v5_disordered_σ0.2.jld2" ;

@@ -9,11 +9,11 @@ global const R0 = 1
 Ns = Int.(1E4)
     rhos = [1]
     Ts     = 0.1
-    v0s    = [0.0,0.01,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4]
-    sigmas = collect(0:0.05:0.5)
+    v0s    = [0.0,0.01,0.03,0.05,0.1,0.3,0.5,1,3,5]
+    sigmas = [0,0.2]
     inits  = ["disordered"]
 
-    tmax = 1E4; times_log = logspace(0.1,tmax,31)
+    tmax = 1E2; times_log = logspace(0.1,tmax,10)
 
     P  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
     n  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
@@ -55,9 +55,8 @@ end
 prinz(z)
 
 comments = ""
-filename = "data/bigscan_v0s_sigmas_rho1_N1E4_tmax1E4_r$real.jld2"
+filename = "data/CORR_todeterminate_phase_N1E4_tmax1E2_r$real.jld2"
 JLD2.@save filename P C n Ts Ns v0s rhos inits sigmas times_log tmax runtime=z comments pos_saved thetas_saved psis_saved omegas_saved
-# WARNING : "C" n'est plus dans les variables saved, il faut la remettre !
 
 
 ## FSS

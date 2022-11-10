@@ -3,7 +3,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
-    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
@@ -12,6 +12,23 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 of the critical velocity with N.
 =#
 
+## Analysis of the results from cluster
+filename = "data/criticalv0.jld2"
+@load filename Ns rho seuil_break seuil_crit times_break v0s T sigmas tmax vcs
+vcs_avg = nanmean(vcs,3)[:,:,1]
+vcs_std = nanstd(vcs,3)[:,:,1]
+rho
+p=plot(legend=:bottomright,xlabel="N",ylabel=L"v_c")
+    for i in 1:size(vcs_avg,2)
+        sig = round(0.1*(i-1),digits=1)
+        plot!(Ns,vcs_avg[:,i],m=false,axis=:log,label="σ=$(round(0.1*(i-1),digits=1))",rib=0vcs_std[:,i])
+    end
+    p
+
+Ns[7]
+vcs_avg[7,:]
+
+## Code
 Ns = round.(Int,logspace(1E2,1E4,10,digits=0))
 rho = 1
 T = 0.1
