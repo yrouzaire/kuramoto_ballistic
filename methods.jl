@@ -173,36 +173,38 @@ function nematicOP(thetas::Vector{T}) where T<:AbstractFloat
     return norm(tmp)/length(thetas),angle(tmp)
 end
 
-function corr(pos::Matrix{T},thetas::Vector{T},N,L,dr;algo="fast")::Vector{T} where T<:AbstractFloat
-    if     algo == "slow" return corr_slow(pos,thetas,N,L,dr)
-    elseif algo == "fast" return corr_fast(pos,thetas,N,L,dr)
+function corr(pos::Matrix{T},thetas::Vector{T},N,Lx,Ly,dr;algo="fast")::Vector{T} where T<:AbstractFloat
+    if     algo == "slow" return corr_slow(pos,thetas,N,Lx,Ly,dr)
+    elseif algo == "fast" return corr_fast(pos,thetas,N,Lx,Ly,dr)
     end
 end
 
-function corr_slow(pos::Matrix{T},thetas::Vector{T},N,L,dr)::Vector{T} where T<:AbstractFloat
+function corr_slow(pos::Matrix{T},thetas::Vector{T},N,Lx,Ly,dr)::Vector{T} where T<:AbstractFloat
     # Construct matrix of distances
-    C = [T[] for i in 1:round(Int,L/2/dr)]
+    Lmin = min(Lx,Ly)
+    C = [T[] for i in 1:round(Int,Lmin/2/dr)]
     # distances = zeros(N,N)
     # for j in 1:N , i in j+1:N
     #     distances[i,j] = dist(pos[:,i],pos[:,j],L)
     # end
     for j in 1:N , i in j+1:N
-        d = dist(pos[:,i],pos[:,j],L)
-        if d ≤ round(Int,L/2) push!(C[min(ceil(Int,d/dr),length(C))],cos(thetas[i] - thetas[j])) end
+        d = dist(pos[:,i],pos[:,j],Lx,Ly)
+        if d ≤ round(Int,Lmin/2) push!(C[min(ceil(Int,d/dr),length(C))],cos(thetas[i] - thetas[j])) end
     end
 
     Cavg = [mean(C[i]) for i in eachindex(C)]
     return vcat(1,Cavg) # 1 to represent C(0,t)
 end
 
-function corr_fast(pos::Matrix{T},thetas::Vector{T},N,L,dr)::Vector{T} where T<:AbstractFloat
+function corr_fast(pos::Matrix{T},thetas::Vector{T},N,Lx,Ly,dr)::Vector{T} where T<:AbstractFloat
     M = 50
-    C = [T[] for i in 1:round(Int,L/2/dr)]
-    ms = zeros(Int,round(Int,L/2/dr))
+    Lmin = min(Lx,Ly)
+    C = [T[] for i in 1:round(Int,Lmin/2/dr)]
+    ms = zeros(Int,round(Int,Lmin/2/dr))
 
     for j in 1:N , i in j+1:N
-        d = dist(pos[:,i],pos[:,j],L)
-        if d ≤ round(Int,L/2)
+        d = dist(pos[:,i],pos[:,j],Lx,Ly)
+        if d ≤ round(Int,Lmin/2)
             ind = min(ceil(Int,d/dr),length(C))
             push!(C[ind],cos(thetas[i] - thetas[j]))
             ms[ind] += 1
@@ -215,7 +217,7 @@ function corr_fast(pos::Matrix{T},thetas::Vector{T},N,L,dr)::Vector{T} where T<:
 end
 
 ## Methods for defects
-function mod1_2D(xx::Tuple{T,T},Lx,Ly) where T<:Number
+function mod1_2D(xx::Tuple{T,T},Lx::Int,Ly::Int) where T<:Number
     return (mod1(xx[1],Lx) , mod1(xx[2],Ly))
 end
 
@@ -432,8 +434,8 @@ mutable struct DefectTracker
     defectsN::Vector{Defect} # so there is a (+)defect with id=1 AND and a (-)defect with id=1
     current_time::Float64 # latest update time (by convention, the creation time of the whole data structure = 0)
 
-    function DefectTracker(pos,thetas,N,L,t) # constructor
-        vortices,antivortices = spot_defects(pos,thetas,N,L)
+    function DefectTracker(pos,thetas,N,Lx,Ly,t) # constructor
+        vortices,antivortices = spot_defects(pos,thetas,N,Lx,Ly)
         defectsP = [Defect(id=i,charge=vortices[i][3],loc=vortices[i][1:2],t=t) for i in each(vortices)]
         defectsN = [Defect(id=i,charge=antivortices[i][3],loc=antivortices[i][1:2],t=t) for i in each(antivortices)]
         new(defectsP,defectsN,t)
@@ -464,10 +466,9 @@ function add_defect!(dt::DefectTracker;charge,loc)
     end
 end
 
-
-function pair_up_hungarian(dt::DefectTracker,new,old,L,charge::String)
+function pair_up_hungarian(dt::DefectTracker,new,old,Lx,Ly,charge::String)
     # charge can be either "+" or "-"
-    distance_matrixx = distance_matrix(new,old,L) # m_new lignes, m_old colonnes
+    distance_matrixx = distance_matrix(new,old,Lx,Ly) # m_new lignes, m_old colonnes
     proposal         = hungarian(distance_matrixx)[1] # length = length(new)
     assignment       = copy(proposal) # because it will be modified in the next for loop
 
@@ -502,12 +503,12 @@ function pair_up_hungarian(dt::DefectTracker,new,old,L,charge::String)
     return assignment
 end
 
-function find_closest_before_annihilation(dt,L,old_loc_defect)
+function find_closest_before_annihilation(dt,Lx,Ly,old_loc_defect)
     distance = Inf ; ID_antidefect = -1 # dummy
     for i in each(dt.defectsN)
         isnothing(dt.defectsN[i].annihilation_time) ? annihilation_time_defect = nothing : annihilation_time_defect = round(dt.defectsN[i].annihilation_time,digits=2)
         if annihilation_time_defect == round(dt.current_time,digits=2) # it has just annihilated
-            tmp = dist(old_loc_defect,last_loc(dt.defectsN[i]),L)
+            tmp = dist(old_loc_defect,last_loc(dt.defectsN[i]),Lx,Ly)
             if tmp < distance
                 distance = tmp
                 ID_antidefect = i
@@ -560,10 +561,10 @@ function decrease_annihilation_ids!(dft::DefectTracker,id::Int,charge::String)
 end
 
 
-function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,L)
+function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,Lx,Ly)
     for i in ids_annihilated_defects
         old_loc_vortex = last_loc(dt.defectsP[i])
-        ID_antivortex,old_loc_antivortex = find_closest_before_annihilation(dt,L,old_loc_vortex)
+        ID_antivortex,old_loc_antivortex = find_closest_before_annihilation(dt,Lx,Ly,old_loc_vortex)
 
         dt.defectsP[i].id_annihilator = ID_antivortex
         try dt.defectsN[ID_antivortex].id_annihilator = i
@@ -571,7 +572,7 @@ function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,L)
             dt.defectsN[ID_antivortex].id_annihilator = -1
         end
 
-        estimate = mean_2_positions(old_loc_vortex,old_loc_antivortex,L)
+        estimate = mean_2_positions(old_loc_vortex,old_loc_antivortex,Lx,Ly)
         update_position!(dt.defectsP[i],estimate)
         try update_position!(dt.defectsN[ID_antivortex],estimate)
         catch ; end
@@ -579,27 +580,27 @@ function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,L)
     return dt
 end
 
-function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,L::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
+function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
     token = 1
     while t < tmax
         t += dt
-        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
         if t ≥ times[token]
             if number_active_defects(dft) == 0
                 println("Simulation stopped, there is no defects left.")
                 break
             end
             println("t = ",round(t,digits=1)," & n(t) = ",number_active_defectsP(dft)," + ",number_active_defectsN(dft))
-            update_DefectTracker!(dft,pos,thetas,N,L,t)
+            update_DefectTracker!(dft,pos,thetas,N,Lx,Ly,t)
             token = min(token+1,length(times))
         end
     end
     return dft,pos,thetas,t
 end
 
-function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T},N,L,t) where T<:AbstractFloat
+function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T},N,Lx,Ly,t) where T<:AbstractFloat
     dt.current_time = t
-    vortices_new,antivortices_new = spot_defects(pos,thetas,N,L)
+    vortices_new,antivortices_new = spot_defects(pos,thetas,N,Lx,Ly)
 
     # if BC == "periodic" @assert length(vortices_new) == length(antivortices_new) && length(vortices_old) == length(antivortices_old) end
     locP_old    = [last_loc(dt.defectsP[i]) for i in each(dt.defectsP)]
@@ -621,11 +622,11 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
     if N_new == N_old == 0 # do nothing, otherwise, "reducing over empty collection blablabla"
 
     elseif Nn_new == Nn_old == 0 && Np_new == Np_old > 0 # there are only (+) defects and no creation/annihilation
-        assignment_vortices = pair_up_hungarian(dt,locP_new,locP_old,L,"+")
+        assignment_vortices = pair_up_hungarian(dt,locP_new,locP_old,Lx,Ly,"+")
         for i in 1:Np_new update_position!(dt.defectsP[assignment_vortices[i]],locP_new[i]) end
 
     elseif Np_new == Np_old == 0 && Nn_new == Nn_old > 0 # there are only (-) defects and no creation/annihilation
-        assignment_antivortices = pair_up_hungarian(dt,locN_new,locN_old,L,"-")
+        assignment_antivortices = pair_up_hungarian(dt,locN_new,locN_old,Lx,Ly,"-")
         for i in 1:Nn_new update_position!(dt.defectsN[assignment_antivortices[i]],locN_new[i]) end
 
     elseif N_new > 0 && N_old == 0
@@ -640,7 +641,7 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
         dt = annihilate_defects(dt::DefectTracker,id_just_annihilated_defectP,L)
 
     elseif Np_new > 0 && Np_old > 0 && Nn_old > 0 && Nn_new == 0  # (+)(+)(-) >> (+) par exemple
-        assignment_vortices = pair_up_hungarian(dt,locP_new,locP_old,L,"+")
+        assignment_vortices = pair_up_hungarian(dt,locP_new,locP_old,Lx,Ly,"+")
         # Update living vortices. NB : the annihilated vortex is absent from the assignment vector : proceed without the condition "≠ 0"
         for i in eachindex(assignment_vortices) update_position!(dt.defectsP[assignment_vortices[i]],locP_new[i]) end
         # Identify annihilated defects
@@ -654,10 +655,10 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
 
         for i in ID_annihilated_vortices     dt.defectsP[i].annihilation_time = dt.current_time end
         for i in ID_annihilated_antivortices dt.defectsN[i].annihilation_time = dt.current_time end
-        dt = annihilate_defects(dt,ID_annihilated_vortices,L)
+        dt = annihilate_defects(dt,ID_annihilated_vortices,Lx,Ly)
 
     elseif Nn_new > 0 && Nn_old > 0 && Np_old > 0 && Np_new == 0  # (+)(-)(-) >> (-) par exemple
-        assignment_antivortices = pair_up_hungarian(dt,locN_new,locN_old,L,"-")
+        assignment_antivortices = pair_up_hungarian(dt,locN_new,locN_old,Lx,Ly,"-")
         # Update living antivortices. NB : the annihilated antivortex is absent from the assignment vector : proceed without the condition "≠ 0"
         for i in eachindex(assignment_antivortices) update_position!(dt.defectsN[assignment_antivortices[i]]) end
         # Identify annihilated defects
@@ -672,12 +673,12 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
         for i in ID_annihilated_vortices     dt.defectsP[i].annihilation_time = dt.current_time end
         for i in ID_annihilated_antivortices dt.defectsN[i].annihilation_time = dt.current_time end
 
-        dt = annihilate_defects(dt,ID_annihilated_vortices,L)
+        dt = annihilate_defects(dt,ID_annihilated_vortices,Lx,Ly)
     else # end of special cases
 
     # GENERAL TREATMENT
-        assignment_vortices     = pair_up_hungarian(dt,locP_new,locP_old,L,"+")
-        assignment_antivortices = pair_up_hungarian(dt,locN_new,locN_old,L,"-")
+        assignment_vortices     = pair_up_hungarian(dt,locP_new,locP_old,Lx,Ly,"+")
+        assignment_antivortices = pair_up_hungarian(dt,locN_new,locN_old,Lx,Ly,"-")
 
         # CASE 1 : no creation, no annihilation : simply update the data structure
         if N_new == N_old
@@ -728,9 +729,9 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
                 end
             end
             if length(ID_annihilated_antivortices) >= length(ID_annihilated_vortices)
-                dt = annihilate_defects(dt,ID_annihilated_vortices,L)
+                dt = annihilate_defects(dt,ID_annihilated_vortices,Lx,Ly)
             else
-                dt = annihilate_defects(dt,ID_annihilated_antivortices,L)
+                dt = annihilate_defects(dt,ID_annihilated_antivortices,Lx,Ly)
             end
 
         end # end of general treatment
@@ -739,7 +740,7 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
 end
 
 ## Defects Analysis : MSD
-function MSD(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracker}}},L)
+function MSD(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracker}}},Lx,Ly)
     indices = [] # indices of dft defined (is simulation not finished, dfts[i] == missing)
     for i in 1:length(dfts)
         if !ismissing(dfts[i]) push!(indices,i) end
@@ -749,7 +750,7 @@ function MSD(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracke
     MSD_N   = NaN*zeros(length(indices),maxlength)
     MSD_all = NaN*zeros(length(indices),maxlength)
     for i in 1:length(indices)
-        msd_all, msd_p, msd_n = MSD(dfts[indices[i]],L)
+        msd_all, msd_p, msd_n = MSD(dfts[indices[i]],Lx,Ly)
         MSD_P[i,1:length(msd_p)] = msd_p
         MSD_N[i,1:length(msd_n)] = msd_n
         MSD_all[i,1:length(msd_all)] = msd_all
@@ -762,7 +763,7 @@ function MSD(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracke
     return MSD_all_avg,MSD_P_avg,MSD_N_avg
 end
 
-function MSD(dft::DefectTracker,L,maxlength=nothing)
+function MSD(dft::DefectTracker,Lx,Ly,maxlength=nothing)
     nP = number_defectsP(dft)
     nN = number_defectsN(dft)
     # tmin,tmax = t_bounds(dft) # (tmin,tmax) = timestamps of (first defect creation , last defect annihilation)
@@ -776,12 +777,12 @@ function MSD(dft::DefectTracker,L,maxlength=nothing)
     SD_N = NaN*zeros(nN,maxlength)
     for n in 1:nP
         defect = dft.defectsP[n]
-        tmp = square_displacement(defect,L)
+        tmp = square_displacement(defect,Lx,Ly)
         SD_P[n,1:length(tmp)] = tmp
     end
     for n in 1:nN
         defect = dft.defectsN[n]
-        tmp = square_displacement(defect,L)
+        tmp = square_displacement(defect,Lx,Ly)
         SD_N[n,1:length(tmp)] = tmp
     end
 
@@ -793,50 +794,50 @@ function MSD(dft::DefectTracker,L,maxlength=nothing)
     return MSD_all, MSD_P, MSD_N
 end
 
-function square_displacement(d::Defect,L)
+function square_displacement(d::Defect,Lx,Ly)
     loc_t0 = first_loc(d)
-    return [dist(loc,loc_t0,L) for loc in d.pos] .^ 2
+    return [dist(loc,loc_t0,Lx,Ly) for loc in d.pos] .^ 2
 end
 
 ## Defects Analysis : Distance between defects
-function interdefect_distance(dft::DefectTracker,defect1::Defect,defect2::Defect,L)
+function interdefect_distance(dft::DefectTracker,defect1::Defect,defect2::Defect,Lx,Ly)
     # TODO take care of case with creation and/or annihilation time different.
     # So far, this care is left to the user...
     # @assert defect1.creation_time == defect2.creation_time
     # @assert defect1.annihilation_time == defect2.annihilation_time
     tmax = min(length(defect1.pos),length(defect2.pos))
-    R = [dist(defect1.pos[t],defect2.pos[t],L) for t in 1:tmax]
+    R = [dist(defect1.pos[t],defect2.pos[t],Lx,Ly) for t in 1:tmax]
     return R
 end
 
-function mean_distance_to_annihilator(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracker}}},L)
+function mean_distance_to_annihilator(dfts::Union{Vector{DefectTracker},Vector{Union{Missing,DefectTracker}}},Lx,Ly)
     indices = [] # indices of dft defined (is simulation not finished, dfts[i] == missing)
     for i in 1:length(dfts)
         if !ismissing(dfts[i]) push!(indices,i) end
     end
-    Rs = [mean_distance_to_annihilator(dfts[indices[n]],L) for n in 1:length(indices)]
+    Rs = [mean_distance_to_annihilator(dfts[indices[n]],Lx,Ly) for n in 1:length(indices)]
     Rs_matrix = vector_of_vector2matrix(Rs)
     return nanmean(Rs_matrix,2)[:,1]
 end
 
-function mean_distance_to_annihilator(dft::DefectTracker,L)
+function mean_distance_to_annihilator(dft::DefectTracker,Lx,Ly)
     nP = number_defectsP(dft)
-    Rs = [distance_to_annihilator(dft,n,L) for n in 1:nP]
+    Rs = [distance_to_annihilator(dft,n,Lx,Ly) for n in 1:nP]
     Rs_matrix = vector_of_vector2matrix(Rs)
     return nanmean(Rs_matrix,2)[:,1],nanstd(Rs_matrix,2)[:,1]
 end
 
-function distance_to_annihilator(dft::DefectTracker,id1::Int,L;reversed=true)
+function distance_to_annihilator(dft::DefectTracker,id1::Int,Lx,Ly;reversed=true)
     if isnothing(dft.defectsP[id1].id_annihilator) # not yet annihilated
         return [NaN]
     else
-        R = interdefect_distance(dft,dft.defectsP[id1],dft.defectsN[dft.defectsP[id1].id_annihilator],L)
+        R = interdefect_distance(dft,dft.defectsP[id1],dft.defectsN[dft.defectsP[id1].id_annihilator],Lx,Ly)
         if reversed reverse!(R) end
         return R
     end
 end
 
-## Auxiliary function
+## Auxiliary functions
 function mean_2_positions(pos1,pos2,Lx,Ly,should_take_mod::Bool=true)
     a,b = pos1 ; x,y = pos2
 
