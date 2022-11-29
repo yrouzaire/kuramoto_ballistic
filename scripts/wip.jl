@@ -1,11 +1,17 @@
 cd("D:/Documents/Research/projects/kuramoto_ballistic")
     using JLD2,StatsBase,Distributions,LinearAlgebra,Parameters,Random
     using Plots,ColorSchemes,LaTeXStrings
-    include("methods.jl")
+    include("../methods.jl")
     pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
+
+t = 0.0
+params_init = ["hightemp",L/2]
+pos,vel_angles,thetas,omegas = initialisation(N,L,σ,params_init)
+    scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
+
 
 ## Development of vortex localisation (and type identification ?)
 N = Int(1E4)

@@ -8,7 +8,6 @@ end
 
 each = eachindex
 
-
 nanmean(x) = mean(filter(!isnan,x))
 nanmean(x,y) = mapslices(nanmean,x,dims=y)
 nanstd(x) = std(filter(!isnan,x))
@@ -24,31 +23,31 @@ function vector_of_vector2matrix(x::Vector{Vector{T}}) where T<:AbstractFloat
 end
 
 
-function dist(a::Vector{T},b::Vector{T},L) where T<:AbstractFloat  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1]) ; dx = min(dx,L-dx)
-    dy = abs(a[2] - b[2]) ; dy = min(dy,L-dy)
+function dist(a::Vector{T},b::Vector{T},Lx,Ly) where T<:AbstractFloat  # euclidian distance with Periodic BCs
+    dx = abs(a[1] - b[1]) ; dx = min(dx,Lx-dx)
+    dy = abs(a[2] - b[2]) ; dy = min(dy,Ly-dy)
     return sqrt(dx^2 + dy^2)
 end
 
-function dist(a::Tuple{T,T},b::Tuple{T,T},L) where T<:Number  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1]) ; dx = min(dx,L-dx)
-    dy = abs(a[2] - b[2]) ; dy = min(dy,L-dy)
+function dist(a::Tuple{T,T},b::Tuple{T,T},Lx,Ly) where T<:Number  # euclidian distance with Periodic BCs
+    dx = abs(a[1] - b[1]) ; dx = min(dx,Lx-dx)
+    dy = abs(a[2] - b[2]) ; dy = min(dy,Ly-dy)
     return sqrt(dx^2 + dy^2)
 end
 
-function dist(a,b,L)  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1]) ; dx = min(dx,L-dx)
-    dy = abs(a[2] - b[2]) ; dy = min(dy,L-dy)
+function dist(a,b,Lx,Ly)  # euclidian distance with Periodic BCs
+    dx = abs(a[1] - b[1]) ; dx = min(dx,Lx-dx)
+    dy = abs(a[2] - b[2]) ; dy = min(dy,Ly-dy)
     return sqrt(dx^2 + dy^2)
 end
 
 
-function distance_matrix(new,old,L)
+function distance_matrix(new,old,Lx,Ly)
     m_new,m_old = length(new),length(old)
     distance_matrix = zeros(m_new,m_old)
     for j in 1:m_old
         for i in 1:m_new
-            distance_matrix[i,j] = dist(new[i],old[j],L)
+            distance_matrix[i,j] = dist(new[i],old[j],Lx,Ly)
         end
     end
     return distance_matrix
@@ -65,8 +64,11 @@ function determine_dt(T,σ,v0,N,rho)
 end
 
 ## Initialisation and evolution
-function initialisation(N,L,σ,params=["disordered"];float_type=Float32)
-    pos = L*rand(2,N)
+function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
+    pos = rand(2,N)
+    pos[1,:] *= Lx
+    pos[2,:] *= Ly
+
     psis = 2π*rand(N)
     omegas = σ*randn(N)
 
@@ -78,20 +80,25 @@ function initialisation(N,L,σ,params=["disordered"];float_type=Float32)
         thetas = zeros(N)
         for n in 1:N
             x,y = pos[:,n]
-            thetas[n] = params[2] * atan(L/2 - y,L/2 - x)
+            thetas[n] = params[2] * atan(Ly/2 - y,Lx/2 - x)
         end
     elseif params[1] == "pair" # params[2] is R0 the separation distance
         # should I implement the different pairs ? source and sink will not act the same way for instance
         thetas = zeros(N)
         for n in 1:N
             x,y = pos[:,n]
-            thetas[n] = atan(L/2 - y,L/2 - x + params[2]/2) - atan(L/2 - y,L/2 - x - params[2]/2) # +1 defect by convention
+            thetas[n] = atan(Ly/2 - y,Lx/2 - x + params[2]/2) - atan(Ly/2 - y,Lx/2 - x - params[2]/2) # +1 defect by convention
         end
+    # elseif params[1] == "1Dwave"
+    #     # then params[2] is "vertical"/"horizontal"
+    #     # then params[3] is the number of waves
+    #     if params[2] == "vertical"
+    #
     end
     return float_type.(pos),float_type.(thetas),float_type.(psis),float_type.(omegas)
 end
 
-function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,L::Int,dt::Number) where FT<:AbstractFloat
+function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
     pos_new    = zeros(FT,2,N)
     thetas_new = zeros(FT,N)
 
@@ -99,11 +106,13 @@ function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vect
     for n in eachindex(psis)
         pos_new[:,n] = pos[:,n] + v0*dt*[cos(psis[n]),sin(psis[n])]
     end
-    pos_new = mod.(pos_new,L)
+    pos_new[1,:] = mod.(pos_new[1,:],Lx)
+    pos_new[2,:] = mod.(pos_new[2,:],Ly)
 
     ## List construction
-    nb_cells_1D = Int(div(L,R0)) + 1
-    head = -ones(Int,nb_cells_1D,nb_cells_1D) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
+    nb_cells_x = Int(div(Lx,R0)) + 1
+    nb_cells_y = Int(div(Ly,R0)) + 1
+    head = -ones(Int,nb_cells_x,nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int,N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
         cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
@@ -115,9 +124,9 @@ function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vect
         poscur = pos[:,n]
 
         cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-        should_take_mod = (cellx == 1) || (cellx == nb_cells_1D) || (celly == 1) || (celly == nb_cells_1D)
+        should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
         if should_take_mod
-            neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_1D)] , [mod1(cellx+1,nb_cells_1D),celly] , [cellx,mod1(celly-1,nb_cells_1D)] , [mod1(cellx-1,nb_cells_1D),celly] , [mod1(cellx+1,nb_cells_1D),mod1(celly+1,nb_cells_1D)] ,  [mod1(cellx-1,nb_cells_1D),mod1(celly-1,nb_cells_1D)] , [mod1(cellx-1,nb_cells_1D),mod1(celly+1,nb_cells_1D)] , [mod1(cellx+1,nb_cells_1D),mod1(celly-1,nb_cells_1D)]]
+            neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),celly] , [cellx,mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),celly] , [mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)] ,  [mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y)]]
         else
             neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
         end
@@ -126,9 +135,9 @@ function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vect
         for (i,j) in neighbouring_cells
             next = head[i,j]
             if next ≠ -1
-                if 0 < dist(poscur,pos[:,next],L) < R0 push!(ind_neighbours,next) end
+                if 0 < dist(poscur,pos[:,next],Lx,Ly) < R0 push!(ind_neighbours,next) end
                 while list[next] ≠ -1
-                    if 0 < dist(poscur,pos[:,list[next]],L) < R0 push!(ind_neighbours,list[next]) end
+                    if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) < R0 push!(ind_neighbours,list[next]) end
                     next = list[next]
                 end
             end
@@ -205,15 +214,19 @@ function corr_fast(pos::Matrix{T},thetas::Vector{T},N,L,dr)::Vector{T} where T<:
     return vcat(1,Cavg) # 1 to represent C(0,t)
 end
 
-
 ## Methods for defects
-function cg(pos::Matrix{T},thetas::Vector{T},N,L) where T<:AbstractFloat
+function mod1_2D(xx::Tuple{T,T},Lx,Ly) where T<:Number
+    return (mod1(xx[1],Lx) , mod1(xx[2],Ly))
+end
+
+function cg(pos::Matrix{T},thetas::Vector{T},N,Lx,Ly) where T<:AbstractFloat
     mesh_size = R0
     cutoff = 5R0 # for contributions
 
     ## Cell List construction
-    nb_cells_1D = Int(div(L,mesh_size)) + 1
-    head = -ones(Int,nb_cells_1D,nb_cells_1D) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
+    nb_cells_x = Int(div(Lx,mesh_size)) + 1
+    nb_cells_y = Int(div(Ly,mesh_size)) + 1
+    head = -ones(Int,nb_cells_x,nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int,N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
         cellx,celly = Int(div(pos[1,n],mesh_size)) + 1 , Int(div(pos[2,n],mesh_size)) + 1 # cell to which particle n belongs
@@ -221,26 +234,27 @@ function cg(pos::Matrix{T},thetas::Vector{T},N,L) where T<:AbstractFloat
         head[cellx,celly] = n
     end
 
-    LL = round(Int,L/mesh_size)
-    fine_grid = NaN*zeros(LL,LL)
-    fine_grid_density = NaN*zeros(LL,LL)
-    for i in 1:LL, j in 1:LL # scan fine_grid cells
+    LLx = round(Int,Lx/mesh_size)
+    LLy = round(Int,Ly/mesh_size)
+    fine_grid = NaN*zeros(LLx,LLy)
+    fine_grid_density = NaN*zeros(LLx,LLy)
+    for i in 1:LLx, j in 1:LLy # scan fine_grid cells
         center_finegrid_cell = T.([(i-0.5)*mesh_size,(j-0.5)*mesh_size])
 
         # find cell from coarse mesh correponding to cell i,j belonging to fine_grid
         cellx,celly = Int(div(center_finegrid_cell[1],mesh_size)) + 1 , Int(div(center_finegrid_cell[2],mesh_size)) + 1
         a = round(Int,cutoff/mesh_size)
         neighbouring_cells = vec([(ii,jj) for ii in -a:a, jj in -a:a])
-        neighbouring_cells = [mod1.(el .+ (cellx,celly),nb_cells_1D) for el in neighbouring_cells]
+        neighbouring_cells = [mod1_2D(el .+ (cellx,celly),nb_cells_x,nb_cells_y) for el in neighbouring_cells]
 
         # get indices of particles within those cells (cells belonging to the coarse mesh)
         ind_neighbours = Int[]
         for (i,j) in neighbouring_cells
             next = head[i,j]
             if next ≠ -1
-                if dist(center_finegrid_cell,pos[:,next],L) < cutoff push!(ind_neighbours,next) end
+                if dist(center_finegrid_cell,pos[:,next],Lx,Ly) < cutoff push!(ind_neighbours,next) end
                 while list[next] ≠ -1
-                    if dist(center_finegrid_cell,pos[:,list[next]],L) < cutoff push!(ind_neighbours,list[next]) end
+                    if dist(center_finegrid_cell,pos[:,list[next]],Lx,Ly) < cutoff push!(ind_neighbours,list[next]) end
                     next = list[next]
                 end
             end
@@ -250,7 +264,7 @@ function cg(pos::Matrix{T},thetas::Vector{T},N,L) where T<:AbstractFloat
         tmp = Complex[]
         tmp_density = Float64[]
         for m in ind_neighbours
-            r = dist(center_finegrid_cell,pos[:,m],L)
+            r = dist(center_finegrid_cell,pos[:,m],Lx,Ly)
             if r < cutoff
                 push!(tmp,exp(im*thetas[m]-r/R0))
                 # push!(tmp_density,exp(-r/R0))
@@ -282,7 +296,7 @@ function arclength(theta1::T,theta2::T)::T where T<:AbstractFloat
 end
 
 function get_neighbours(thetas::Matrix{<:T},i::Int,j::Int,bulk::Bool=false)::Vector{T} where T<:AbstractFloat
-    L = size(thetas,1)
+    Lx,Ly = size(thetas)
     # convention depuis la droite et sens trigo
     if bulk
         jm  = j-1
@@ -290,10 +304,10 @@ function get_neighbours(thetas::Matrix{<:T},i::Int,j::Int,bulk::Bool=false)::Vec
         imm = i-1
         ip  = i+1
     else
-        jm  = mod1(j-1,L)
-        jp  = mod1(j+1,L)
-        imm = mod1(i-1,L)
-        ip  = mod1(i+1,L)
+        jm  = mod1(j-1,Ly)
+        jp  = mod1(j+1,Ly)
+        imm = mod1(i-1,Lx)
+        ip  = mod1(i+1,Lx)
     end
 
     @inbounds angles =
@@ -305,12 +319,12 @@ function get_neighbours(thetas::Matrix{<:T},i::Int,j::Int,bulk::Bool=false)::Vec
     return angles
 end
 
-is_on_border(i::Int,j::Int,L::Int) = (i == 1) || (j == 1) || (i == L) || (j == L)
-is_in_bulk(i::Int,j::Int,L::Int) = !is_on_border(i,j,L)
+is_on_border(i::Int,j::Int,Lx::Int,Ly::Int) = (i == 1) || (j == 1) || (i == Lx) || (j == Ly)
+is_in_bulk(i::Int,j::Int,Lx::Int,Ly::Int) = !is_on_border(i,j,Lx,Ly)
 
-function get_vorticity(thetas_mat::Matrix{T},i::Int,j::Int,L::Int)::T where T<:AbstractFloat
+function get_vorticity(thetas_mat::Matrix{T},i::Int,j::Int,Lx::Int,Ly::Int)::T where T<:AbstractFloat
     # Note : thetas_mat = mod.(thetas,2π)
-    angles_corners = get_neighbours(thetas_mat,i,j,is_in_bulk(i,j,L))
+    angles_corners = get_neighbours(thetas_mat,i,j,is_in_bulk(i,j,Lx,Ly))
     perimeter_covered = 0.0
     for i in 1:length(angles_corners)-1
         perimeter_covered += arclength(angles_corners[i],angles_corners[i+1])
@@ -323,26 +337,26 @@ function get_vorticity(thetas_mat::Matrix{T},i::Int,j::Int,L::Int)::T where T<:A
     return charge
 end
 
-number_defects(pos,thetas,N,L) = sum(length,spot_defects(pos,thetas,N,L))
-number_defectsP(pos,thetas,N,L) = length(spot_defects(pos,thetas,N,L)[1])
-number_defectsN(pos,thetas,N,L) = length(spot_defects(pos,thetas,N,L)[2])
-function spot_defects(pos::Matrix{T},thetas::Vector{T},N,L) where T<:AbstractFloat
+number_defects(pos,thetas,N,Lx,Ly) = sum(length,spot_defects(pos,thetas,N,Lx,Ly))
+number_defectsP(pos,thetas,N,Lx,Ly) = length(spot_defects(pos,thetas,N,Lx,Ly)[1])
+number_defectsN(pos,thetas,N,Lx,Ly) = length(spot_defects(pos,thetas,N,Lx,Ly)[2])
+function spot_defects(pos::Matrix{T},thetas::Vector{T},N,Lx,Ly) where T<:AbstractFloat
     vortices_plus  = Tuple{Int,Int,T}[]
     vortices_minus = Tuple{Int,Int,T}[]
 
-    thetasmod = mod.(cg(pos,thetas,N,L),2π)
+    thetasmod = mod.(cg(pos,thetas,N,Lx,Ly),2π)
     relax!(thetasmod)
 
-    for i in 1:L
-        for j in 1:L
-            q = get_vorticity(thetasmod,i,j,L)
+    for i in 1:Lx
+        for j in 1:Ly
+            q = get_vorticity(thetasmod,i,j,Lx,Ly)
             if     q > + 0.1 push!(vortices_plus,(i,j,q)) # we want to keep ±½ defects, and not rounding errors
             elseif q < - 0.1 push!(vortices_minus,(i,j,q))
             end
         end
     end
-    vortices_plus_no_duplicates  = merge_duplicates(vortices_plus,L)
-    vortices_minus_no_duplicates = merge_duplicates(vortices_minus,L)
+    vortices_plus_no_duplicates  = merge_duplicates(vortices_plus,Lx,Ly)
+    vortices_minus_no_duplicates = merge_duplicates(vortices_minus,Lx,Ly)
 
     return vortices_plus_no_duplicates,vortices_minus_no_duplicates
 end
@@ -351,16 +365,16 @@ function relax!(thetas::Matrix{FT},trelax=0.3) where FT<:AbstractFloat
     t = 0.0
     dt = 1E-2
     # T = 0.05
-    L = size(thetas,1)
+    Lx,Ly = size(thetas)
 
     thetas_old = copy(thetas)
 
     while t<trelax
         t += dt
-        for j in 1:L
-            for i in 1:L
+        for j in 1:Ly
+            for i in 1:Lx
                 θ = thetas_old[i,j]
-                angle_neighbours = get_neighbours(thetas_old,i,j,is_in_bulk(i,j,L))
+                angle_neighbours = get_neighbours(thetas_old,i,j,is_in_bulk(i,j,Lx,Ly))
                 thetas[i,j] += dt*sum(sin,angle_neighbours .- θ)
                 # thetas[i,j] += dt*sum(sin,angle_neighbours .- θ) + sqrt(2T*dt)*randn(FT)
             end
@@ -371,7 +385,7 @@ function relax!(thetas::Matrix{FT},trelax=0.3) where FT<:AbstractFloat
 end
 
 
-function merge_duplicates(list,L;radius=3)
+function merge_duplicates(list,Lx,Ly;radius=3)
     #= In this list, there might be doubles/triples (2/3 locations for the
     same physical vortex). We thus seek for numerically identified vortices
     which are neighbours and with the same charge to delete them. =#
@@ -384,12 +398,12 @@ function merge_duplicates(list,L;radius=3)
         if !dealt_with[i]
             tmp = []
             for j in i:length(pos) # includes defect "i"
-                if dist(pos[i],pos[j],L) ≤ radius && charge[i] == charge[j]
+                if dist(pos[i],pos[j],Lx,Ly) ≤ radius && charge[i] == charge[j]
                     dealt_with[j] = true
                     push!(tmp,pos[j])
                 end
             end
-            mean_loc_defect = mean_N_positions(tmp,L,true)
+            mean_loc_defect = mean_N_positions(tmp,Lx,Ly,true)
             push!(merged_duplicates,(mean_loc_defect[1],mean_loc_defect[2],charge[i]))
         end
     end
@@ -823,16 +837,17 @@ function distance_to_annihilator(dft::DefectTracker,id1::Int,L;reversed=true)
 end
 
 ## Auxiliary function
-function mean_2_positions(pos1,pos2,L,should_take_mod::Bool=true)
+function mean_2_positions(pos1,pos2,Lx,Ly,should_take_mod::Bool=true)
     a,b = pos1 ; x,y = pos2
 
     dx = (x - a) #; dx = min(dx,L-dx)
     dy = (y - b) #; dy = min(dy,L-dy)
 
     if should_take_mod
-        if abs(L-dx) < abs(dx) dx = -(L-dx) end
-        if abs(L-dy) < abs(dy) dy = -(L-dy) end
-         return mod1.((a,b) .+ 0.5.*(dx,dy),L)
+        if abs(Lx-dx) < abs(dx) dx = -(Lx-dx) end
+        if abs(Ly-dy) < abs(dy) dy = -(Ly-dy) end
+        # return mod1.((a,b) .+ 0.5.*(dx,dy),L)
+        return (mod1(a .+ 0.5*dx,Lx) , mod1(b .+ 0.5*dy,Ly))
     else return (a,b) .+ 0.5.*(dx,dy)
     end
 end
@@ -841,10 +856,10 @@ end
 # mean_2_positions((10,10),(90,90),l) == (100,100)
 # mean_2_positions((49,66),(51,61),l) == (50.0, 63.5)
 
-function mean_N_positions(vec_pos,L,should_take_mod::Bool=true)
+function mean_N_positions(vec_pos,Lx,Ly,should_take_mod::Bool=true)
     averaged_pos = vec_pos[1]
     for i in 2:length(vec_pos)
-        averaged_pos = mean_2_positions(averaged_pos,vec_pos[i],L,should_take_mod)
+        averaged_pos = mean_2_positions(averaged_pos,vec_pos[i],Lx,Ly,should_take_mod)
     end
     return averaged_pos
 end
@@ -885,54 +900,54 @@ function remove_negative(input)
 end
 
 ## Plotting methods
-# import Plots.plot
-# function plot(pos,thetas,N,L;particles=false,vertical=false,size=(512,512),defects=false)
-#     cols = cgrad([:black,:blue,:green,:orange,:red,:black])
-#     if particles
-#         if vertical
-#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
-#             thetas_cg = cg(pos,thetas,N,L)
-#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
-#             if defects
-#                 defects_p,defects_m = spot_defects(pos,thetas,N,L)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2,L,locP,locN)
-#             end
-#             return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]))
-#         else
-#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=size,aspect_ratio=1,xlims=(0,L),ylims=(0,L))
-#             thetas_cg = cg(pos,thetas,N,L)
-#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
-#             if defects
-#                 defects_p,defects_m = spot_defects(pos,thetas,N,L)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2,L,locP,locN)
-#             end
-#             return plot(p1,p2,size=(2*size[1],size[2]))
-#         end
-#     else
-#         thetas_cg = cg(pos,thetas,N,L)
-#         p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=1)
-#         if defects
-#             defects_p,defects_m = spot_defects(pos,thetas,N,L)
-#             locP = [defects_p[i][1:2] for i in each(defects_p)]
-#             locN = [defects_m[i][1:2] for i in each(defects_m)]
-#             highlight_defects!(p2,L,locP,locN)
-#         end
-#         return p2
-#     end
-# end
-#
-# function highlight_defects!(p,L,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
-#     for defect in defects_p
-#         scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
-#     end
-#     for defect in defects_m
-#         scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
-#     end
-#     xlims!((1,L))
-#     ylims!((1,L))
-#     return p
-# end
+import Plots.plot
+function plot(pos,thetas,N,Lx,Ly;particles=false,vertical=false,size=(512,512),defects=false)
+    cols = cgrad([:black,:blue,:green,:orange,:red,:black])
+    if particles
+        if vertical
+            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
+            thetas_cg = cg(pos,thetas,N,Lx,Ly)
+            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+            if defects
+                defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+                locP = [defects_p[i][1:2] for i in each(defects_p)]
+                locN = [defects_m[i][1:2] for i in each(defects_m)]
+                highlight_defects!(p2,Lx,Ly,locP,locN)
+            end
+            return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]))
+        else
+            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
+            thetas_cg = cg(pos,thetas,N,Lx,Ly)
+            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+            if defects
+                defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+                locP = [defects_p[i][1:2] for i in each(defects_p)]
+                locN = [defects_m[i][1:2] for i in each(defects_m)]
+                highlight_defects!(p2,Lx,Ly,locP,locN)
+            end
+            return plot(p1,p2,size=(2*size[1],size[2]))
+        end
+    else
+        thetas_cg = cg(pos,thetas,N,Lx,Ly)
+        p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+        if defects
+            defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+            locP = [defects_p[i][1:2] for i in each(defects_p)]
+            locN = [defects_m[i][1:2] for i in each(defects_m)]
+            highlight_defects!(p2,Lx,Ly,locP,locN)
+        end
+        return p2
+    end
+end
+
+function highlight_defects!(p,Lx,Ly,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
+    for defect in defects_p
+        scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
+    end
+    for defect in defects_m
+        scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
+    end
+    xlims!((1,Lx))
+    ylims!((1,Ly))
+    return p
+end
