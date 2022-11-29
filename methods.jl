@@ -89,11 +89,20 @@ function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
             x,y = pos[:,n]
             thetas[n] = atan(Ly/2 - y,Lx/2 - x + params[2]/2) - atan(Ly/2 - y,Lx/2 - x - params[2]/2) # +1 defect by convention
         end
-    # elseif params[1] == "1Dwave"
-    #     # then params[2] is "vertical"/"horizontal"
-    #     # then params[3] is the number of waves
-    #     if params[2] == "vertical"
-    #
+    elseif params[1] == "1Dwave"
+        # then params[2] is "vertical"/"horizontal"
+        # then params[3] is the number of waves
+        thetas = zeros(N)
+        if params[2] == "horizontal"
+            for n in 1:N thetas[n] = mod(params[3]*2pi*pos[1,n]/Lx,2pi) end
+        elseif params[2] == "vertical"
+            for n in 1:N thetas[n] = mod(params[3]*2pi*pos[2,n]/Ly,2pi) end
+        end
+    elseif params[1] == "2Dwave"
+        # then params[2] is the number of horizontal waves
+        # then params[3] is the number of vertical waves
+        thetas = zeros(N)
+        for n in 1:N thetas[n] = mod(π .+ π/2*(sin(params[2]*pos[1,n]*2pi/Lx)+sin(params[3]*pos[2,n]*2pi/Lx)),2pi) end
     end
     return float_type.(pos),float_type.(thetas),float_type.(psis),float_type.(omegas)
 end

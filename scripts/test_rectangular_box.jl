@@ -11,8 +11,8 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 N = Int(1E4)
     rho = 1
     v0 = 1
-    σ  = 0.
-    aspect_ratio = 1.2# Lx/Ly
+    σ  = 0.3
+    aspect_ratio = 1# Lx/Ly
     Lx  = round(Int,sqrt(aspect_ratio*N/rho))
     Ly  = round(Int,sqrt(N/rho/aspect_ratio))
     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
@@ -36,19 +36,21 @@ update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,1:5)
 dft.defectsN[1].pos
 MSD(dft,Lx,Ly)
 
+## Different init types
+aspect_ratio = 1# Lx/Ly
+Lx  = round(Int,sqrt(aspect_ratio*N/rho))
+Ly  = round(Int,sqrt(N/rho/aspect_ratio))
 
+params_init = ["1Dwave","horizontal",2]
+params_init = ["2Dwave",2,2]
+    pos,thetas,psis,omegas = initialisation(N,Lx,Ly,σ,params_init)
+    plot(pos,thetas,N,Lx,Ly)
 
-
-
-
-
-
-
-
-
-
-
-
+for i in 1:1000
+    pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
+end
+    plot(pos,thetas,N,Lx,Ly)
+scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=(512,512/4),xlims=(0,Lx),ylims=(0,Ly),aspect_ratio=1/aspect_ratio)
 
 
 &
