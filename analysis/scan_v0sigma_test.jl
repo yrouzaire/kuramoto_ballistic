@@ -14,7 +14,7 @@ filename = "data/scan_v0_sigma_N1E4_rho1_tmax100000.0.jld2"
 filename = "data/scan_v0_sigma_rho1_N1E4_tmax1E4.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 
-histogram(runtimes*15*11*11/5/6/3600/24/50,bins=20)
+histogram(runtimes*15*11*11/6/3600/24/50,bins=20)
 histogram(runtimes/3600/24,bins=20)
 Ps_avg = nanmean(Ps,7) # N rho T v0 sigma t init R
 Ps_std = nanstd(Ps,7) # N rho T v0 sigma t init R
