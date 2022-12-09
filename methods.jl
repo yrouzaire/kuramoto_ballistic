@@ -910,54 +910,54 @@ function remove_negative(input)
 end
 
 ## Plotting methods
-import Plots.plot
-function plot(pos,thetas,N,Lx,Ly;particles=false,vertical=false,size=(512,512),defects=false)
-    cols = cgrad([:black,:blue,:green,:orange,:red,:black])
-    if particles
-        if vertical
-            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
-            thetas_cg = cg(pos,thetas,N,Lx,Ly)
-            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
-            if defects
-                defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
-                locP = [defects_p[i][1:2] for i in each(defects_p)]
-                locN = [defects_m[i][1:2] for i in each(defects_m)]
-                highlight_defects!(p2,Lx,Ly,locP,locN)
-            end
-            return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]))
-        else
-            p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
-            thetas_cg = cg(pos,thetas,N,Lx,Ly)
-            p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
-            if defects
-                defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
-                locP = [defects_p[i][1:2] for i in each(defects_p)]
-                locN = [defects_m[i][1:2] for i in each(defects_m)]
-                highlight_defects!(p2,Lx,Ly,locP,locN)
-            end
-            return plot(p1,p2,size=(2*size[1],size[2]))
-        end
-    else
-        thetas_cg = cg(pos,thetas,N,Lx,Ly)
-        p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
-        if defects
-            defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
-            locP = [defects_p[i][1:2] for i in each(defects_p)]
-            locN = [defects_m[i][1:2] for i in each(defects_m)]
-            highlight_defects!(p2,Lx,Ly,locP,locN)
-        end
-        return p2
-    end
-end
-
-function highlight_defects!(p,Lx,Ly,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
-    for defect in defects_p
-        scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
-    end
-    for defect in defects_m
-        scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
-    end
-    xlims!((1,Lx))
-    ylims!((1,Ly))
-    return p
-end
+# import Plots.plot
+# function plot(pos,thetas,N,Lx,Ly;particles=false,vertical=false,size=(512,512),defects=false,title="")
+#     cols = cgrad([:black,:blue,:green,:orange,:red,:black])
+#     if particles
+#         if vertical
+#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
+#             thetas_cg = cg(pos,thetas,N,Lx,Ly)
+#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+#             if defects
+#                 defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
+#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
+#                 highlight_defects!(p2,Lx,Ly,locP,locN)
+#             end
+#             return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]),title=title)
+#         else
+#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
+#             thetas_cg = cg(pos,thetas,N,Lx,Ly)
+#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+#             if defects
+#                 defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
+#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
+#                 highlight_defects!(p2,Lx,Ly,locP,locN)
+#             end
+#             return plot(p1,p2,size=(2*size[1],size[2]),title=title)
+#         end
+#     else
+#         thetas_cg = cg(pos,thetas,N,Lx,Ly)
+#         p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx,title=title)
+#         if defects
+#             defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+#             locP = [defects_p[i][1:2] for i in each(defects_p)]
+#             locN = [defects_m[i][1:2] for i in each(defects_m)]
+#             highlight_defects!(p2,Lx,Ly,locP,locN)
+#         end
+#         return p2
+#     end
+# end
+#
+# function highlight_defects!(p,Lx,Ly,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
+#     for defect in defects_p
+#         scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
+#     end
+#     for defect in defects_m
+#         scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
+#     end
+#     xlims!((1,Lx))
+#     ylims!((1,Ly))
+#     return p
+# end

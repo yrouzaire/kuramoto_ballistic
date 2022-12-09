@@ -25,6 +25,26 @@ end
 v0s
 heatmap(v0s[2:end],sigmas,Ps_avg[1,1,1,2:end,:,1,end,1]',xaxis=:log,c=cgrad([:red,:orange,:green]),clims=(0,1))
 
+## Correlation function at final time for different v0
+ind_sig = 1
+    p=plot(xlabel="r",ylabel="C(r,∞)",legend=:outerright,size=(550,400),yaxis=:log,title="σ = $(sigmas[ind_sig])",ylims=(1E-2,1.2))
+    for i in 1:length(v0s)
+        plot!(0.5:0.5:50,remove_negative(Cs_avg[2:end,1,1,1,i,ind_sig,1,end,1]),label="v = $(v0s[i])",rib=0)
+    end
+    savefig("figures\\transition_SR-LR_sigma$(sigmas[ind_sig]).png")
+    p
+
+
+## Correlation length over time for different v0
+ind_sig = 1
+    p=plot(xlabel="t",ylabel="ξ(t)",legend=:outerright,size=(550,400),axis=:log,title="σ = $(sigmas[ind_sig])")
+    for i in 1:length(v0s)
+        plot!(times_log,xis_avg[i,ind_sig,:],label="v = $(v0s[i])",rib=0)
+    end
+    plot!(x->sqrt(x),c=:black)
+    savefig("figures\\xit_SR-LR_sigma$(sigmas[ind_sig]).png")
+    p
+
 ## Correlation functions over time
 ind_v0 = 8
     ind_sigma = 2
