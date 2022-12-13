@@ -104,7 +104,7 @@ function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
         thetas = zeros(N)
         for n in 1:N thetas[n] = mod(π .+ π/2*(sin(params[2]*pos[1,n]*2pi/Lx)+sin(params[3]*pos[2,n]*2pi/Lx)),2pi) end
     end
-    return float_type.(pos),float_type.(thetas),float_type.(psis),float_type.(omegas)
+    return float_type.(pos),float_type.(thetas),float_type.(omegas),float_type.(psis)
 end
 
 ## Time Evolution
@@ -148,6 +148,8 @@ function get_list_neighbours(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:Abs
     ind_neighbours = Vector{Vector{Int}}(undef,N)
     nb_cells_x = Int(div(Lx,R0)) + 1
     nb_cells_y = Int(div(Ly,R0)) + 1
+    list,head = construct_cell_list(pos,N,Lx,Ly)
+
 
     # offsets = Vector{Int}[[0,0],[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]
     for n in 1:N
@@ -170,7 +172,7 @@ function get_list_neighbours(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:Abs
     return ind_neighbours
 end
 
-function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},ind_neighbours::Vector{Vector{Int}},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
+function update(pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},ind_neighbours::Vector{Vector{Int}},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
     thetas_new = zeros(FT,N)
 
     if v0 == 0  pos_new = pos
