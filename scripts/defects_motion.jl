@@ -9,6 +9,38 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 &
 
 
+N = Int(1E4)
+    # rho = 1.3*(4.51/pi)
+    rho = 2
+    v0 = 0
+    σ  = 0.3
+    aspect_ratio = 1 # Lx/Ly
+    Lx  = round(Int,sqrt(N/rho*aspect_ratio))
+    Ly  = round(Int,sqrt(N/rho/aspect_ratio))
+    T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
+    tmax = 10 ; dt = determine_dt(T,σ,v0,N,rho)
+    global R0 = 1
+
+t = 0.0
+    params_init = ["hightemp",Lx/2]
+    pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
+    plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+
+ind_neighbours0 = get_list_neighbours(pos,N,Lx,Ly)
+z = @elapsed while t < tmax
+    t += dt
+    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours0,T,v0,N,Lx,Ly,dt)
+end
+prinz(z)
+
+z = @elapsed while t < tmax
+    t += dt
+    ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+end
+prinz(z)
+plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+
 #= This file investigates the motion of defects.
 1. Departure from XY model as v varies at fixed T
 2. Departure from XY model as T varies at fixed v
@@ -20,8 +52,10 @@ Basically consists in scan on two parameters, v and sigma
 
 ## For cluster
 N = Int(1E4)
-    rho = 1
-    L  = round(Int,sqrt(N/rho))
+    rho = 2
+    aspect_ratio = 1 # Lx/Ly
+    Lx  = round(Int,sqrt(N/rho*aspect_ratio))
+    Ly  = round(Int,sqrt(N/rho/aspect_ratio))
     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
     # In vitro (green region only)
     v_sigmas = [ (0,0) , (0.05,0) , (0.1,0) , (0.5,0) , (1,0) ,
@@ -31,27 +65,29 @@ N = Int(1E4)
     # v_sigmas = [ (0,0) , (0.05,0) , (0.1,0) , (0.5,0) , (1,0) ,
     #              (0,0.1) , (0.05,0.1) , (0.1,0.1) , (0.5,0.1) , (1,0.1) ,
     #              (0.4,0.2) , (0.65,0.3)]
-    v_sigmas = [ (0.65,0.3) ]
-    transients = 1 ; tmax = 1000 ;
+    v_sigmas = [ (0.5,0.1) ]
+    transients = 2 ; tmax = 100 ;
     times = logspace(round(Int,transients),tmax,50,digits=1)
-    times = 10:10:tmax
+    times = 5:5:tmax
 
 dfts = Array{DefectTracker,1}(undef,length(v_sigmas))
 z = @elapsed for i in each(v_sigmas)
     v0,σ = v_sigmas[i]
     dt = determine_dt(T,σ,v0,N,rho)
-    t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["pair",round(Int,L/2)])
-    while t<transients
-        t += dt
-        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
-    end
-    dft = DefectTracker(pos,thetas,N,L,t)
-    dft,pos,thetas,t = update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,L,dt,t,times)
+    t = 0. ; pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,["pair",round(Int,Lx/2)])
+    ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+
+    pos,thetas = evolve(pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt,transients)
+
+    dft = DefectTracker(pos,thetas,N,Lx,Ly,t)
+    dft,pos,thetas,t = track!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,times)
     dfts[i] = dft
 end
 prinz(z)
 
-MSD(dfts,L)
+plot(MSD(dfts,Lx,Ly)[1])
+plot(interdefect_distance(dfts[1].defectsP[1],dfts[1].defectsN[1],Lx,Ly))
 
 comments = "Study the motion of defects at various locations in phase space. Goal: understand the role of v and sigma on the MSD. Preliminary results indicate that MSD ~ t even for σ>0. Understand the transition from immobile (MSD ~ t^1.5) to mobile (MSD ~ t)."
 filename = "data/defects_motion_IN_VITRO_v0s_sigmas_N1E4_r$real.jld2"

@@ -12,12 +12,12 @@ N = Int(1E4)
     # rho = 1.3*(4.51/pi)
     rho = 2
     v0 = 0
-    σ  = 0.3
+    σ  = 0.05
     aspect_ratio = 1 # Lx/Ly
     Lx  = round(Int,sqrt(N/rho*aspect_ratio))
     Ly  = round(Int,sqrt(N/rho/aspect_ratio))
     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
-    tmax = 100 ; dt = determine_dt(T,σ,v0,N,rho)
+    tmax = 1000 ; dt = determine_dt(T,σ,v0,N,rho)
     global R0 = 1
 
 t = 0.0
@@ -30,7 +30,9 @@ z = @elapsed while t < tmax
     t += dt
     pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours0,T,v0,N,Lx,Ly,dt)
 end
-prinz(z)
+    prinz(z)
+    plot(pos,thetas,N,Lx,Ly,particles=true,defects=false,title="t = $(round(Int,t))")
+
 
 z = @elapsed while t < tmax
     t += dt

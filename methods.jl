@@ -88,6 +88,10 @@ function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
         for n in 1:N
             x,y = pos[:,n]
             thetas[n] = atan(Ly/2 - y,Lx/2 - x + params[2]/2) - atan(Ly/2 - y,Lx/2 - x - params[2]/2) # +1 defect by convention
+            # smooth the transition between top and bottom
+            if (y < 0.05*Ly) || (y > 0.95*Ly)
+                thetas[n] = 0
+            end
         end
     elseif params[1] == "1Dwave"
         # then params[2] is "vertical"/"horizontal"
@@ -170,6 +174,25 @@ function get_list_neighbours(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:Abs
         ind_neighbours[n] = ind_neighbours_n
     end
     return ind_neighbours
+end
+
+function evolve(pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,tmax::Number) where FT<:AbstractFloat
+    t = 0.0
+    if v0 == 0
+        ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+        while t<tmax
+            t += dt
+            pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+        end
+    else
+        while t<tmax
+            t += dt
+            ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+            pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+        end
+    end
+
+    return pos,thetas
 end
 
 function update(pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},ind_neighbours::Vector{Vector{Int}},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
@@ -623,12 +646,42 @@ function annihilate_defects(dt::DefectTracker,ids_annihilated_defects,Lx,Ly)
     return dt
 end
 
-function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
+function track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
+    if v0 == 0
+        return update_and_track_v0!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,times)
+    else
+        return update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,times)
+    end
+end
+function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
     token = 1
     while t < tmax
         t += dt
-        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
+        ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+        pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
         if t ≥ times[token]
+            # p=plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+            # display(p)
+            if number_active_defects(dft) == 0
+                println("Simulation stopped, there is no defects left.")
+                break
+            end
+            println("t = ",round(t,digits=1)," & n(t) = ",number_active_defectsP(dft)," + ",number_active_defectsN(dft))
+            update_DefectTracker!(dft,pos,thetas,N,Lx,Ly,t)
+            token = min(token+1,length(times))
+        end
+    end
+    return dft,pos,thetas,t
+end
+function update_and_track_v0!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
+    token = 1
+    ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+    while t < tmax
+        t += dt
+        pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+        if t ≥ times[token]
+            # p=plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+            # display(p)
             if number_active_defects(dft) == 0
                 println("Simulation stopped, there is no defects left.")
                 break
@@ -843,7 +896,7 @@ function square_displacement(d::Defect,Lx,Ly)
 end
 
 ## Defects Analysis : Distance between defects
-function interdefect_distance(dft::DefectTracker,defect1::Defect,defect2::Defect,Lx,Ly)
+function interdefect_distance(defect1::Defect,defect2::Defect,Lx,Ly)
     # TODO take care of case with creation and/or annihilation time different.
     # So far, this care is left to the user...
     # @assert defect1.creation_time == defect2.creation_time
