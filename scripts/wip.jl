@@ -2,11 +2,11 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     using JLD2,StatsBase,Distributions,LinearAlgebra,Parameters,Random
     using Plots,ColorSchemes,LaTeXStrings
     include("../methods.jl")
-    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
-
+hzebfhz
 ## Test specific function for evolution at v0 = 0
 N = Int(1E4)
     #rho = 1.3*(4.51/pi)
@@ -22,20 +22,10 @@ N = Int(1E4)
 
 using BenchmarkTools
 t = 0.0
-params_init = ["hightemp",Lx/2]
-pos,thetas,psis,omegas = initialisation(N,Lx,Ly,σ,params_init)
-    scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=(512,512),xlims=(0,Lx),ylims=(0,Ly),aspect_ratio=1/aspect_ratio)
+params_init = ["hightemp",L/2]
+pos,vel_angles,thetas,omegas = initialisation(N,L,σ,params_init)
+    scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
 
-function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
-
-update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
-@btime update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
-list,head = construct_cell_list(pos,N,Lx,Ly)
-@btime update_v0(pos,thetas,omegas,list,head,T,N,Lx,Ly,dt)
-
-ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
-update_v0(pos,thetas,omegas,ind_neighbours,T,N,Lx,Ly,dt)
-@btime update_v0(pos,thetas,omegas,ind_neighbours,T,N,Lx,Ly,dt)
 
 ## Development of vortex localisation (and type identification ?)
 N = Int(1E4)
