@@ -107,54 +107,6 @@ function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
     return float_type.(pos),float_type.(thetas),float_type.(psis),float_type.(omegas)
 end
 
-function construct_cell_list(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:AbstractFloat
-    nb_cells_x = Int(div(Lx,R0)) + 1
-    nb_cells_y = Int(div(Ly,R0)) + 1
-    head = -ones(Int,nb_cells_x,nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
-    list = -ones(Int,N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
-    for n in 1:N
-        cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-        list[n] = head[cellx,celly]
-        head[cellx,celly] = n
-    end
-    return list,head
-end
-
-function get_neighbouring_cells(cellx,celly,nb_cells_x,nb_cells_y)::Vector{Vector{Int}}
-    should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
-    if should_take_mod
-        neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),celly] , [cellx,mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),celly] , [mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)] ,  [mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y)]]
-    else
-        neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
-    end
-    return neighbouring_cells
-end
-
-function get_list_neighbours(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:AbstractFloat
-    ind_neighbours = Vector{Vector{Int}}(undef,N)
-    nb_cells_x = Int(div(Lx,R0)) + 1
-    nb_cells_y = Int(div(Ly,R0)) + 1
-
-    for n in 1:N
-        cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-        neighbouring_cells = get_neighbouring_cells(cellx,celly,nb_cells_x,nb_cells_y)
-        poscur = pos[:,n]
-        ind_neighbours_n = Int[]
-        for (i,j) in neighbouring_cells
-            next = head[i,j]
-            if next ≠ -1
-                if 0 < dist(poscur,pos[:,next],Lx,Ly) < R0 push!(ind_neighbours_n,next) end
-                while list[next] ≠ -1
-                    if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) < R0 push!(ind_neighbours_n,list[next]) end
-                    next = list[next]
-                end
-            end
-        end
-        ind_neighbours[n] = ind_neighbours_n
-    end
-    return ind_neighbours
-end
-
 function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
     pos_new    = zeros(FT,2,N)
     thetas_new = zeros(FT,N)
@@ -166,15 +118,27 @@ function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vect
     pos_new[1,:] = mod.(pos_new[1,:],Lx)
     pos_new[2,:] = mod.(pos_new[2,:],Ly)
 
-    list,head = construct_cell_list(pos,N,Lx,Ly)
+    ## List construction
     nb_cells_x = Int(div(Lx,R0)) + 1
     nb_cells_y = Int(div(Ly,R0)) + 1
+    head = -ones(Int,nb_cells_x,nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
+    list = -ones(Int,N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
+    for n in 1:N
+        cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
+        list[n] = head[cellx,celly]
+        head[cellx,celly] = n
+    end
 
     for n in 1:N
         poscur = pos[:,n]
 
         cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-        neighbouring_cells = get_neighbouring_cells(cellx,celly,nb_cells_x,nb_cells_y)
+        should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
+        if should_take_mod
+            neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),celly] , [cellx,mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),celly] , [mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)] ,  [mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y)]]
+        else
+            neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
+        end
 
         ind_neighbours = Int[]
         for (i,j) in neighbouring_cells
@@ -201,39 +165,6 @@ function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vect
     return pos_new,thetas_new
 end
 
-function update_v0(pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},ind_neighbours::Vector{Vector{Int}},T::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
-    thetas_new = zeros(FT,N)
-
-    for n in 1:N
-        poscur = pos[:,n]
-
-        # cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-        # neighbouring_cells = get_neighbouring_cells(cellx,celly,nb_cells_x,nb_cells_y)
-        #
-        # ind_neighbours = Int[]
-        # for (i,j) in neighbouring_cells
-        #     next = head[i,j]
-        #     if next ≠ -1
-        #         if 0 < dist(poscur,pos[:,next],Lx,Ly) < R0 push!(ind_neighbours,next) end
-        #         while list[next] ≠ -1
-        #             if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) < R0 push!(ind_neighbours,list[next]) end
-        #             next = list[next]
-        #         end
-        #     end
-        # end
-
-        thetas_neighbours = thetas[ind_neighbours[n]]
-
-        # Sync Theta
-        theta = thetas[n]
-        if length(thetas_neighbours) > 0
-            thetas_new[n] = theta + dt * omegas[n] + dt * sum(sin,thetas_neighbours .- theta) + sqrt(2T*dt)*randn()
-        else
-            thetas_new[n] = theta + dt * omegas[n] + sqrt(2T*dt)*randn()
-        end
-    end
-    return pos, thetas_new
-end
 ## Measurements
 function polarOP(thetas::Vector{T}) where T<:AbstractFloat
     tmp = Complex(0)
@@ -980,7 +911,7 @@ end
 
 ## Plotting methods
 # import Plots.plot
-# function plot(pos,thetas,N,Lx,Ly;particles=false,vertical=particles,size=(512,512),defects=false,title="")
+# function plot(pos,thetas,N,Lx,Ly;particles=false,vertical=false,size=(512,512),defects=false,title="")
 #     cols = cgrad([:black,:blue,:green,:orange,:red,:black])
 #     if particles
 #         if vertical
