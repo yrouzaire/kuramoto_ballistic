@@ -63,7 +63,7 @@ function determine_dt(T,σ,v0,N,rho)
             arbitrary_coeff^2*π/4/T])
 end
 
-## Initialisation and evolution
+## Initialisation
 function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
     pos = rand(2,N)
     pos[1,:] *= Lx
@@ -107,18 +107,8 @@ function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
     return float_type.(pos),float_type.(thetas),float_type.(psis),float_type.(omegas)
 end
 
-function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
-    pos_new    = zeros(FT,2,N)
-    thetas_new = zeros(FT,N)
-
-    # Update position
-    for n in eachindex(psis)
-        pos_new[:,n] = pos[:,n] + v0*dt*[cos(psis[n]),sin(psis[n])]
-    end
-    pos_new[1,:] = mod.(pos_new[1,:],Lx)
-    pos_new[2,:] = mod.(pos_new[2,:],Ly)
-
-    ## List construction
+## Time Evolution
+function construct_cell_list(pos::Matrix{T},N::Int,Lx::Int,Ly::Int)::Tuple{Vector{Int},Matrix{Int}} where T<:AbstractFloat
     nb_cells_x = Int(div(Lx,R0)) + 1
     nb_cells_y = Int(div(Ly,R0)) + 1
     head = -ones(Int,nb_cells_x,nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
@@ -128,33 +118,75 @@ function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vect
         list[n] = head[cellx,celly]
         head[cellx,celly] = n
     end
+    return list,head
+end
 
+function get_neighbouring_cells(cellx::Int,celly::Int,nb_cells_x::Int,nb_cells_y::Int)::Vector{Vector{Int}}
+    # In the end, this function is quite fast, it contributes +3ms for N=1E4 particles
+    should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
+    if should_take_mod
+        neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),celly] , [cellx,mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),celly] , [mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)] ,  [mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y)]]
+    else
+        neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
+    end
+    return neighbouring_cells
+
+    # Code below as fast but less clear
+    # if should_take_mod
+    #     neighbouring_cells = Tuple{Int,Int}[ (cellx,celly) , (cellx,mod1(celly+1,nb_cells_y)) , (mod1(cellx+1,nb_cells_x),celly) , (cellx,mod1(celly-1,nb_cells_y)) , (mod1(cellx-1,nb_cells_x),celly) , (mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)) ,  (mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)) , (mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)) , (mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y))]
+    # else
+    #     neighbouring_cells = Tuple{Int,Int}[ (cellx,celly) , (cellx,celly+1) , (cellx+1,celly) , (cellx,celly-1) , (cellx-1,celly) , (cellx+1,celly+1) ,  (cellx-1,celly-1) , (cellx-1,celly+1) , (cellx+1,celly-1)]
+    # end
+    # return CartesianIndex.(neighbouring_cells)
+
+    # Code below is 2x slower
+    # neighbouring_cells = [[cellx,celly]] .+ [[0,0],[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]
+    # neighbouring_cells = [mod1.(neighbouring_cells[i],nb_cells_x) for i in 1:9]
+end
+
+function get_list_neighbours(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:AbstractFloat
+    ind_neighbours = Vector{Vector{Int}}(undef,N)
+    nb_cells_x = Int(div(Lx,R0)) + 1
+    nb_cells_y = Int(div(Ly,R0)) + 1
+
+    # offsets = Vector{Int}[[0,0],[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]
     for n in 1:N
-        poscur = pos[:,n]
-
         cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-        should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
-        if should_take_mod
-            neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),celly] , [cellx,mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),celly] , [mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)] ,  [mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y)]]
-        else
-            neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
-        end
-
-        ind_neighbours = Int[]
-        for (i,j) in neighbouring_cells
+        poscur = pos[:,n]
+        ind_neighbours_n = Int[]
+        for (i,j) in get_neighbouring_cells(cellx,celly,nb_cells_x,nb_cells_y)
+            # After some questionning, the line above is not slow, what takes time is the cell algo itself
             next = head[i,j]
             if next ≠ -1
-                if 0 < dist(poscur,pos[:,next],Lx,Ly) < R0 push!(ind_neighbours,next) end
+                if 0 < dist(poscur,pos[:,next],Lx,Ly) < R0 push!(ind_neighbours_n,next) end
                 while list[next] ≠ -1
-                    if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) < R0 push!(ind_neighbours,list[next]) end
+                    if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) < R0 push!(ind_neighbours_n,list[next]) end
                     next = list[next]
                 end
             end
         end
+        ind_neighbours[n] = ind_neighbours_n
+    end
+    return ind_neighbours
+end
 
-        thetas_neighbours = thetas[ind_neighbours]
+function update(pos::Matrix{FT},thetas::Vector{FT},psis::Vector{FT},omegas::Vector{FT},ind_neighbours::Vector{Vector{Int}},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number) where FT<:AbstractFloat
+    thetas_new = zeros(FT,N)
 
-        # Sync Theta
+    if v0 == 0  pos_new = pos
+    else
+        pos_new    = zeros(FT,2,N)
+        # Update position
+        for n in eachindex(psis)
+            pos_new[:,n] = pos[:,n] + v0*dt*[cos(psis[n]),sin(psis[n])]
+        end
+        pos_new[1,:] = mod.(pos_new[1,:],Lx)
+        pos_new[2,:] = mod.(pos_new[2,:],Ly)
+    end
+
+    for n in 1:N
+        poscur = pos[:,n]
+        thetas_neighbours = thetas[ind_neighbours[n]]
         theta = thetas[n]
         if length(thetas_neighbours) > 0
             thetas_new[n] = theta + dt * omegas[n] + dt * sum(sin,thetas_neighbours .- theta) + sqrt(2T*dt)*randn()
