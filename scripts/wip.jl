@@ -6,7 +6,11 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
+<<<<<<< HEAD
 
+=======
+bad code
+>>>>>>> 67a9bb99babb742b63129c8fcbcbae8b46c55851
 ## Test specific function for evolution at v0 = 0
 N = Int(1E4)
     #rho = 1.3*(4.51/pi)
