@@ -11,28 +11,38 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 filename = "data/CORR_todeterminate_phase_N1E4_tmax1E4.jld2"
 filename = "data/XIN_during_coarsening_v0_sigma_N1E4_tmax2E3.jld2"
 filename = "data/scan_v0_sigma_N1E4_rho1_tmax100000.0.jld2"
-filename = "data/scan_v0_sigma_rho1_N1E4_tmax1E4.jld2"
+filename = "data/nature_phase_impact_rho_N1E4_tmax1E4.jld2"
+filename = "data/scan_for_discussion_Parisa_v0_sigma_rho_N1E3_tmax2E3.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
-
-histogram(runtimes*15*11*11/6/3600/24/50,bins=20)
 histogram(runtimes/3600/24,bins=20)
-Ps_avg = nanmean(Ps,7) # N rho T v0 sigma t init R
-Ps_std = nanstd(Ps,7) # N rho T v0 sigma t init R
-ns_avg = nanmean(ns,7) # N rho T v0 sigma t init R
-Cs_avg = nanmean(Cs,8)
-xis_avg = zeros(length(v0s),length(sigmas),length(times_log))
-for i in each(v0s) , j in each(sigmas) , t in each(times_log)
-    xis_avg[i,j,t] = corr_length(Cs_avg[:,1,1,1,i,j,1,t,1],0:0.5:50)
+Ps_avg = nanmean(Ps,8) # N rho T v0 sigma t init R
+Ps_std = nanstd(Ps,8) # N rho T v0 sigma t init R
+ns_avg = nanmean(ns,8) # N rho T v0 sigma t init R
+real_completed = []
+for r in 1:R
+    try
+        Cs[r]
+        push!(real_completed,r)
+    catch ;
+    end
+end
+Cs_avg = mean(Cs[real_completed])
+xis_avg = NaN*zeros(length(rhos),length(v0s),length(sigmas),length(times_log))
+for p in each(rhos), i in each(v0s) , j in each(sigmas) , t in each(times_log)
+    rr = 0:0.5:round(sqrt(Ns)/rhos[p])
+    xis_avg[p,i,j,t] = corr_length(Cs_avg[1,p,1,i,j,1,t],rr)
 end
 
 plot(times_log,Ps_avg[1,1,1,3,2,:,1],axis=:log,rib=0)
 
 # Heatmap of P at final time
 p=plot(xlabel=L"v_0",ylabel=L"\sigma",colorbartitle="P",size=(500,400))
-    heatmap!(v0s[2:end],sigmas,Ps_avg[1,1,1,2:end,:,end,1,1]',xaxis=:log,c=cgrad([:red,:orange,:green]),clims=(0,1))
+    heatmap!(v0s[2:end],sigmas,Ps_avg[1,1,1,2:end,:,end,end-19,1]',xaxis=:log,c=cgrad([:red,:orange,:green]),clims=(0,1))
     # plot!(x->0.25(x-0.1)^0.5,xlims=(v0s[2],v0s[end]),ylims=(0,sigmas[end]),c=:black)
 # savefig("figures/heatmap_sigmav0_rho2.png")
-
+vel = 1
+    sig = 4
+    plot(times_log,Ps_avg[1,1,1,vel,sig,1,:,1],uaxis=:log,ylims=(0,1))
 # Animation of Heatmap over time
 anim = @animate for t in each(times_log)
     p_low=plot(xlabel=L"v_0",ylabel=L"\sigma",title="t = $(times_log[t])")
@@ -45,7 +55,7 @@ end
 
 # Heatmap of N at final time
 p=plot(xlabel=L"v_0",ylabel=L"\sigma",colorbartitle=L"\log_{10}(n+1)",size=(500,400))
-    heatmap!(v0s[2:end],sigmas,log10.(ns_avg[1,2,1,2:end,:,1,end,1]' .+1),xaxis=:log,c=cgrad([:green,:orange,:red]))
+    heatmap!(v0s[2:end],sigmas,log10.(ns_avg[1,end,1,2:end,:,1,end,1]' .+1),xaxis=:log,c=cgrad([:green,:orange,:red]))
     # plot!(x->0.25(x-0.1)^0.5,xlims=(v0s[2],v0s[end]),ylims=(0,sigmas[end]),c=:black)
 savefig("figures/heatmapN_sigmav0_rho2.png")
 

@@ -7,14 +7,14 @@ global const R0 = 1
 
 ## Phase Diagram
 Ns = Int.(1E3)
-    rhos = collect(1:0.1:2)
+    rhos = collect(1:0.15:2)
     Ts     = 0.1
-    # v0s = vcat(0,logspace(0.001,3,15,digits=3))
-    v0s    = [0,0.05]
+    v0s = vcat(0,logspace(0.001,3,15,digits=3))
+    # v0s    = [0,0.05]
     sigmas = collect(0:0.05:0.4)
     inits  = ["disordered"]
 
-    tmax = 1E4; times_log = logspace(0.1,tmax,32)
+    tmax = 2E3; times_log = logspace(0.1,tmax,32)
 
     P  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
     n  = zeros(length(Ns),length(rhos),length(Ts),length(v0s),length(sigmas),length(inits),length(times_log))
