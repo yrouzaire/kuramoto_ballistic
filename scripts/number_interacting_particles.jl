@@ -3,7 +3,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
-    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
@@ -13,7 +13,6 @@ a test particles interacts with over time. Underlying idea: understanding
 the relation between moving particles and MF approximation.
 =#
 plot(legend=:bottomright,xlabel="Time (arb. units)",ylabel="n(t)/N",ylims=(0,1))
-
 N = Int(4E2)
     rho = 5
     L = round(Int,sqrt(N/rho))
@@ -73,14 +72,76 @@ N = Int(4E2)
     plot!(nintavg[1:100:end]/N,m=:circle,label="ρ = $rho")
     # plot!(x->2/pi*atan(x/28))
 
-savefig("figures/number_visited_particles_rho.png")
+# savefig("figures/number_visited_particles_rho.png")
 
 plot!(x->2/pi*atan((x-1)/21*1),c=:black)
 plot!(x->2/pi*atan((x-1)/21*2),c=:black)
 plot!(x->2/pi*atan((x-1)/21*3),c=:black)
 plot!(x->2/pi*atan((x-1)/21*5),c=:black)
 
+## Visualizing the are of seen particules over time
+for v0 in [0.1,0.5,1,2,5]
+for v0 in [5]
+    N = Int(1E4)
+        rho = 5
+        L  = round(Int,sqrt(N/rho))
+        T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
+        println("v0 = $v0")
+        sigma = 0
 
+    global pos,thetas,omegas,psis = initialisation(N,L,L,sigma)
+
+    dt = 0.1
+    Niter = 500
+    seen = zeros(Int,N)
+    z = @elapsed anim = @animate for t in 1:Niter
+
+        for n in eachindex(psis)
+            pos[:,n] += v0*dt*[cos(psis[n]),sin(psis[n])]
+        end
+        pos = mod.(pos,L)
+
+        nb_cells_1D = Int(div(L,R0)) + 1
+        head = -ones(Int,nb_cells_1D,nb_cells_1D) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
+        list = -ones(Int,N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
+        for n in 1:N
+            cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
+            list[n] = head[cellx,celly]
+            head[cellx,celly] = n
+        end
+
+        for n in 1:N
+            poscur = pos[:,n]
+
+            cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
+            should_take_mod = (cellx == 1) || (cellx == nb_cells_1D) || (celly == 1) || (celly == nb_cells_1D)
+            if should_take_mod
+                neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_1D)] , [mod1(cellx+1,nb_cells_1D),celly] , [cellx,mod1(celly-1,nb_cells_1D)] , [mod1(cellx-1,nb_cells_1D),celly] , [mod1(cellx+1,nb_cells_1D),mod1(celly+1,nb_cells_1D)] ,  [mod1(cellx-1,nb_cells_1D),mod1(celly-1,nb_cells_1D)] , [mod1(cellx-1,nb_cells_1D),mod1(celly+1,nb_cells_1D)] , [mod1(cellx+1,nb_cells_1D),mod1(celly-1,nb_cells_1D)]]
+            else
+                neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
+            end
+
+            ind_neighbours = Int[]
+            for (i,j) in neighbouring_cells
+                next = head[i,j]
+                if next ≠ -1
+                    if 0 < dist(poscur,pos[:,next],L,L) < R0 push!(ind_neighbours,next) end
+                    while list[next] ≠ -1
+                        if 0 < dist(poscur,pos[:,list[next]],L,L) < R0 push!(ind_neighbours,list[next]) end
+                        next = list[next]
+                    end
+                end
+            end
+            if n == 1
+                seen[ind_neighbours] .= 1
+            end
+        end
+        p=scatter(pos[1,:],pos[2,:],marker_z = seen[:,end],c=cgrad([:green,:red]),m=2,clims=(0,1),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
+        scatter!((pos[1,1],pos[2,1]),c = :black,m=5)# display(p)
+    end
+    prinz(z)
+    mp4(anim,"films/dispersion_seen_v0$(v0).mp4")
+end
 
 ## Solving the dynamics of the fully connected Kuramoto model
 N = Int(1E4)

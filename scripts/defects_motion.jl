@@ -8,38 +8,46 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
+## Cluster results analysis
+filename = "data/defects_motion_IN_VITRO_v0s_sigmas_N1E4.jld2"
+@load filename runtimes T N rho v_sigmas times tmax comments R dfts_fusion dfts_fusion_undef
+histogram(runtimes/3600/24,bins=20)
+L = round(Int,N/rho)
 
-N = Int(1E4)
-    # rho = 1.3*(4.51/pi)
-    rho = 2
-    v0 = 0
-    σ  = 0.3
-    aspect_ratio = 1 # Lx/Ly
-    Lx  = round(Int,sqrt(N/rho*aspect_ratio))
-    Ly  = round(Int,sqrt(N/rho/aspect_ratio))
-    T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
-    tmax = 10 ; dt = determine_dt(T,σ,v0,N,rho)
-    global R0 = 1
-
-t = 0.0
-    params_init = ["hightemp",Lx/2]
-    pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
-    plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
-
-ind_neighbours0 = get_list_neighbours(pos,N,Lx,Ly)
-z = @elapsed while t < tmax
-    t += dt
-    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours0,T,v0,N,Lx,Ly,dt)
+# MSD
+mySD = zeros(length(v_sigmas),length(times)+1,R)
+for i in each(v_sigmas)
+    for r in 1:R
+        positions = dfts_fusion[r][i].defectsP[1].pos
+        pos0 = positions[1]
+        mySD[i,:,r] = [sum(abs2,pos .- pos0) for pos in positions]
+    end
 end
-prinz(z)
+myMSD = mean(mySD,dims=3)[:,:,1]
+p=plot(axis=:log)
+    for i in each(v_sigmas)
+        plot!(times,myMSD[i,2:end])
+    end
+    # plot!(x->x)
+    p
 
-z = @elapsed while t < tmax
-    t += dt
-    ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
-    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+# R(t)
+Rt = zeros(length(v_sigmas),length(times)+1,R)
+for i in each(v_sigmas)
+    for r in 1:R
+        positions = dfts_fusion[r][i].defectsP[1].pos
+        def1 = dfts_fusion[r][i].defectsP[1]
+        def2 = dfts_fusion[r][i].defectsN[1]
+        Rt[i,:,r] = interdefect_distance(def1,def2,L,L)
+    end
 end
-prinz(z)
-plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+meanRt = mean(Rt,dims=3)[:,:,1]
+p=plot(axis=:log)
+    for i in each(v_sigmas)
+        plot!(times,meanRt[i,2:end])
+    end
+    # plot!(x->x)
+    p
 
 #= This file investigates the motion of defects.
 1. Departure from XY model as v varies at fixed T
@@ -182,3 +190,36 @@ plot()
 
 
 plot(mean_distance_to_annihilator(dft,L)[1],rib=mean_distance_to_annihilator(dft,L)[2])
+
+## Archives
+# N = Int(1E4)
+#     # rho = 1.3*(4.51/pi)
+#     rho = 2
+#     v0 = 0
+#     σ  = 0.3
+#     aspect_ratio = 1 # Lx/Ly
+#     Lx  = round(Int,sqrt(N/rho*aspect_ratio))
+#     Ly  = round(Int,sqrt(N/rho/aspect_ratio))
+#     T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
+#     tmax = 10 ; dt = determine_dt(T,σ,v0,N,rho)
+#     global R0 = 1
+#
+# t = 0.0
+#     params_init = ["hightemp",Lx/2]
+#     pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
+#     plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+#
+# ind_neighbours0 = get_list_neighbours(pos,N,Lx,Ly)
+# z = @elapsed while t < tmax
+#     t += dt
+#     pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours0,T,v0,N,Lx,Ly,dt)
+# end
+# prinz(z)
+#
+# z = @elapsed while t < tmax
+#     t += dt
+#     ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+#     pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+# end
+# prinz(z)
+# plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")

@@ -8,23 +8,25 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
-filename = "data/CORR_todeterminate_phase_N1E4_tmax1E4.jld2"
-@load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 
+filename = "data/phase_space_rho_sig_v0_N1E3_tmax2500.jld2"
+@load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 histogram(runtimes/3600/24,bins=20)
+
 Ps_avg = nanmean(Ps,8) # N rho T v0 sigma t init R
 Ps_std = nanstd(Ps,8) # N rho T v0 sigma t init R
 ns_avg = nanmean(ns,8) # N rho T v0 sigma t init R
 Cs_avg = nanmean(Cs,9)
+Cs_avg = mean(Cs)
 xis_avg = zeros(length(v0s),length(sigmas),length(times_log))
 for i in each(v0s) , j in each(sigmas) , t in each(times_log)
     xis_avg[i,j,t] = corr_length(Cs_avg[:,1,1,1,i,j,1,t,1],0:0.5:50)
 end
 
-## Recall the phase space
+## Phase space
 v0s
 heatmap(v0s[2:end],sigmas,Ps_avg[1,1,1,2:end,:,1,end,1]',xaxis=:log,c=cgrad([:red,:orange,:green]),clims=(0,1))
-
+rhos
 ## Correlation function at final time for different v0
 ind_sig = 1
     p=plot(xlabel="r",ylabel="C(r,∞)",legend=:outerright,size=(550,400),yaxis=:log,title="σ = $(sigmas[ind_sig])",ylims=(1E-2,1.2))
