@@ -734,7 +734,7 @@ function update_DefectTracker!(dt::DefectTracker,pos::Matrix{T},thetas::Vector{T
 
         for i in id_just_annihilated_defectP dt.defectsP[i].annihilation_time = dt.current_time end
         for i in id_just_annihilated_defectM dt.defectsN[i].annihilation_time = dt.current_time end
-        dt = annihilate_defects(dt::DefectTracker,id_just_annihilated_defectP,L)
+        dt = annihilate_defects(dt::DefectTracker,id_just_annihilated_defectP,Lx,Ly)
 
     elseif Np_new > 0 && Np_old > 0 && Nn_old > 0 && Nn_new == 0  # (+)(+)(-) >> (+) par exemple
         assignment_vortices = pair_up_hungarian(dt,locP_new,locP_old,Lx,Ly,"+")
