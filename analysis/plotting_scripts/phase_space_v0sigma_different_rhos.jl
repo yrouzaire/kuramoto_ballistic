@@ -28,6 +28,7 @@ p2 = heatmap(v0s[2:end], sigmas, Ps_avg[1, end, 1, 2:end, :, 1, end, 1]',
 
 
 ## Find critical velocity at final time for which the order parameter P is == seuil
+seuils = [0.5]
 seuils = [0.4, 0.45, 0.5, 0.55, 0.6]
 # seuils = [0.35,0.4,0.45,0.5,0.55,0.6,0.65] # not much better
 
@@ -42,11 +43,12 @@ for i in each(rhos), j in each(v0s), k in each(seuils)
     end
 end
 
-p3 = plot(legend=false, xaxis=:log)
+p3 = plot(legend=false, xaxis=:log);
 for i in each(rhos)
     plot!(v0s[2:end], nanmean(sigma_crit, 3)[i, 2:end, 1], rib=0)
 end
 p3
 
 ## Final figure
-p = plot(p1, p2, p3, layout=(1,3), size=(1400, 400), legend=:topleft)
+p = plot(p1, p2, p3, layout=(1, 3), size=(1400, 400), legend=:topleft)
+rhos

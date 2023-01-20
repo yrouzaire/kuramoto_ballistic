@@ -9,7 +9,6 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
 
-filename = "data/investigation_v00.jld2"
 filename = "data/"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 histogram(runtimes / 3600 / 24, bins=20)

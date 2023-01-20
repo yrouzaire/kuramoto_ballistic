@@ -108,7 +108,6 @@ z = @elapsed for n in eachindex(Ns)
 
         P[n,r] = polarOP(thetas)[1]
         Crt[n,r] = corr(pos,thetas,params,dr)
-        end
     end # realisations
 end # scan parameters
 prinz(z)
