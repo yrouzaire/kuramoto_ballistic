@@ -35,9 +35,6 @@ plot(MSD(dfts[1][6],L,L)[1])
 plot(MSD(dfts[1][7],L,L)[1])
 
 
-
-
-
 # MSD
 mySD = zeros(length(v_sigmas), length(times) + 1, R)
 for i in each(v_sigmas)
