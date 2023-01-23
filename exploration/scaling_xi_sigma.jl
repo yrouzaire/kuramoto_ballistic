@@ -28,22 +28,18 @@ times_log
 v0s =#
 
 xis = zeros(length(rhos), length(sigmas), length(times_log), R)
-for r in 1:R
-    for j in each(rhos)
-        rho = rhos[j]
-        for k in each(sigmas)
-            sigma = sigmas[k]
-            for t in each(times_log)
-				try 
-					tmp = Cs[r][1, j, 1, 1, k, 1, t]
-					rs = 1:length(tmp)
-					xis[j, k, t, r] = corr_length(tmp, rs)
-				catch 
-					xis[j, k, t, r] = NaN
-				end
-            end
-        end
-    end
+for r in 1:R , j in each(rhos) , k in each(sigmas)
+	rho = rhos[j]
+	sigma = sigmas[k]
+	for t in each(times_log)
+		try 
+			tmp = Cs[r][1, j, 1, 1, k, 1, t]
+			rs = 1:length(tmp)
+			xis[j, k, t, r] = corr_length(tmp, rs)
+		catch 
+			xis[j, k, t, r] = NaN
+		end
+	end
 end
 xis_avg = nanmean(xis, 4)
 
@@ -69,4 +65,3 @@ p=plot(axis=:log,legend=false,xlabel=L"\sigma",ylabel=L"\xi")
 	# plot!(x->1/x,c=:black)
 	p
 
-	
