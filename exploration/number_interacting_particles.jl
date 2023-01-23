@@ -12,76 +12,49 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 a test particles interacts with over time. Underlying idea: understanding
 the relation between moving particles and MF approximation.
 =#
-plot(legend=:bottomright,xlabel="Time (arb. units)",ylabel="n(t)/N",ylims=(0,1))
-N = Int(4E2)
-    rho = 5
+
+N = 500
+rhos = [1,2,3]
+Niter = Int(1E3)
+R0 = 0.5
+v0 = 0.2
+
+number_interactions = zeros(length(rhos),N,Niter)
+for j in each(rhos)
+    rho = rhos[j]
     L = round(Int,sqrt(N/rho))
-
-    pos,~,psis,~ = initialisation(N,L,0)
-    v0 = 1
-
-    Niter = Int(3E3)
+    pos,thetas,omegas,psis = initialisation(N,L,L,0,["disordered"])
+    
     ID_interactions = [Int[] for i in 1:N]
-    number_interactions = zeros(N,Niter)
-
     z = @elapsed for t in 1:Niter
         # Update position
-        for n in eachindex(psis)
-            pos[:,n] += v0*0.5E-1*[cos(psis[n]),sin(psis[n])]
+        for n in 1:N
+            pos[:,n] += v0*[cos(psis[n]),sin(psis[n])]
         end
         pos = mod.(pos,L)
 
-        nb_cells_1D = Int(div(L,R0)) + 1
-        head = -ones(Int,nb_cells_1D,nb_cells_1D) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
-        list = -ones(Int,N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
+        ind_neighbours = get_list_neighbours(pos,N,L,L)
         for n in 1:N
-            cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-            list[n] = head[cellx,celly]
-            head[cellx,celly] = n
-        end
-
-        for n in 1:N
-            poscur = pos[:,n]
-
-            cellx,celly = Int(div(pos[1,n],R0)) + 1 , Int(div(pos[2,n],R0)) + 1 # cell to which particle n belongs
-            should_take_mod = (cellx == 1) || (cellx == nb_cells_1D) || (celly == 1) || (celly == nb_cells_1D)
-            if should_take_mod
-                neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_1D)] , [mod1(cellx+1,nb_cells_1D),celly] , [cellx,mod1(celly-1,nb_cells_1D)] , [mod1(cellx-1,nb_cells_1D),celly] , [mod1(cellx+1,nb_cells_1D),mod1(celly+1,nb_cells_1D)] ,  [mod1(cellx-1,nb_cells_1D),mod1(celly-1,nb_cells_1D)] , [mod1(cellx-1,nb_cells_1D),mod1(celly+1,nb_cells_1D)] , [mod1(cellx+1,nb_cells_1D),mod1(celly-1,nb_cells_1D)]]
-            else
-                neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]
-            end
-
-            ind_neighbours = Int[]
-            for (i,j) in neighbouring_cells
-                next = head[i,j]
-                if next ≠ -1
-                    if 0 < dist(poscur,pos[:,next],L) < R0 push!(ind_neighbours,next) end
-                    while list[next] ≠ -1
-                        if 0 < dist(poscur,pos[:,list[next]],L) < R0 push!(ind_neighbours,list[next]) end
-                        next = list[next]
-                    end
-                end
-            end
-            push!(ID_interactions[n],ind_neighbours...)
+            push!(ID_interactions[n],ind_neighbours[n]...)
             unique!(ID_interactions[n])
-            number_interactions[n,t] = length(ID_interactions[n])
+            number_interactions[j,n,t] = length(ID_interactions[n])
         end
     end
-    prinz(z)
-    nintavg = mean(number_interactions,dims=1)[1,:]
-    plot!(nintavg[1:100:end]/N,m=:circle,label="ρ = $rho")
-    # plot!(x->2/pi*atan(x/28))
+end
+nintavg = mean(number_interactions,dims=2)[:,1,:]
 
-# savefig("figures/number_visited_particles_rho.png")
-
-plot!(x->2/pi*atan((x-1)/21*1),c=:black)
-plot!(x->2/pi*atan((x-1)/21*2),c=:black)
-plot!(x->2/pi*atan((x-1)/21*3),c=:black)
-plot!(x->2/pi*atan((x-1)/21*5),c=:black)
+cst = 3.9
+p=plot()
+for j in each(rhos)
+    rho = rhos[j]
+    plot!(nintavg[j,1:50]/N,label="ρ = $rho")
+    N0 = pi*rho*R0^2
+    plot!(t->(N0+2/pi*(N-N0)*atan(cst*rho*v0*R0/N*t))/N,c=:black)
+end
+p
 
 ## Visualizing the are of seen particules over time
 for v0 in [0.1,0.5,1,2,5]
-for v0 in [5]
     N = Int(1E4)
         rho = 5
         L  = round(Int,sqrt(N/rho))
@@ -143,6 +116,42 @@ for v0 in [5]
     mp4(anim,"films/dispersion_seen_v0$(v0).mp4")
 end
 
+## Visualizing analytic predictions for the phase space separation
+rhoc = 1.44 ; cst = 3.9
+vc(rho) = (rhoc- rho)/rho/cst*π^2*R0/2
+vv = logspace(1e-3,5,100,digits=3)
+p=plot(xaxis=:log)
+for rho in 1:0.2:2
+    plot!(vv,(max.(0,(vv) .- vc(rho))).^1,label="rho = $rho")
+end
+ylims!(0,0.5)
+p
+
+
+seuil = 1
+xx = 0:0.01:5
+function f1(x) 
+    if x > seuil
+        return sqrt(x-seuil)
+    else
+        return 0
+    end
+end
+
+function f2(x)
+    if x > seuil
+        return x/(0.01+sqrt(x))
+    else
+        return 0
+    end
+end
+
+plot(xx,f1.(xx),uaxis=:log)
+plot!(xx,f2.(xx),uaxis=:log)
+
+
+
+
 ## Solving the dynamics of the fully connected Kuramoto model
 N = Int(1E4)
 function complexOP(thetas::Vector{Float64})
@@ -168,6 +177,5 @@ prinz(z)
 plot(times,rs,uaxis=:log,m=true)
     plot!(x->1-exp(-x/10000),uaxis=:log)
     plot!(x->2/pi*atan(x/1000))
-histogram(mod.(thetas,2pi),bins=50,normalize=true)
+    histogram(mod.(thetas,2pi),bins=50,normalize=true)
 
-&
