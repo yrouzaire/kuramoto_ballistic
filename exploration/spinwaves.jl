@@ -44,11 +44,12 @@ z = @elapsed for a in eachindex(Ns)
     # m += 1 ; println("Simu $m/$M")
 
     Random.seed!(r+100)
-    pos,thetas,psis,omegas = initialisation(N,L,σ,[init])
+    pos,thetas,omegas,psis = initialisation(N,L,σ,[init])
     t = 0.0 ; token = 1
     while t < tmax
         t += dt
-        pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+        ind_neighbours = get_list_neighbours(pos,N,L,L)
+        pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,L,dt)
         # if t ≥ times_log[token]
         #     P[a,i,j,k,q,ini,token]   = polarOP(thetas)[1]
         #     n[a,i,j,k,q,ini,token]   = number_defects(pos,thetas,N,L)
