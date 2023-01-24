@@ -65,3 +65,7 @@ p=plot(axis=:log,legend=false,xlabel=L"\sigma",ylabel=L"\xi")
 	# plot!(x->1/x,c=:black)
 	p
 
+plot(x -> sqrt(1 - exp(-x^2)),xlims=(0,5))
+plot!(x -> sqrt(1 - exp(-x)),xlims=(0,5))
+plot(x -> pi/2*(1 - exp(log(0.5)*x)),xlims=(0,10))
+plot!(x->atan(x),xlims=(0,10))

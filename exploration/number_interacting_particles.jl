@@ -119,20 +119,20 @@ end
 ## Visualizing analytic predictions for the phase space separation
 rhoc = 1.44 ; cst = 3.9
 vc(rho) = (rhoc- rho)/rho/cst*π^2*R0/2
-vv = logspace(1e-3,5,100,digits=3)
-p=plot(xaxis=:log)
-for rho in 1:0.2:2
+vv = logspace(1e-2,5,100,digits=3)
+p=plot(xaxis=:log,legend=false)
+for rho in 1:0.1:2
     plot!(vv,(max.(0,(vv) .- vc(rho))).^1,label="rho = $rho")
 end
 ylims!(0,0.5)
 p
 
-
+## Some Stuff 
 seuil = 1
-xx = 0:0.01:5
-function f1(x) 
-    if x > seuil
-        return sqrt(x-seuil)
+xx = 0.01:0.01:5
+function f1(v,rho) 
+    if v > vc(rho)
+        return (v-vc(rho))*sqrt(rho*π)
     else
         return 0
     end
@@ -145,10 +145,11 @@ function f2(x)
         return 0
     end
 end
-
-plot(xx,f1.(xx),uaxis=:log)
-plot!(xx,f2.(xx),uaxis=:log)
-
+p=plot(xaxis=:log)
+for rho in 1:0.2:2
+    plot!(xx,f1.(xx,rho),label="rho = $rho")
+end
+p
 
 
 
