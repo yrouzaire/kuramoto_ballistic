@@ -212,4 +212,3 @@ comments = "Critical sigma against v0 for 5 different rhos.
     is more red phase then green phase if you go up in σ."
 filename = "data/critical_sigma_r$real.jld2"
 JLD2.@save filename N rhos times tmax critical_sigmas T v0s sigmas seuil vc comments rhoc runtime = z
-
