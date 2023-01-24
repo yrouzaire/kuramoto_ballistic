@@ -53,7 +53,7 @@ for j in each(rhos)
 end
 p
 
-## Visualizing the are of seen particules over time
+## Visualizing the area of seen particules over time
 for v0 in [0.1,0.5,1,2,5]
     N = Int(1E4)
         rho = 5
@@ -152,31 +152,87 @@ end
 p
 
 
+## Investigate the behaviour of critical sigma σc(v0) both for ρ ≤ ρc and ρ > ρc
+rhoc = 1.44
+vc(rho) = (rhoc- rho)/rho/cst*π^2*R0/2
+v0s = logspace(1e-2,1,10,digits=3)
+sigmas = collect(0:0.05:0.2)
+rhos = [1,1.44,2]
+R = 1 
+N = Int(1E3)
+T = 0.1
+seuil = 0.5
+tmax = 100
+times =  0:tmax/10:tmax
 
-## Solving the dynamics of the fully connected Kuramoto model
-N = Int(1E4)
-function complexOP(thetas::Vector{Float64})
-    z = mean(exp.(im*thetas))
-    return abs(z),angle(z)
-end
+critical_sigmas = NaN*zeros(length(v0s),length(rhos))
+z = @elapsed for i in each(v0s) , k in each(rhos)
+    for r in 1:R
+        for j in each(sigmas)
+            v0 = v0s[i]
+            sigma = sigmas[j]
+            rho = rhos[k]
+            println("v0 = $v0, σ = $sigma, ρ = $rho")
+            L = round(Int,sqrt(N/rho))
+            
+            dt = determine_dt(T,sigma,v0,N,rho)
+            pos,thetas,omegas,psis = initialisation(N,L,L,sigma,["lowtemp"])
+            t = 0.0 ; token = 1
 
-dt = 1E-1 ; tmax = 500
-times = logspace(dt,tmax,40,digits=2)
-rs = zeros(length(times))
-thetas = 2pi*rand(N)
-t = 0 ; token = 1
-z = @elapsed while t < tmax
-    t += dt
-    r,psi = complexOP(thetas)
-    thetas += dt*0.05r*sin.(psi .- thetas)
-    if t ≥ times[token]
-        rs[token] = r
-        token = min(token+1,length(times))
+            already_broken_at_time = -1 
+            while t < tmax
+                t += dt
+                ind_neighbours = get_list_neighbours(pos,N,L,L)
+                pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,L,L,dt)
+                if t ≥ times[token]
+                    token += 1
+                     P = polarOP(thetas)[1]
+                    if P < seuil 
+                        already_broken_at_time = t
+                        println("Broken at t = $already_broken_at_time")
+                        break # gets out of the while loop only 
+                    end
+                end
+            end
+
+            P = polarOP(thetas)[1]
+            if (already_broken_at_time > 0) || P < seuil 
+                critical_sigmas[i,k,r] = sigma
+                println("σc = $sigma for v0 = $v0 and rho = $rho, at time = $already_broken_at_time")
+                break # gets out of the sigma for loop
+            end
+        end
     end
 end
 prinz(z)
-plot(times,rs,uaxis=:log,m=true)
-    plot!(x->1-exp(-x/10000),uaxis=:log)
-    plot!(x->2/pi*atan(x/1000))
-    histogram(mod.(thetas,2pi),bins=50,normalize=true)
+
+
+
+
+## Solving the dynamics of the fully connected Kuramoto model
+# N = Int(1E4)
+# function complexOP(thetas::Vector{Float64})
+#     z = mean(exp.(im*thetas))
+#     return abs(z),angle(z)
+# end
+
+# dt = 1E-1 ; tmax = 500
+# times = logspace(dt,tmax,40,digits=2)
+# rs = zeros(length(times))
+# thetas = 2pi*rand(N)
+# t = 0 ; token = 1
+# z = @elapsed while t < tmax
+#     t += dt
+#     r,psi = complexOP(thetas)
+#     thetas += dt*0.05r*sin.(psi .- thetas)
+#     if t ≥ times[token]
+#         rs[token] = r
+#         token = min(token+1,length(times))
+#     end
+# end
+# prinz(z)
+# plot(times,rs,uaxis=:log,m=true)
+#     plot!(x->1-exp(-x/10000),uaxis=:log)
+#     plot!(x->2/pi*atan(x/1000))
+#     histogram(mod.(thetas,2pi),bins=50,normalize=true)
 

@@ -95,56 +95,121 @@ const global R0 = 1
 # JLD2.@save filename P C n Ts Ns v0s rhos inits sigmas times_log tmax runtime=z comments pos_saved thetas_saved psis_saved omegas_saved
 
 ## FSS
-Ns = round.(Int, logspace(1E2, 1E3, 2, digits=0))
-rhos = [1, 2]
+# Ns = round.(Int, logspace(1E2, 1E3, 2, digits=0))
+# rhos = [1, 2]
+# T = 0.1
+# v_sigmas = [(0, 0), (0, 0.1)]#, (0.1, 0), (0.1, 0.1)]
+# tmax_base100 = 1E2
+# times = [Int.(logspace(1, tmax_base100 * L, 30, digits=0)) for L in each(Ns)]
+
+# Ps = Array{Vector{Float64}}(undef, length(Ns), length(rhos), length(v_sigmas))
+# ns = Array{Vector{Float64}}(undef, length(Ns), length(rhos), length(v_sigmas))
+# xis = Array{Vector{Float64}}(undef, length(Ns), length(rhos), length(v_sigmas))
+
+# z = @elapsed for i in each(Ns), p in each(rhos), j in each(v_sigmas)
+#     v0, σ = v_sigmas[j]
+#     N = Ns[i]
+#     rho = rhos[p]
+#     L = round(Int, sqrt(N / rho))
+#     # println("N = $N, ρ = $rho, L = $L, σ = $σ, v0 = $v0")
+#     dt = determine_dt(T, σ, v0, N, rho)
+#     t = 0.0
+#     pos, thetas, omegas, psis = initialisation(N, L, L, σ, ["hightemp"])
+#     token = 1
+#     ind_neighbours_t0 = get_list_neighbours(pos, N, L, L)
+#     P_tmp = []
+#     n_tmp = []
+#     xi_tmp = []
+#     while t < times[i][end]
+#         t += dt
+#         if v0 == 0
+#             ind_neighbours = ind_neighbours_t0
+#         else
+#             ind_neighbours = get_list_neighbours(pos, N, L, L)
+#         end
+#         pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, L, L, dt)
+#         if t > times[i][token]
+#             push!(P_tmp, polarOP(thetas)[1])
+#             push!(n_tmp, number_defects(pos, thetas, N, L, L))
+#             dr = 1
+#             C = corr_fast(pos, thetas, N, L, L, dr)
+#             push!(xi_tmp, corr_length(C))
+#             token += 1
+#         end
+#     end
+
+#     Ps[i, p, j] = P_tmp
+#     ns[i, p, j] = n_tmp
+#     xis[i, p, j] = xi_tmp
+# end
+# prinz(z)
+
+
+# comments = "Study the finite size scaling."
+# filename = "data/FSS_r$real.jld2"
+# JLD2.@save filename Ns rhos times v_sigmas T Ps ns xis runtime=z
+
+## Critical Sigma 
+rhoc = 1.44
+vc(rho) = (rhoc - rho) / rho / cst * π^2 * R0 / 2
+v0s = logspace(1e-2, 1, 25, digits=3)
+sigmas = collect(0:0.01:0.2)
+rhos = [1, 1.3, 1.44, 1.7, 2]
+N = Int(1E3)
 T = 0.1
-v_sigmas = [(0, 0), (0, 0.1)]#, (0.1, 0), (0.1, 0.1)]
-tmax_base100 = 1E2
-times = [Int.(logspace(1, tmax_base100 * L, 30, digits=0)) for L in each(Ns)]
+seuil = 0.5 # below P = 0.5, we consider the system to be in the disordered phase
+init = "lowtemp" # easier to say that a system has disordered than to wait for the system to reach the ordered phase
+tmax = 3000
+times = 0:tmax/20:tmax
 
-Ps = Array{Vector{Float64}}(undef, length(Ns), length(rhos), length(v_sigmas))
-ns = Array{Vector{Float64}}(undef, length(Ns), length(rhos), length(v_sigmas))
-xis = Array{Vector{Float64}}(undef, length(Ns), length(rhos), length(v_sigmas))
+critical_sigmas = zeros(length(v0s), length(rhos))
+z = @elapsed for i in each(v0s), k in each(rhos)
+    for j in each(sigmas)
+        v0 = v0s[i]
+        sigma = sigmas[j]
+        rho = rhos[k]
+        println("v0 = $v0, σ = $sigma, ρ = $rho")
+        L = round(Int, sqrt(N / rho))
 
-z = @elapsed for i in each(Ns), p in each(rhos), j in each(v_sigmas)
-    v0, σ = v_sigmas[j]
-    N = Ns[i]
-    rho = rhos[p]
-    L = round(Int, sqrt(N / rho))
-    # println("N = $N, ρ = $rho, L = $L, σ = $σ, v0 = $v0")
-    dt = determine_dt(T, σ, v0, N, rho)
-    t = 0.0
-    pos, thetas, omegas, psis = initialisation(N, L, L, σ, ["hightemp"])
-    token = 1
-    ind_neighbours_t0 = get_list_neighbours(pos, N, L, L)
-    P_tmp = []
-    n_tmp = []
-    xi_tmp = []
-    while t < times[i][end]
-        t += dt
-        if v0 == 0
-            ind_neighbours = ind_neighbours_t0
-        else
+        dt = determine_dt(T, sigma, v0, N, rho)
+        pos, thetas, omegas, psis = initialisation(N, L, L, sigma, [init])
+        t = 0.0
+        token = 1
+
+        already_broken_at_time = -1
+        while t < tmax
+            t += dt
             ind_neighbours = get_list_neighbours(pos, N, L, L)
+            pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, L, L, dt)
+            if t ≥ times[token]
+                token += 1
+                P = polarOP(thetas)[1]
+                if P < seuil
+                    already_broken_at_time = t
+                    println("Broken at t = $already_broken_at_time")
+                    break # gets out of the while loop only 
+                end
+            end
         end
-        pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, L, L, dt)
-        if t > times[i][token]
-            push!(P_tmp, polarOP(thetas)[1])
-            push!(n_tmp, number_defects(pos, thetas, N, L, L))
-            dr = 1
-            C = corr_fast(pos, thetas, N, L, L, dr)
-            push!(xi_tmp, corr_length(C))
-            token += 1
+
+        P = polarOP(thetas)[1]
+        if (already_broken_at_time > 0) || P < seuil
+            critical_sigmas[i, k] = sigma
+            println("σc = $sigma for v0 = $v0 and rho = $rho, at time = $already_broken_at_time")
+            break # gets out of the sigma for loop
         end
     end
-
-    Ps[i, p, j] = P_tmp
-    ns[i, p, j] = n_tmp
-    xis[i, p, j] = xi_tmp
 end
 prinz(z)
 
+comments = "Critical sigma against v0 for 5 different rhos. 
+    From lowtemp for two reasons. First, easier to say that 
+    a system has disordered than to wait for the system to 
+    reach the ordered phase. Second, because if in the red 
+    phase from the beggining, the system will never reach 
+    the ordered state (thus one has to wait all the simulation 
+    to then conlude that the system is disordered). And there 
+    is more red phase then green phase if you go up in σ."
+filename = "data/critical_sigma_r$real.jld2"
+JLD2.@save filename N rhos times tmax critical_sigmas T v0s sigmas seuil vc comments rhoc runtime = z
 
-comments = "Study the finite size scaling."
-filename = "data/FSS_r$real.jld2"
-JLD2.@save filename Ns rhos times v_sigmas T Ps ns xis runtime=z
