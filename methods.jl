@@ -64,10 +64,38 @@ function determine_dt(T,σ,v0,N,rho)
 end
 
 ## Initialisation
-function initialisation(N,Lx,Ly,σ,params=["disordered"];float_type=Float32)
-    pos = rand(2,N)
-    pos[1,:] *= Lx
-    pos[2,:] *= Ly
+function effective_number_particle(Ntarget, rho, aspect_ratio=1)
+    Lx  = round(Int,sqrt(aspect_ratio*Ntarget/rho))
+    Ly  = round(Int,sqrt(Ntarget/rho/aspect_ratio))
+    N_effective = Lx*Ly*rho
+    return N_effective, Lx, Ly
+end
+
+function initialisation(N,Lx,Ly,σ,params;float_type=Float32)
+    # params[1] rules the initialisation of thetas, params[2] rules the initialisation of pos
+    if params[2] in ["random","rand"]
+        pos = rand(2,N)
+        pos[1,:] *= Lx
+        pos[2,:] *= Ly
+    elseif params[2] in ["square_lattice","square","regular_square","regular_square_lattice"]
+        pos = zeros(2,N)
+        for n in 1:N
+            pos[1,n] = mod(n,Lx)
+            pos[2,n] = mod(floor(n/Ly),Ly)
+        end
+    elseif params[2] in ["sobol","Sobol"]
+        @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
+        dimm = 10
+        p = reduce(hcat, next!(s) for i = 1:N)'
+        good_sobol_axes = [(1,3),(1,4),(1,8),(2,3),(2,4),(2,8),(3,1),(3,2),(3,5),(3,8),(3,7),(4,1),(4,2),(4,5),(4,7),(5,3),(6,5),(6,9),(7,3),(7,4),(7,8),(7,9),(8,1),(8,2),(8,3),(8,7),(9,6),(9,7),(5,10),(7,10),(10,5),(10,7)]
+        # this 32-element list of good sobol axis (for a total dimension of dimm = 10) was obtained by visual inspection. We wanted to have a good spread of points in the 2D plane, with low discrepancy.
+        sobol_axis = rand(good_sobol_axes)
+        sobol = SobolSeq(2) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
+        pos = zeros(2,N)
+        pos[1, :] = p[:, a]*Lx
+        pos[2, :] = p[:, b]*Ly
+    else println("Error : params[2] should be \"random\" or \"square_lattice\" or \"Sobol\"")
+    end
 
     psis = 2π*rand(N)
     omegas = σ*randn(N)
@@ -164,9 +192,9 @@ function get_list_neighbours(pos::Matrix{T},N::Int,Lx::Int,Ly::Int) where T<:Abs
             # After some questionning, the line above is not slow, what takes time is the cell algo itself
             next = head[i,j]
             if next ≠ -1
-                if 0 < dist(poscur,pos[:,next],Lx,Ly) < R0 push!(ind_neighbours_n,next) end
+                if 0 < dist(poscur,pos[:,next],Lx,Ly) ≤ R0 push!(ind_neighbours_n,next) end
                 while list[next] ≠ -1
-                    if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) < R0 push!(ind_neighbours_n,list[next]) end
+                    if 0 < dist(poscur,pos[:,list[next]],Lx,Ly) ≤ R0 push!(ind_neighbours_n,list[next]) end
                     next = list[next]
                 end
             end
@@ -1036,7 +1064,7 @@ end
 #         return p2
 #     end
 # end
-#
+
 # function highlight_defects!(p,Lx,Ly,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
 #     for defect in defects_p
 #         scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
