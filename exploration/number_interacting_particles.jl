@@ -14,10 +14,10 @@ the relation between moving particles and MF approximation.
 =#
 
 N = 500
-rhos = [1,2,3]
+rhos = collect(1:0.1:2)
 Niter = Int(1E3)
-R0 = 0.5
-v0 = 0.2
+R0 = collect(0.5:0.5:2)
+v0 = [0.1,0.5,1,2]
 
 number_interactions = zeros(length(rhos),N,Niter)
 for j in each(rhos)
