@@ -14,12 +14,14 @@ histogram(runtimes / 3600 / 24, bins=20)
 
 critical_sigmas_avg = nanmean(critical_sigmas_fusion, 3)[:, :, 1]
 ## Plotting
-p = plot(uaxis=:log, legend=:topleft)
-for i in reverse(each(rhos))
-	if rhos[i] ≈ 4.51/pi lab = L"ρ = ρ_c ≈ 1.44"
-	else lab = "ρ = $(rhos[i])"
-	end
-    plot!((v0s), critical_sigmas_avg[:, i], label=lab, rib=0, m=true)
+p = plot(uaxis=:log, legend=:topleft, xlabel=L"\sqrt{v_0}", ylabel=L"\sigma_c")
+for i in each(rhos)
+    if rhos[i] ≈ 4.51 / pi
+        lab = L"ρ = ρ_c ≈ 1.44"
+    else
+        lab = "ρ = $(rhos[i])"
+    end
+    plot!(sqrt.(v0s), critical_sigmas_avg[:, i], label=lab, rib=0, m=true)
 end
 p
 
