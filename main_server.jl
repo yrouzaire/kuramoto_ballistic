@@ -216,14 +216,14 @@ const global R0 = 1
 ## Critical velocity at sigma = 0 for ρ < ρc
 rhoc = 4.51 / pi
 #vc(rho) = (rhoc - rho) / rho / cst * π^2 * R0 / 2
-v0s = logspace(1e-3, 0.3, 25, digits=3)
+v0s = logspace(1e-3, 0.3, 5, digits=3)
 sigmas = 0
-rhos = collect(1:0.02:1.44)
+rhos = collect(1:0.1:1.44)
 N = Int(1E3)
 T = 0.1
 seuil = 0.5 # below P = 0.5, we consider the system to be in the disordered phase
 init = ["hightemp","random"] # easier to say that a system has disordered than to wait for the system to reach the ordered phase
-tmax = 3000
+tmax = 300
 times = 0:tmax/20:tmax
 
 critical_velocity = v0s[end]*ones(length(rhos))
@@ -270,4 +270,4 @@ comments = "Critical velocity vc against the density ρ.
             Indeed, here since there is no σ to pertube the dynamics, 
             I prefer to start from a disordered state and see whether it can order." 
 filename = "data/critical_velocity_r$real.jld2"
-JLD2.@save filename N rhos times tmax critical_velocity T v0s sigmas seuil vc comments rhoc runtime = z
+JLD2.@save filename N rhos times tmax critical_velocity T v0s sigmas seuil comments rhoc runtime = z

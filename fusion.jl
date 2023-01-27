@@ -1,7 +1,7 @@
 using JLD2, Parameters
 include("methods.jl");
 
-base_filename = "data/critical_sigma" # look up in main_server.jl
+base_filename = "data/critical_velocity" # look up in main_server.jl
 R = 40 # look up into bash_loog.sh
 indices = [];
 for r in 1:R
@@ -80,15 +80,27 @@ println("There are $(length(indices))/$R files.")
 # println("Fusionned data saved in $(base_filename*".jld2") .")
 
 ## Critical sigmas
-@load base_filename * "_r$(indices[1]).jld2" N rhos times tmax critical_sigmas T v0s sigmas seuil vc rhoc runtime comments
+# @load base_filename * "_r$(indices[1]).jld2" N rhos times tmax critical_sigmas T v0s sigmas seuil vc rhoc runtime comments
+# critical_sigmas_fusion = NaN*ones(length(v0s), length(rhos), R)
+# runtimes = NaN * zeros(R)
+# for r in indices
+#     println("r = $r")
+#     @load base_filename * "_r$r.jld2" runtime critical_sigmas
+#     critical_sigmas_fusion[:, :, r] = critical_sigmas
+#     runtimes[r] = runtime
+# end
+# @save base_filename * ".jld2" N rhos times tmax critical_sigmas_fusion T v0s sigmas seuil vc rhoc runtimes comments R
+# println("Fusionned data saved in $(base_filename*".jld2") .")
+
+## Critical velocity
+@load base_filename * "_r$(indices[1]).jld2" N rhos times tmax T v0s seuil rhoc runtime comments
 critical_sigmas_fusion = NaN*ones(length(v0s), length(rhos), R)
 runtimes = NaN * zeros(R)
 for r in indices
     println("r = $r")
-    @load base_filename * "_r$r.jld2" runtime critical_sigmas
-    critical_sigmas_fusion[:, :, r] = critical_sigmas
+    @load base_filename * "_r$r.jld2" runtime critical_velocity
+    critical_velocity_fusion[:, :, r] = critical_velocity
     runtimes[r] = runtime
 end
-@save base_filename * ".jld2" N rhos times tmax critical_sigmas_fusion T v0s sigmas seuil vc rhoc runtimes comments R
+@save base_filename * ".jld2" N rhos times tmax critical_velocity_fusion T v0s seuil rhoc runtimes comments R
 println("Fusionned data saved in $(base_filename*".jld2") .")
-
