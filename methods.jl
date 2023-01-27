@@ -73,18 +73,18 @@ end
 
 function initialisation(N,Lx,Ly,σ,params;float_type=Float32)
     # params[1] rules the initialisation of thetas, params[2] rules the initialisation of pos
-    if length(params) == 1 params = [params[1],"random"] end # if not specified, initial position are drawn at random
-    if params[2] in ["random","rand"]
+    # if length(params) == 1 params = [params[1],"random"] end # if not specified, initial position are drawn at random
+    if params[1] in ["random","rand"]
         pos = rand(2,N)
         pos[1,:] *= Lx
         pos[2,:] *= Ly
-    elseif params[2] in ["square_lattice","square","regular_square","regular_square_lattice"]
+    elseif params[1] in ["square_lattice","square","regular_square","regular_square_lattice"]
         pos = zeros(2,N)
         for n in 1:N
             pos[1,n] = mod(n,Lx)
             pos[2,n] = mod(floor(n/Ly),Ly)
         end
-    elseif params[2] in ["sobol","Sobol"]
+    elseif params[1] in ["sobol","Sobol"]
         @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
         dimm = 10
         good_sobol_axes = [(1,3),(1,4),(1,8),(2,3),(2,4),(2,8),(3,1),(3,2),(3,5),(3,8),(3,7),(4,1),(4,2),(4,5),(4,7),(5,3),(6,5),(6,9),(7,3),(7,4),(7,8),(7,9),(8,1),(8,2),(8,3),(8,7),(9,6),(9,7),(5,10),(7,10),(10,5),(10,7)]
@@ -101,22 +101,23 @@ function initialisation(N,Lx,Ly,σ,params;float_type=Float32)
     psis = 2π*rand(N)
     omegas = σ*randn(N)
 
-    if params[1] in ["disordered","hightemp"]
+    if params[2] in ["disordered","hightemp"]
         thetas = 2π*rand(N)
-    elseif params[1] in ["ordered","lowtemp"]
+    elseif params[2] in ["ordered","lowtemp"]
         thetas = zeros(N)
-    elseif params[1] in ["isolated","single"] # params[2] = q the charge
+    elseif params[2] in ["isolated","single"] # params[3] = q the charge
         thetas = zeros(N)
         for n in 1:N
             x,y = pos[:,n]
             thetas[n] = params[2] * atan(Ly/2 - y,Lx/2 - x)
         end
-    elseif params[1] == "pair" # params[2] is R0 the separation distance
+    elseif params[2] == "pair" # params[3] is R0 the separation distance
         # should I implement the different pairs ? source and sink will not act the same way for instance
+        r0 = params[3] 
         thetas = zeros(N)
         for n in 1:N
             x,y = pos[:,n]
-            thetas[n] = atan(Ly/2 - y,Lx/2 - x + params[2]/2) - atan(Ly/2 - y,Lx/2 - x - params[2]/2) # +1 defect by convention
+            thetas[n] = atan(Ly/2 - y,Lx/2 - x + r0/2) - atan(Ly/2 - y,Lx/2 - x - r0/2) # +1 defect by convention
             # smooth the transition between top and bottom
             if (y < 0.05*Ly) || (y > 0.95*Ly)
                 thetas[n] = 0
@@ -677,14 +678,14 @@ end
 
 function track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
     if v0 == 0
-        return update_and_track_v0!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,times)
+        return update_and_track_v0!(dft,pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt,t,times)
     else
-        return update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,times)
+        return update_and_track!(dft,pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt,t,times)
     end
 end
 function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
     token = 1
-    while t < tmax
+    while t < times[end]
         t += dt
         ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
         pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
@@ -698,6 +699,7 @@ function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT}
             println("t = ",round(t,digits=1)," & n(t) = ",number_active_defectsP(dft)," + ",number_active_defectsN(dft))
             update_DefectTracker!(dft,pos,thetas,N,Lx,Ly,t)
             token = min(token+1,length(times))
+            display(plot(pos, thetas, N, L, L))
         end
     end
     return dft,pos,thetas,t

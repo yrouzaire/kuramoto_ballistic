@@ -185,7 +185,7 @@ plot(mean_distance_to_annihilator(dfts[1, 1, :], L)[1], rib=0)
 # Old version, without different i,j,r
 t = 0.0;
 pos, thetas, psis, omegas = initialisation(N, L, σ, ["pair", round(Int, L / 3)]);
-# t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["single",+1])
+# t = 0. ; pos,thetas,omegas,psis = initialisation(N,L,σ,["single",+1])
 plot(pos, thetas, N, L)
 
 z = @elapsed while t < 1

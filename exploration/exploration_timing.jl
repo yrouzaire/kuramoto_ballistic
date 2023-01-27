@@ -19,14 +19,14 @@ N = Int(1E4)
 
 t = 0.0
 params_init = ["hightemp",L/2]
-pos,thetas,psis,omegas = initialisation(N,L,σ,params_init)
+pos,thetas,omegas,psis = initialisation(N,L,σ,params_init)
     # scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/L,size=(512,512),xlims=(0,L),ylims=(0,L))
     # plot(corr_fast(pos,thetas,N,L,0.5))
 
 
 z = @elapsed while t<300
     t += dt
-    global pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+    global pos,thetas = update(pos,thetas,omegas,psis,T,v0,N,L,dt)
 end
     plot(pos,thetas,particles=true)
 prinz(z)

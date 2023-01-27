@@ -90,9 +90,9 @@ Tmax = 5000
 dt = 0.04
 z = @elapsed for seeed in promising_seeds
     Random.seed!(seeed)
-    pos,thetas,psis,omegas = initialisation(N,L,sigma,["disordered"])
+    pos,thetas,omegas,psis = initialisation(N,L,sigma,["disordered"])
     animation = @animate for i in 1:25:Tmax
-        for j in 1:25 pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt) end
+        for j in 1:25 pos,thetas = update(pos,thetas,omegas,psis,T,v0,N,L,dt) end
         p=plot(pos,thetas,N,L)
     end
     mp4(animation,"films/looking_for_spinwaves/promising_seeds/$(seeed).mp4")
@@ -113,7 +113,7 @@ rea = 4
 # savefig("figures/spinwaveR$(rea)_N10000_rho1_v5_σ0.2.png")
 psis   = Float32.(2π*rand(N))
 omegas = Float32.(2*randn(N))
-for i in 1:500 pos,thetas = update(pos,thetas,psis,omegas,0.1,0.01,N,L,0.05) end
+for i in 1:500 pos,thetas = update(pos,thetas,omegas,psis,0.1,0.01,N,L,0.05) end
     plot(pos,thetas,N,L,particles=false)
 savefig("figures/spinwaveR$(rea)_perturb1.png")
 

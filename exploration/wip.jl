@@ -64,7 +64,7 @@ pos,vel_angles,thetas,omegas = initialisation(N,Lx,Ly,σ,params_init)
 
 ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
 @btime get_list_neighbours(pos,N,Lx,Ly)
-@btime update(pos,thetas,psis,omegas,ind_neighbours,T,v0,N,Lx,Ly,dt)
+@btime update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
 @btime update(pos,thetas,omegas,ind_neighbours,T,N,Lx,Ly,dt)
 @btime get_neighbouring_cells(1,2,10,10)
 cellx = celly = 1

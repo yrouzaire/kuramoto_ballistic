@@ -50,11 +50,11 @@ z = @elapsed for j in each(sigmas)
             v0 = v0s[i]
             println("σ = $σ, N = $N, v0 = $v0")
             dt = determine_dt(T,σ,v0,N,rho)
-            t = 0. ; pos,thetas,psis,omegas = initialisation(N,L,σ,["hightemp"])
+            t = 0. ; pos,thetas,omegas,psis = initialisation(N,L,σ,["hightemp"])
             token = 1
             while t<tmax
                 t += dt
-                pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,L,dt)
+                pos,thetas = update(pos,thetas,omegas,psis,T,v0,N,L,dt)
                 if t ≥ times_break[token]
                     if polarOP(thetas)[1] > seuil_break
                         println("Simu stopped because P>$(seuil_break) : v0 > vc")

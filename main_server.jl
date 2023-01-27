@@ -33,7 +33,7 @@ const global R0 = 1
 #     pos,thetas = evolve(pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt,transients) # takes care of v0 = 0 if needed
 #
 #     dft = DefectTracker(pos,thetas,N,Lx,Ly,t)
-#     dft,pos,thetas,t = track!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,times)
+#     dft,pos,thetas,t = track!(dft,pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt,t,times)
 #     dfts[i] = dft
 # end
 # prinz(z)
