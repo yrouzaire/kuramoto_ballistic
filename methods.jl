@@ -685,6 +685,7 @@ function track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Ve
 end
 function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
     token = 1
+    println("tmax = ",times[end])
     while t < times[end]
         t += dt
         ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
@@ -699,7 +700,7 @@ function update_and_track!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT}
             println("t = ",round(t,digits=1)," & n(t) = ",number_active_defectsP(dft)," + ",number_active_defectsN(dft))
             update_DefectTracker!(dft,pos,thetas,N,Lx,Ly,t)
             token = min(token+1,length(times))
-            display(plot(pos, thetas, N, L, L))
+            # display(plot(pos, thetas, N, L, L))
         end
     end
     return dft,pos,thetas,t
@@ -707,7 +708,7 @@ end
 function update_and_track_v0!(dft::DefectTracker,pos::Matrix{FT},thetas::Vector{FT},omegas::Vector{FT},psis::Vector{FT},T::Number,v0::Number,N::Int,Lx::Int,Ly::Int,dt::Number,t::Number,times::AbstractVector) where FT<:AbstractFloat
     token = 1
     ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
-    while t < tmax
+    while t < times[end]
         t += dt
         pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
         if t ≥ times[token]

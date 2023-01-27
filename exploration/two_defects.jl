@@ -22,45 +22,41 @@ rho = 4.51 / π
 aspect_ratio = 1
 N, L, L = effective_number_particle(Ntarget, rho, aspect_ratio)
 T = 0.1 # temperature for angle diffusion
-v0 = 1
-sigma = 0.0
-dt = determine_dt(T, sigma, v0, N, rho) / 10
+v0 = 0.25
+sigma = 0.05
 every = 2;
-tmax = 5.5;
-
+tmax = 30;
 r0s = 10:10:50
 dt = determine_dt(T, sigma, v0, N, rho)
-params_init = ["random", "pair", 20]
-pos, thetas, omegas, psis = initialisation(N, L, L, sigma, params_init)
-plot(pos, thetas, N, L, L)
-t = 0
-dft = DefectTracker(pos, thetas, N, L, L, t)
-times = 1:5
-dft, pos, thetas, t = track!(dft, pos, thetas, omegas, psis, T, v0, N, L, L, dt, t, times)
+every = 2;
+tmax = 100;
+times = every:every:tmax;
 
-t = 0
-pos, thetas, omegas, psis = initialisation(N, L, L, sigma, params_init)
-plot(pos, thetas, N, L, L)
-while t < 50
-    t += dt
-    ind_neighbours = get_list_neighbours(pos, N, Lx, Ly)
-    pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, Lx, Ly, dt)
-end
-plot(pos, thetas, N, L, L)
-
-track!()
-
-
-for i in each(r0s)
+dfts = Vector{DefectTracker}(undef, length(r0s))
+z = @elapsed for i in each(r0s)
     r0 = r0s[i]
     params_init = ["random", "pair", r0]
-    dt = determine_dt(T, sigma, v0, N, rho)
     pos, thetas, omegas, psis = initialisation(N, L, L, sigma, params_init)
-    # plot(pos, thetas, N, L, L)
-
-
-
+    t = 0
+    dft = DefectTracker(pos, thetas, N, L, L, t)
+    dft, pos, thetas, t = track!(dft, pos, thetas, omegas, psis, T, v0, N, L, L, dt, t, times)
+    dfts[i] = dft
 end
+prinz(z)
+
+## Compute R(t) from dft
+Rts = Vector{Vector{Float64}}(undef, length(r0s))
+for i in each(r0s)
+    dft = dfts[i]
+    Rts[i] = interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L)
+end
+plot()
+for i in each(r0s)
+    rt = Rts[i]
+    plot!(rt, label="r0 = $(r0s[i])")
+end
+
+## B. Study MSD with two defects far apart
 
 
 
