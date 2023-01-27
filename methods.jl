@@ -73,6 +73,7 @@ end
 
 function initialisation(N,Lx,Ly,σ,params;float_type=Float32)
     # params[1] rules the initialisation of thetas, params[2] rules the initialisation of pos
+    if length(params) == 1 params = [params[1],"random"] end # if not specified, initial position are drawn at random
     if params[2] in ["random","rand"]
         pos = rand(2,N)
         pos[1,:] *= Lx
