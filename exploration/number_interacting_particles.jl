@@ -7,6 +7,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
+a = 1
 
 #= The file aims at computing the number of different particles
 a test particles interacts with over time. Underlying idea: understanding
@@ -14,16 +15,15 @@ the relation between moving particles and MF approximation.
 =#
 
 N = 500
-rhos = collect(1:0.1:2)
+rhos = collect(1:0.5:2)
 Niter = Int(1E3)
-R0 = collect(0.5:0.5:2)
-v0 = [0.1,0.5,1,2]
+v0s = [0.1,0.5,1,2]
 
-number_interactions = zeros(length(rhos),N,Niter)
-for j in each(rhos)
-    rho = rhos[j]
+number_interactions = zeros(N,Niter,length(rhos),length(v0s))
+z = @elapsed for j in each(rhos) , k in each(v0s)
+    rho = rhos[j] ; v0 = v0s[k]
     L = round(Int,sqrt(N/rho))
-    pos,thetas,omegas,psis = initialisation(N,L,L,0,["disordered"])
+    pos,thetas,omegas,psis = initialisation(N,L,L,0,["disordered","random"])
     
     ID_interactions = [Int[] for i in 1:N]
     z = @elapsed for t in 1:Niter
@@ -37,19 +37,24 @@ for j in each(rhos)
         for n in 1:N
             push!(ID_interactions[n],ind_neighbours[n]...)
             unique!(ID_interactions[n])
-            number_interactions[j,n,t] = length(ID_interactions[n])
+            number_interactions[n,t,j,k] = length(ID_interactions[n])
         end
     end
 end
-nintavg = mean(number_interactions,dims=2)[:,1,:]
+prinz(z)
+nintavg = mean(number_interactions,dims=1)[1,:,:,:]
 
+## 
 cst = 3.9
-p=plot()
+p=plot(legend=false)
 for j in each(rhos)
-    rho = rhos[j]
-    plot!(nintavg[j,1:50]/N,label="ρ = $rho")
-    N0 = pi*rho*R0^2
-    plot!(t->(N0+2/pi*(N-N0)*atan(cst*rho*v0*R0/N*t))/N,c=:black)
+    for k in each(v0s)
+        rho = rhos[j] ; v0 = v0s[k]
+        times = collect(1:500) 
+        plot!(times,nintavg[1:500,j,k]/N,label="ρ = $rho , v0 = $v0")
+        N0 = pi*rho*R0^2
+        # plot!(t->(N0+2/pi*(N-N0)*atan(cst*rho*v0*R0/N*t))/N,c=:black)
+    end
 end
 p
 
