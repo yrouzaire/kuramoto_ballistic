@@ -11,13 +11,16 @@ plot()
 filename = "data/critical_sigma.jld2"
 @load filename runtimes critical_sigmas_fusion times sigmas v0s rhos tmax R
 histogram(runtimes / 3600 / 24, bins=20)
-histogram(runtimes, bins=20)
 
-critical_sigmas_avg = mean(critical_sigmas_fusion, dims=3)[:, :, 1]
+critical_sigmas_avg = nanmean(critical_sigmas_fusion, 3)[:, :, 1]
 ## Plotting
-p = plot()
-	for i in each(rhos)
-		plot!(v0s, critical_sigmas_avg[:, i], label="ρ = $(rhos[i])")
+p = plot(uaxis=:log, legend=:topleft)
+for i in reverse(each(rhos))
+	if rhos[i] ≈ 4.51/pi lab = L"ρ = ρ_c ≈ 1.44"
+	else lab = "ρ = $(rhos[i])"
 	end
-	p
+    plot!((v0s), critical_sigmas_avg[:, i], label=lab, rib=0, m=true)
+end
+p
 
+##

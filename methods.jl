@@ -67,7 +67,7 @@ end
 function effective_number_particle(Ntarget, rho, aspect_ratio=1)
     Lx  = round(Int,sqrt(aspect_ratio*Ntarget/rho))
     Ly  = round(Int,sqrt(Ntarget/rho/aspect_ratio))
-    N_effective = Lx*Ly*rho
+    N_effective = round(Int,Lx*Ly*rho)
     return N_effective, Lx, Ly
 end
 
@@ -87,14 +87,14 @@ function initialisation(N,Lx,Ly,σ,params;float_type=Float32)
     elseif params[2] in ["sobol","Sobol"]
         @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
         dimm = 10
-        p = reduce(hcat, next!(s) for i = 1:N)'
         good_sobol_axes = [(1,3),(1,4),(1,8),(2,3),(2,4),(2,8),(3,1),(3,2),(3,5),(3,8),(3,7),(4,1),(4,2),(4,5),(4,7),(5,3),(6,5),(6,9),(7,3),(7,4),(7,8),(7,9),(8,1),(8,2),(8,3),(8,7),(9,6),(9,7),(5,10),(7,10),(10,5),(10,7)]
         # this 32-element list of good sobol axis (for a total dimension of dimm = 10) was obtained by visual inspection. We wanted to have a good spread of points in the 2D plane, with low discrepancy.
         sobol_axis = rand(good_sobol_axes)
-        sobol = SobolSeq(2) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
+        sobol = SobolSeq(dimm) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
+        p = reduce(hcat, next!(sobol) for i = 1:N)
         pos = zeros(2,N)
-        pos[1, :] = p[:, a]*Lx
-        pos[2, :] = p[:, b]*Ly
+        pos[1, :] = p[sobol_axis[1],:]*Lx
+        pos[2, :] = p[sobol_axis[2],:]*Ly
     else println("Error : params[2] should be \"random\" or \"square_lattice\" or \"Sobol\"")
     end
 
@@ -157,7 +157,7 @@ end
 function get_neighbouring_cells(cellx::Int,celly::Int,nb_cells_x::Int,nb_cells_y::Int)::Vector{Vector{Int}}
     # In the end, this function is quite fast, it contributes +3ms for N=1E4 particles
     should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
-    if should_take_mod
+    if true
         neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),celly] , [cellx,mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),celly] , [mod1(cellx+1,nb_cells_x),mod1(celly+1,nb_cells_y)] ,  [mod1(cellx-1,nb_cells_x),mod1(celly-1,nb_cells_y)] , [mod1(cellx-1,nb_cells_x),mod1(celly+1,nb_cells_y)] , [mod1(cellx+1,nb_cells_x),mod1(celly-1,nb_cells_y)]]
     else
         neighbouring_cells = Vector{Int}[ [cellx,celly] , [cellx,celly+1] , [cellx+1,celly] , [cellx,celly-1] , [cellx-1,celly] , [cellx+1,celly+1] ,  [cellx-1,celly-1] , [cellx-1,celly+1] , [cellx+1,celly-1]]

@@ -81,7 +81,7 @@ println("There are $(length(indices))/$R files.")
 
 ## Critical sigmas
 @load base_filename * "_r$(indices[1]).jld2" N rhos times tmax critical_sigmas T v0s sigmas seuil vc rhoc runtime comments
-critical_sigmas_fusion = Array{Float64}(undef, length(v0s), length(rhos), R)
+critical_sigmas_fusion = NaN*ones(length(v0s), length(rhos), R)
 runtimes = NaN * zeros(R)
 for r in indices
     println("r = $r")
