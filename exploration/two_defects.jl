@@ -23,38 +23,79 @@ aspect_ratio = 1
 N, L, L = effective_number_particle(Ntarget, rho, aspect_ratio)
 T = 0.1 # temperature for angle diffusion
 v0 = 0.25
-sigma = 0.05
+sigma = 0.0
 every = 2;
-tmax = 30;
-r0s = 10:10:50
+r0s = 5:5:15
 dt = determine_dt(T, sigma, v0, N, rho)
 every = 2;
-tmax = 100;
+tmax = 40;
 times = every:every:tmax;
+R = 50
 
-dfts = Vector{DefectTracker}(undef, length(r0s))
+dfts = Array{Union{DefectTracker,Nothing}}(undef, length(r0s), R)
 z = @elapsed for i in each(r0s)
-    r0 = r0s[i]
-    params_init = ["random", "pair", r0]
-    pos, thetas, omegas, psis = initialisation(N, L, L, sigma, params_init)
-    t = 0
-    dft = DefectTracker(pos, thetas, N, L, L, t)
-    dft, pos, thetas, t = track!(dft, pos, thetas, omegas, psis, T, v0, N, L, L, dt, t, times)
-    dfts[i] = dft
+    Threads.@threads for r in 1:R
+        r0 = r0s[i]
+        params_init = ["random", "pair", r0]
+        pos, thetas, omegas, psis = initialisation(N, L, L, sigma, params_init)
+        t = 0
+        dft = DefectTracker(pos, thetas, N, L, L, t)
+        # try 
+            dft, pos, thetas, t = track!(dft, pos, thetas, omegas, psis, T, v0, N, L, L, dt, t, times)
+            dfts[i, r] = dft
+        # catch e
+        #     println("Error at r0 = $(r0) and r = $(r)")
+        #     println(e)
+        #     dfts[i, r] = nothing
+        # end    
+    end
 end
 prinz(z)
 
-## Compute R(t) from dft
-Rts = Vector{Vector{Float64}}(undef, length(r0s))
-for i in each(r0s)
-    dft = dfts[i]
-    Rts[i] = interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L)
+filename = "data/two_defects_r0s_rho$(rho)_v0$(v0)_sigma$(sigma)_tmax$(tmax)_R$(R)_N$(Ntarget).jld2"
+@save filename dfts tmax times v0 sigma dt r0s Ntarget N L R T rho aspect_ratio runtime = z
+# @load filename dfts tmax times v0 sigma dt r0s Ntarget N L R T rho aspect_ratio runtime 
+
+## Compute R(t) from dft;  Linear time
+# Rts = Array{Vector{Float64}}(undef, length(r0s), R)
+# for i in each(r0s), r in 1:R
+#     dft = dfts[i, r]
+#     Rts[i, r] = interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L)
+# end
+
+# Rts_avg = Vector{Vector{Float64}}(undef, length(r0s))
+# for i in each(r0s)
+#     tmp = vector_of_vector2matrix(Rts[i, :])
+#     Rts_avg[i] = nanmean(tmp, 2)[:, 1]
+# end
+
+# p = plot(legend=false, xlabel="t", ylabel="R(t)")
+# for i in each(r0s)
+#     rt = Rts_avg[i]
+#     plot!(rt, label="r0 = $(r0s[i])")
+# end
+# p
+
+## Compute R(t*) from dft; Reversed time = time to annihilation
+Rts_reverse = Array{Vector{Float64}}(undef, length(r0s), R)
+for i in each(r0s), r in 1:R
+    dft = dfts[i, r]
+    Rts_reverse[i, r] = reverse(interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L))
 end
-plot()
+
+Rts_reverse_avg = Vector{Vector{Float64}}(undef, length(r0s))
 for i in each(r0s)
-    rt = Rts[i]
-    plot!(rt, label="r0 = $(r0s[i])")
+    tmp = vector_of_vector2matrix(Rts_reverse[i, :])
+    Rts_reverse_avg[i] = nanmean(tmp, 2)[:, 1]
 end
+
+p = plot(legend=:bottomright, xlabel="t*", ylabel="R(t*)", axis=:log, title="ρ = $(round(rho,digits=2))")
+for i in each(r0s)
+    rt = Rts_reverse_avg[i]
+    plot!(rt[2:end], label="r0 = $(r0s[i])", m=true)
+end
+p
+# savefig("figures/two_defects/Rt_several_r0s_rho$(round(rho,digits=2))_v0$(v0)_sigma$(sigma)_tmax$(tmax)_R$(R)_N$(Ntarget)..png")
 
 ## B. Study MSD with two defects far apart
 

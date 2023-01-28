@@ -28,9 +28,11 @@ p
 ## Critical velocity
 filename = "data/critical_velocity.jld2"
 @load filename runtimes critical_velocity_fusion times v0s rhos tmax R
-histogram(runtimes / 3600 *50, bins=20)
+histogram(runtimes / 3600, bins=20)
 critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
 
 ## Plotting
-p = plot(uaxis=:log, legend=:topleft, xlabel=L"\sqrt{v_0}", ylabel=L"\sigma_c")
-plot!(rhos, critical_velocity_avg,m=true)
+p = plot(uaxis=:log, legend=:topleft, xlabel=L"ρ", ylabel=L"v_c")
+plot!((rhos), critical_velocity_avg, m=true)
+# plot!(rhos, x -> max(0, 0.5(1.44 - x) / x)^2)
+
