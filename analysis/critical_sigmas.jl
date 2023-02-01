@@ -9,7 +9,7 @@ plot()
 &
 ## Critical Sigmas
 filename = "data/critical_sigma.jld2"
-@load filename runtimes critical_sigmas_fusion times sigmas v0s rhos tmax R
+@load filename critical_sigmas_fusion times sigmas v0s rhos tmax R #runtimes
 histogram(runtimes / 3600 / 24, bins=20)
 
 critical_sigmas_avg = nanmean(critical_sigmas_fusion, 3)[:, :, 1]
@@ -25,14 +25,16 @@ for i in each(rhos)
 end
 p
 
+
 ## Critical velocity
 filename = "data/critical_velocity.jld2"
 @load filename runtimes critical_velocity_fusion times v0s rhos tmax R
 histogram(runtimes / 3600, bins=20)
 critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
 
-## Plotting
+rhoc = 4.51 / π
 p = plot(uaxis=:log, legend=:topleft, xlabel=L"ρ", ylabel=L"v_c")
 plot!((rhos), critical_velocity_avg, m=true)
-# plot!(rhos, x -> max(0, 0.5(1.44 - x) / x)^2)
-
+plot!(rhos, x -> 0.08(rhoc - x) / x, c=:black, l=:solid)
+plot!(rhos, x -> 0.15(rhoc - x)^2 / x^2, c=:black, l=:dash)
+plot!(rhos, x -> 800exp(-10x), c=:black, l=:dot)
