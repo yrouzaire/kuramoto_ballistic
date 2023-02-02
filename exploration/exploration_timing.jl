@@ -37,7 +37,7 @@ spot_defects(pos, thetas, N, L)
 
 
 ## Timing
-N = Int(1E6)
+N = Int(1E4)
 rho = 1
 v0 = 1
 σ = 0
@@ -45,7 +45,7 @@ L = round(Int, sqrt(N / rho))
 T = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
 
 tmax = 10;
-dt = determine_dt(T, σ, v, N, rho);
+dt = determine_dt(T, σ, v0, N, rho);
 
 t = 0.0
 params_init = ["random", "hightemp", L / 2]
@@ -61,6 +61,7 @@ sum(sin,...) instead of sum(sin(...)) gain = 0.1 ms
 update the same structure instead gain = 0.2 ms
 Declaring the type of indices_neighbours made me gain 10 ms out of 20 !!
 Having const variables omegas and vel_angles does not seem to change the runtime
+In the end, for N = 1E4, rho = 1 : runtime = 10.5 (find neighbours) + 3.6 (update à proprement parler) = 14.1 ms
 =#
 
 zz = 2.6 
