@@ -1,129 +1,39 @@
-#"Copyright (c) 2022 Y.Rouzaire All Rights Reserved."
+"Copyright (c) 2022 Y.Rouzaire All Rights Reserved."
 
-#################### Structure Definitions ####################
-using StaticArrays, BenchmarkTools, Sobol, Parameters
-using Plots, ColorSchemes, LaTeXStrings
-mutable struct Agent{F<:AbstractFloat}
-    pos::Tuple{F,F}
-    theta::F
-    omega::F
-    psi::F
+function dist(a::Vector{T}, b::Vector{T}, Lx, Ly) where {T<:AbstractFloat}  # euclidian distance with Periodic BCs
+    dx = abs(a[1] - b[1])
+    dx = min(dx, Lx - dx)
+    dy = abs(a[2] - b[2])
+    dy = min(dy, Ly - dy)
+    return sqrt(dx^2 + dy^2)
 end
 
-mutable struct System{F<:AbstractFloat}
-    agents::Vector{Agent{F}}
-    Lx::Int
-    Ly::Int
-    rho::Number
-    Ntarget::Int
-    N::Int
-    T::Number
-    sigma::Number
-    v0::Number
-    R0::Number
-    dt::Number
-    t::Number
-    params::Dict
+function dist(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclidian distance with Periodic BCs
+    dx = abs(a[1] - b[1])
+    dx = min(dx, Lx - dx)
+    dy = abs(a[2] - b[2])
+    dy = min(dy, Ly - dy)
+    return sqrt(dx^2 + dy^2)
 end
 
-function System(params; float_type=Float32)
-    @unpack Ntarget, aspect_ratio, rho, Ntarget, T, sigma, v0, R0, params_init = params
-    @unpack init_pos, init_theta, r0, q = params_init
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    dt = determine_dt(T, sigma, v0, N, rho)
+function dist(a, b, Lx, Ly)  # euclidian distance with Periodic BCs
+    dx = abs(a[1] - b[1])
+    dx = min(dx, Lx - dx)
+    dy = abs(a[2] - b[2])
+    dy = min(dy, Ly - dy)
+    return sqrt(dx^2 + dy^2)
+end
 
-    pos = initialisation_positions(N, Lx, Ly, init_pos)
-    thetas = initialisation_thetas(N, init_theta, r0, q, pos=pos, Lx=Lx, Ly=Ly)
-    omegas = initialisation_omegas(N, sigma)
-    psis = initialisation_psis(N)
-    vec_agents = Vector{Agent{float_type}}(undef, N)
-    for n in 1:N
-        vec_agents[n] = Agent{float_type}(Tuple(pos[:, n]), thetas[n], omegas[n], psis[n])
+
+function distance_matrix(new, old, Lx, Ly)
+    m_new, m_old = length(new), length(old)
+    distance_matrix = zeros(m_new, m_old)
+    for j in 1:m_old
+        for i in 1:m_new
+            distance_matrix[i, j] = dist(new[i], old[j], Lx, Ly)
+        end
     end
-    return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params)
-end
-
-#################### Get Methods ####################
-get_pos(syst::System) = [syst.agents[n].pos for n in 1:syst.N]
-get_theta(syst::System) = [syst.agents[n].theta for n in 1:syst.N]
-get_omega(syst::System) = [syst.agents[n].omega for n in 1:syst.N]
-get_psi(syst::System) = [syst.agents[n].psi for n in 1:syst.N]
-# and for convenience :
-get_thetas = get_theta
-get_omegas = get_omega
-get_psis = get_psi
-
-#################### Initialisation functions ####################
-initialisation_psis(N) = 2π * rand(N)
-initialisation_omegas(N, σ) = σ * randn(N)
-
-function initialisation_positions(N, Lx, Ly, init_pos)
-    if init_pos in ["random", "rand"]
-        pos = rand(2, N)
-        pos[1, :] *= Lx
-        pos[2, :] *= Ly
-    elseif init_pos in ["square_lattice", "square", "regular_square", "regular_square_lattice"]
-        pos = zeros(2, N)
-        for n in 1:N
-            pos[1, n] = mod(n, Lx)
-            pos[2, n] = mod(floor(n / Ly), Ly)
-        end
-    elseif init_pos in ["sobol", "Sobol"]
-        @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
-        dimm = 10
-        good_sobol_axes = [(1, 3), (1, 4), (1, 8), (2, 3), (2, 4), (2, 8), (3, 1), (3, 2), (3, 5), (3, 8), (3, 7), (4, 1), (4, 2), (4, 5), (4, 7), (5, 3), (6, 5), (6, 9), (7, 3), (7, 4), (7, 8), (7, 9), (8, 1), (8, 2), (8, 3), (8, 7), (9, 6), (9, 7), (5, 10), (7, 10), (10, 5), (10, 7)]
-        # this 32-element list of good sobol axis (for a total dimension of dimm = 10) was obtained by visual inspection. We wanted to have a good spread of points in the 2D plane, with low discrepancy.
-        sobol_axis = rand(good_sobol_axes)
-        sobol = SobolSeq(dimm) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
-        p = reduce(hcat, next!(sobol) for i = 1:N)
-        pos = zeros(2, N)
-        pos[1, :] = p[sobol_axis[1], :] * Lx
-        pos[2, :] = p[sobol_axis[2], :] * Ly
-    else
-        println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\"")
-    end
-    return pos
-end
-
-function initialisation_thetas(N, init_theta, r0, q, nb_horizontal_waves=1, nb_vertical_waves=1; pos, Lx, Ly)
-    if init_theta in ["disordered", "hightemp", "random"]
-        thetas = 2π * rand(N)
-    elseif init_theta in ["ordered", "lowtemp"]
-        thetas = zeros(N)
-    elseif init_theta in ["isolated", "single"]
-        thetas = zeros(N)
-        for n in 1:N
-            x, y = pos[:, n]
-            thetas[n] = q * atan(Ly / 2 - y, Lx / 2 - x)
-        end
-    elseif init_theta == "pair"
-        thetas = zeros(N)
-        for n in 1:N
-            x, y = pos[:, n]
-            thetas[n] = q * (atan(Ly / 2 - y, Lx / 2 - x + r0 / 2) - atan(Ly / 2 - y, Lx / 2 - x - r0 / 2)) # +1 defect by convention
-            # smooth the transition between top and bottom
-            if (y < 0.05 * Ly) || (y > 0.95 * Ly)
-                thetas[n] = 0
-            end
-        end
-    elseif init_theta in ["1D_horizontal_wave", "1D_hor", "hor_wave", "wave_hor", "horizontal_wave"]
-        thetas = zeros(N)
-        for n in 1:N
-            thetas[n] = mod(nb_horizontal_waves * 2pi * pos[1, n] / Lx, 2pi)
-        end
-    elseif init_theta in ["1D_vertical_wave", "1D_vert", "vert_wave", "wave_vert", "vertical_wave"]
-        for n in 1:N
-            thetas[n] = mod(nb_vertical_waves * 2pi * pos[2, n] / Ly, 2pi)
-        end
-    elseif init_theta == "2Dwave"
-        thetas = zeros(N)
-        for n in 1:N
-            thetas[n] = mod(π .+ π / 2 * (sin(nb_vertical_waves * pos[1, n] * 2pi / Lx) + sin(nb_horizontal_waves * pos[2, n] * 2pi / Lx)), 2pi)
-        end
-    else
-        error("Error : init_theta should be \"disordered\", \"ordered\", \"isolated\", \"pair\", \"1D_horizontal_wave\", \"1D_vertical_wave\" or \"2Dwave\"")
-    end
-    return thetas
+    return distance_matrix
 end
 
 function determine_dt(T, σ, v0, N, rho)
@@ -136,6 +46,7 @@ function determine_dt(T, σ, v0, N, rho)
         arbitrary_coeff^2 * π / 4 / T])
 end
 
+## Initialisation
 function effective_number_particle(Ntarget, rho, aspect_ratio=1)
     Lx = round(Int, sqrt(aspect_ratio * Ntarget / rho))
     Ly = round(Int, sqrt(Ntarget / rho / aspect_ratio))
@@ -143,163 +54,101 @@ function effective_number_particle(Ntarget, rho, aspect_ratio=1)
     return N_effective, Lx, Ly
 end
 
-#################### Visualisation methods ####################
-function plot_thetas(system; particles=false, vertical=false, size=(512, 512), defects=false, title="")
-    pos, thetas, N, Lx, Ly = get_pos(system), get_thetas(system), system.N, system.Lx, system.Ly
-    cols = cgrad([:black, :blue, :green, :orange, :red, :black])
-    if particles
-        if vertical
-            p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            thetas_cg = cg(pos, thetas, N, Lx, Ly)
-            p2 = heatmap(1:Lx, 1:Ly, mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            final_plot = plot(p1, p2, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
-        else
-            p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            thetas_cg = cg(pos, thetas, N, Lx, Ly)
-            p2 = heatmap(1:Lx, 1:Ly, mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            final_plot = plot(p1, p2, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
+function initialisation(N, Lx, Ly, σ, params; float_type=Float32)
+    # params[1] rules the initialisation of thetas, params[2] rules the initialisation of pos
+    # if length(params) == 1 params = [params[1],"random"] end # if not specified, initial position are drawn at random
+    if params[1] in ["random", "rand"]
+        pos = rand(2, N)
+        pos[1, :] *= Lx
+        pos[2, :] *= Ly
+    elseif params[1] in ["square_lattice", "square", "regular_square", "regular_square_lattice"]
+        pos = zeros(2, N)
+        for n in 1:N
+            pos[1, n] = mod(n, Lx)
+            pos[2, n] = mod(floor(n / Ly), Ly)
         end
+    elseif params[1] in ["sobol", "Sobol"]
+        @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
+        dimm = 10
+        good_sobol_axes = [(1, 3), (1, 4), (1, 8), (2, 3), (2, 4), (2, 8), (3, 1), (3, 2), (3, 5), (3, 8), (3, 7), (4, 1), (4, 2), (4, 5), (4, 7), (5, 3), (6, 5), (6, 9), (7, 3), (7, 4), (7, 8), (7, 9), (8, 1), (8, 2), (8, 3), (8, 7), (9, 6), (9, 7), (5, 10), (7, 10), (10, 5), (10, 7)]
+        # this 32-element list of good sobol axis (for a total dimension of dimm = 10) was obtained by visual inspection. We wanted to have a good spread of points in the 2D plane, with low discrepancy.
+        sobol_axis = rand(good_sobol_axes)
+        sobol = SobolSeq(dimm) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
+        p = reduce(hcat, next!(sobol) for i = 1:N)
+        pos = zeros(2, N)
+        pos[1, :] = p[sobol_axis[1], :] * Lx
+        pos[2, :] = p[sobol_axis[2], :] * Ly
     else
-        thetas_cg = cg(pos, thetas, N, Lx, Ly)
-        final_plot = heatmap(1:Lx, 1:Ly, mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly), title=title)
-    end
-    return final_plot
-end
-# function old_plot(pos, thetas, N, Lx, Ly; particles=false, vertical=false, size=(512, 512), defects=false, title="")
-#     cols = cgrad([:black, :blue, :green, :orange, :red, :black])
-#     if particles
-#         if vertical
-#             p1 = scatter((pos[1, :], pos[2, :]), marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-#             thetas_cg = cg(pos, thetas, N, Lx, Ly)
-#             p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx)
-#             if defects
-#                 defects_p, defects_m = spot_defects(pos, thetas, N, Lx, Ly)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2, Lx, Ly, locP, locN)
-#             end
-#             return plot(p1, p2, layout=(2, 1), size=(size[1], 2 * size[2]), title=title)
-#         else
-#             p1 = scatter((pos[1, :], pos[2, :]), marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-#             thetas_cg = cg(pos, thetas, N, Lx, Ly)
-#             p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx)
-#             if defects
-#                 defects_p, defects_m = spot_defects(pos, thetas, N, Lx, Ly)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2, Lx, Ly, locP, locN)
-#             end
-#             return plot(p1, p2, size=(2 * size[1], size[2]), title=title)
-#         end
-#     else
-#         thetas_cg = cg(pos, thetas, N, Lx, Ly)
-#         p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, title=title)
-#         if defects
-#             defects_p, defects_m = spot_defects(pos, thetas, N, Lx, Ly)
-#             locP = [defects_p[i][1:2] for i in each(defects_p)]
-#             locN = [defects_m[i][1:2] for i in each(defects_m)]
-#             highlight_defects!(p2, Lx, Ly, locP, locN)
-#         end
-#         return p2
-#     end
-# end
-function mod1_2D(xx::Tuple{T,T}, Lx::Int, Ly::Int) where {T<:Number}
-    return (mod1(xx[1], Lx), mod1(xx[2], Ly))
-end
-
-function cg(pos, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
-    mesh_size = R0
-    cutoff = 5R0 # for contributions
-
-    ## Cell List construction
-    nb_cells_x = Int(div(Lx, mesh_size)) + 1
-    nb_cells_y = Int(div(Ly, mesh_size)) + 1
-    head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
-    list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
-    for n in 1:N
-        cellx, celly = Int(div(pos[n][1], mesh_size)) + 1, Int(div(pos[n][2], mesh_size)) + 1 # cell to which particle n belongs
-        list[n] = head[cellx, celly]
-        head[cellx, celly] = n
+        println("Error : params[2] should be \"random\" or \"square_lattice\" or \"Sobol\"")
     end
 
-    LLx = round(Int, Lx / mesh_size)
-    LLy = round(Int, Ly / mesh_size)
-    fine_grid = NaN * zeros(LLx, LLy)
-    fine_grid_density = NaN * zeros(LLx, LLy)
-    for i in 1:LLx, j in 1:LLy # scan fine_grid cells
-        center_finegrid_cell = T.([(i - 0.5) * mesh_size, (j - 0.5) * mesh_size])
+    psis = 2π * rand(N)
+    omegas = σ * randn(N)
 
-        # find cell from coarse mesh correponding to cell i,j belonging to fine_grid
-        cellx, celly = Int(div(center_finegrid_cell[1], mesh_size)) + 1, Int(div(center_finegrid_cell[2], mesh_size)) + 1
-        a = round(Int, cutoff / mesh_size)
-        neighbouring_cells = vec([(ii, jj) for ii in -a:a, jj in -a:a])
-        neighbouring_cells = [mod1_2D(el .+ (cellx, celly), nb_cells_x, nb_cells_y) for el in neighbouring_cells]
-
-        # get indices of particles within those cells (cells belonging to the coarse mesh)
-        ind_neighbours = Int[]
-        for (i, j) in neighbouring_cells
-            next = head[i, j]
-            if next ≠ -1
-                if dist(center_finegrid_cell, pos[next], Lx, Ly) < cutoff
-                    push!(ind_neighbours, next)
-                end
-                while list[next] ≠ -1
-                    if dist(center_finegrid_cell, pos[list[next]], Lx, Ly) < cutoff
-                        push!(ind_neighbours, list[next])
-                    end
-                    next = list[next]
-                end
+    if params[2] in ["disordered", "hightemp"]
+        thetas = 2π * rand(N)
+    elseif params[2] in ["ordered", "lowtemp"]
+        thetas = zeros(N)
+    elseif params[2] in ["isolated", "single"] # params[3] = q the charge
+        thetas = zeros(N)
+        for n in 1:N
+            x, y = pos[:, n]
+            thetas[n] = params[2] * atan(Ly / 2 - y, Lx / 2 - x)
+        end
+    elseif params[2] == "pair" # params[3] is R0 the separation distance
+        # should I implement the different pairs ? source and sink will not act the same way for instance
+        r0 = params[3]
+        thetas = zeros(N)
+        for n in 1:N
+            x, y = pos[:, n]
+            thetas[n] = atan(Ly / 2 - y, Lx / 2 - x + r0 / 2) - atan(Ly / 2 - y, Lx / 2 - x - r0 / 2) # +1 defect by convention
+            # smooth the transition between top and bottom
+            if (y < 0.05 * Ly) || (y > 0.95 * Ly)
+                thetas[n] = 0
             end
         end
-
-        # compute contributions from those "neighbouring" particles
-        tmp = Complex[]
-        tmp_density = Float64[]
-        for m in ind_neighbours
-            r = dist(center_finegrid_cell, pos[m], Lx, Ly)
-            if r < cutoff
-                push!(tmp, exp(im * thetas[m] - r / R0))
-                # push!(tmp_density,exp(-r/R0))
+    elseif params[1] == "1Dwave"
+        # then params[2] is "vertical"/"horizontal"
+        # then params[3] is the number of waves
+        thetas = zeros(N)
+        if params[2] == "horizontal"
+            for n in 1:N
+                thetas[n] = mod(params[3] * 2pi * pos[1, n] / Lx, 2pi)
+            end
+        elseif params[2] == "vertical"
+            for n in 1:N
+                thetas[n] = mod(params[3] * 2pi * pos[2, n] / Ly, 2pi)
             end
         end
-        fine_grid[i, j] = angle(mean(tmp))
-        # fine_grid_density[i,j] = sum(tmp_density)
+    elseif params[1] == "2Dwave"
+        # then params[2] is the number of horizontal waves
+        # then params[3] is the number of vertical waves
+        thetas = zeros(N)
+        for n in 1:N
+            thetas[n] = mod(π .+ π / 2 * (sin(params[2] * pos[1, n] * 2pi / Lx) + sin(params[3] * pos[2, n] * 2pi / Lx)), 2pi)
+        end
     end
-    return fine_grid
-    # return fine_grid,fine_grid_density
-end
-
-function highlight_defects!(p, Lx, Ly, defects_p, defects_m, symbP=:circle, symbM=:utriangle)
-    for defect in defects_p
-        scatter!((defect), m=(1.5, 1.0, symbP, :transparent, stroke(1.2, :grey85)))
-    end
-    for defect in defects_m
-        scatter!((defect), m=(1.5, 1.0, symbM, :transparent, stroke(1.2, :grey85)))
-    end
-    xlims!((1, Lx))
-    ylims!((1, Ly))
-    return p
+    return float_type.(pos), float_type.(thetas), float_type.(omegas), float_type.(psis)
 end
 
 ## Time Evolution
-function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
+function construct_cell_list(pos::Matrix{T}, N::Int, Lx::Int, Ly::Int)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
     nb_cells_x = Int(div(Lx, R0)) + 1
     nb_cells_y = Int(div(Ly, R0)) + 1
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
-        cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
+        cellx, celly = Int(div(pos[1, n], R0)) + 1, Int(div(pos[2, n], R0)) + 1 # cell to which particle n belongs
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
     return list, head
 end
 
-
 function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cells_y::Int)::Vector{Vector{Int}}
     # In the end, this function is quite fast, it contributes +3ms for N=1E4 particles
     should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
-    if should_take_mod
+    if true
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, mod1(celly + 1, nb_cells_y)], [mod1(cellx + 1, nb_cells_x), celly], [cellx, mod1(celly - 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), celly], [mod1(cellx + 1, nb_cells_x), mod1(celly + 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), mod1(celly - 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), mod1(celly + 1, nb_cells_y)], [mod1(cellx + 1, nb_cells_x), mod1(celly - 1, nb_cells_y)]]
     else
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, celly + 1], [cellx + 1, celly], [cellx, celly - 1], [cellx - 1, celly], [cellx + 1, celly + 1], [cellx - 1, celly - 1], [cellx - 1, celly + 1], [cellx + 1, celly - 1]]
@@ -319,28 +168,28 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     # neighbouring_cells = [mod1.(neighbouring_cells[i],nb_cells_x) for i in 1:9]
 end
 
-
-function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number) where {T<:AbstractFloat}
+function get_list_neighbours(pos::Matrix{T}, N::Int, Lx::Int, Ly::Int) where {T<:AbstractFloat}
     ind_neighbours = Vector{Vector{Int}}(undef, N)
     nb_cells_x = Int(div(Lx, R0)) + 1
     nb_cells_y = Int(div(Ly, R0)) + 1
-    list, head = construct_cell_list(pos, N, Lx, Ly, R0)
-    R02 = R0^2
+    list, head = construct_cell_list(pos, N, Lx, Ly)
+
+
     # offsets = Vector{Int}[[0,0],[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]
     for n in 1:N
-        cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
-        poscur = pos[n]
+        cellx, celly = Int(div(pos[1, n], R0)) + 1, Int(div(pos[2, n], R0)) + 1 # cell to which particle n belongs
+        poscur = pos[:, n]
         ind_neighbours_n = Int[]
-        sizehint!(ind_neighbours_n, 10)
+        # sizehint!(ind_neighbours_n, 10) # does not improve much
         for (i, j) in get_neighbouring_cells(cellx, celly, nb_cells_x, nb_cells_y)
-            # After some investigation, the line above is not slow, what takes time is the cell algo itself
+            # After some questionning, the line above is not slow, what takes time is the cell algo itself
             next = head[i, j]
             if next ≠ -1
-                if 0 < dist2(poscur, pos[next], Lx, Ly) ≤ R02
+                if 0 < dist(poscur, pos[:, next], Lx, Ly) ≤ R0
                     push!(ind_neighbours_n, next)
                 end
                 while list[next] ≠ -1
-                    if 0 < dist2(poscur, pos[list[next]], Lx, Ly) ≤ R02
+                    if 0 < dist(poscur, pos[:, list[next]], Lx, Ly) ≤ R0
                         push!(ind_neighbours_n, list[next])
                     end
                     next = list[next]
@@ -352,52 +201,51 @@ function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, 
     return ind_neighbours
 end
 
-function evolve(system::System, tmax::Number)
-    # pos, thetas, omegas, psis = get_pos(system), get_thetas(system), get_omegas(system), get_psis(system)
-    v0, R0, N, Lx, Ly, dt = system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt
+function evolve(pos::Matrix{FT}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, T::Number, v0::Number, N::Int, Lx::Int, Ly::Int, dt::Number, tmax::Number) where {FT<:AbstractFloat}
+    t = 0.0
     if v0 == 0
-        ind_neighbours = get_list_neighbours(system.pos, N, Lx, Ly, R0)
-        while system.t < tmax
-            system.t += dt
-            update_thetas!(system, ind_neighbours)
+        ind_neighbours = get_list_neighbours(pos, N, Lx, Ly)
+        while t < tmax
+            t += dt
+            pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, Lx, Ly, dt)
         end
     else
-        while system.t < tmax
-            system.t += dt
-            ind_neighbours = get_list_neighbours(system.pos, N, Lx, Ly, R0)
-            update_positions!(system)
-            update_thetas!(system, ind_neighbours)
+        while t < tmax
+            t += dt
+            ind_neighbours = get_list_neighbours(pos, N, Lx, Ly)
+            pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, Lx, Ly, dt)
         end
     end
-    return system
+
+    return pos, thetas
 end
 
-function update_positions!(system::System{T}) where {T<:AbstractFloat}
-    v0, dt = system.v0, system.dt
-    Lx, Ly = system.Lx, system.Ly
-    for n in 1:system.N
-        agent = system.agents[n]
-        x = mod(agent.pos[1] + v0 * dt * cos(agent.psi), Lx)
-        y = mod(agent.pos[2] + v0 * dt * sin(agent.psi), Ly)
-        agent.pos = (x, y)
+function update(pos::Matrix{FT}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, ind_neighbours::Vector{Vector{Int}}, T::Number, v0::Number, N::Int, Lx::Int, Ly::Int, dt::Number) where {FT<:AbstractFloat}
+    thetas_new = zeros(FT, N)
+
+    if v0 == 0
+        pos_new = pos
+    else
+        pos_new = zeros(FT, 2, N)
+        # Update position
+        for n in eachindex(psis)
+            pos_new[:, n] = pos[:, n] + v0 * dt * [cos(psis[n]), sin(psis[n])]
+        end
+        pos_new[1, :] = mod.(pos_new[1, :], Lx)
+        pos_new[2, :] = mod.(pos_new[2, :], Ly)
     end
-end
 
-function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}}) where {FT<:AbstractFloat}
-    dt, T = system.dt, system.T
-    for n in 1:system.N
-        agent = system.agents[n]
-        if length(ind_neighbours[n]) > 0
-            thetas_neighbours = [system.agents[i].theta for i in ind_neighbours[n]]
-            sumsin = 0.0
-            for theta in thetas_neighbours
-                sumsin += sin(theta - agent.theta)
-            end
-            agent.theta += dt * (agent.omega + sumsin) + sqrt(2T * dt) * randn()
+    for n in 1:N
+        poscur = pos[:, n]
+        thetas_neighbours = thetas[ind_neighbours[n]]
+        theta = thetas[n]
+        if length(thetas_neighbours) > 0
+            thetas_new[n] = theta + dt * omegas[n] + dt * sum(sin, thetas_neighbours .- theta) + sqrt(2T * dt) * randn()
         else
-            agent.theta += dt * agent.omega + sqrt(2T * dt) * randn()
+            thetas_new[n] = theta + dt * omegas[n] + sqrt(2T * dt) * randn()
         end
     end
+    return pos_new, thetas_new
 end
 
 ## Measurements
@@ -467,7 +315,71 @@ function corr_fast(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} 
 end
 
 ## Methods for defects
+function mod1_2D(xx::Tuple{T,T}, Lx::Int, Ly::Int) where {T<:Number}
+    return (mod1(xx[1], Lx), mod1(xx[2], Ly))
+end
 
+function cg(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
+    mesh_size = R0
+    cutoff = 5R0 # for contributions
+
+    ## Cell List construction
+    nb_cells_x = Int(div(Lx, mesh_size)) + 1
+    nb_cells_y = Int(div(Ly, mesh_size)) + 1
+    head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
+    list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
+    for n in 1:N
+        cellx, celly = Int(div(pos[1, n], mesh_size)) + 1, Int(div(pos[2, n], mesh_size)) + 1 # cell to which particle n belongs
+        list[n] = head[cellx, celly]
+        head[cellx, celly] = n
+    end
+
+    LLx = round(Int, Lx / mesh_size)
+    LLy = round(Int, Ly / mesh_size)
+    fine_grid = NaN * zeros(LLx, LLy)
+    fine_grid_density = NaN * zeros(LLx, LLy)
+    for i in 1:LLx, j in 1:LLy # scan fine_grid cells
+        center_finegrid_cell = T.([(i - 0.5) * mesh_size, (j - 0.5) * mesh_size])
+
+        # find cell from coarse mesh correponding to cell i,j belonging to fine_grid
+        cellx, celly = Int(div(center_finegrid_cell[1], mesh_size)) + 1, Int(div(center_finegrid_cell[2], mesh_size)) + 1
+        a = round(Int, cutoff / mesh_size)
+        neighbouring_cells = vec([(ii, jj) for ii in -a:a, jj in -a:a])
+        neighbouring_cells = [mod1_2D(el .+ (cellx, celly), nb_cells_x, nb_cells_y) for el in neighbouring_cells]
+
+        # get indices of particles within those cells (cells belonging to the coarse mesh)
+        ind_neighbours = Int[]
+        for (i, j) in neighbouring_cells
+            next = head[i, j]
+            if next ≠ -1
+                if dist(center_finegrid_cell, pos[:, next], Lx, Ly) < cutoff
+                    push!(ind_neighbours, next)
+                end
+                while list[next] ≠ -1
+                    if dist(center_finegrid_cell, pos[:, list[next]], Lx, Ly) < cutoff
+                        push!(ind_neighbours, list[next])
+                    end
+                    next = list[next]
+                end
+            end
+        end
+
+        # compute contributions from those "neighbouring" particles
+        tmp = Complex[]
+        tmp_density = Float64[]
+        for m in ind_neighbours
+            r = dist(center_finegrid_cell, pos[:, m], Lx, Ly)
+            if r < cutoff
+                push!(tmp, exp(im * thetas[m] - r / R0))
+                # push!(tmp_density,exp(-r/R0))
+            end
+        end
+        fine_grid[i, j] = angle(mean(tmp))
+        # fine_grid_density[i,j] = sum(tmp_density)
+    end
+    return fine_grid
+    # return fine_grid,fine_grid_density
+end
 
 function arclength(theta1::T, theta2::T)::T where {T<:AbstractFloat}
     #= This function returns the signed arclength on the unit trigonometric circle .
@@ -1183,18 +1095,62 @@ function corr_length(C::Vector{T}, rs=1:length(C); seuil=exp(-1))::T where {T<:A
     return ξ
 end
 
-########################## Miscellaneous
 
-function remove_negative(input)
-    array = Float64.(copy(input))
-    for i in 1:length(array)
-        if array[i] ≤ 0
-            array[i] = NaN
-        end
-    end
-    return array
-end
 
+## Plotting methods
+# import Plots.plot
+# function plot(pos,thetas,N,Lx,Ly;particles=false,vertical=false,size=(512,512),defects=false,title="")
+#     cols = cgrad([:black,:blue,:green,:orange,:red,:black])
+#     if particles
+#         if vertical
+#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
+#             thetas_cg = cg(pos,thetas,N,Lx,Ly)
+#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+#             if defects
+#                 defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
+#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
+#                 highlight_defects!(p2,Lx,Ly,locP,locN)
+#             end
+#             return plot(p1,p2,layout=(2,1),size=(size[1],2*size[2]),title=title)
+#         else
+#             p1 = scatter((pos[1,:],pos[2,:]),marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=size,aspect_ratio=Ly/Lx,xlims=(0,Lx),ylims=(0,Ly))
+#             thetas_cg = cg(pos,thetas,N,Lx,Ly)
+#             p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx)
+#             if defects
+#                 defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
+#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
+#                 highlight_defects!(p2,Lx,Ly,locP,locN)
+#             end
+#             return plot(p1,p2,size=(2*size[1],size[2]),title=title)
+#         end
+#     else
+#         thetas_cg = cg(pos,thetas,N,Lx,Ly)
+#         p2 = heatmap(mod.(thetas_cg,2pi)',clims=(0,2pi),c=cols,size=size,aspect_ratio=Ly/Lx,title=title)
+#         if defects
+#             defects_p,defects_m = spot_defects(pos,thetas,N,Lx,Ly)
+#             locP = [defects_p[i][1:2] for i in each(defects_p)]
+#             locN = [defects_m[i][1:2] for i in each(defects_m)]
+#             highlight_defects!(p2,Lx,Ly,locP,locN)
+#         end
+#         return p2
+#     end
+# end
+
+# function highlight_defects!(p,Lx,Ly,defects_p,defects_m,symbP=:circle,symbM=:utriangle)
+#     for defect in defects_p
+#         scatter!((defect), m = (1.5, 1., symbP,:transparent, stroke(1.2, :grey85)))
+#     end
+#     for defect in defects_m
+#         scatter!((defect), m = (1.5, 1., symbM,:transparent, stroke(1.2, :grey85)))
+#     end
+#     xlims!((1,Lx))
+#     ylims!((1,Ly))
+#     return p
+# end
+
+# Miscellaneous 
 logspace(x1, x2, n; digits=1) = unique!(round.([10.0^y for y in range(log10(x1), log10(x2), length=n)], digits=digits))
 
 function prinz(z)
@@ -1218,50 +1174,12 @@ function vector_of_vector2matrix(x::Vector{Vector{T}}) where {T<:AbstractFloat}
     return matrice
 end
 
-
-function dist(a::Vector{T}, b::Vector{T}, Lx, Ly) where {T<:AbstractFloat}  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return sqrt(dx^2 + dy^2)
-end
-
-function dist(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return sqrt(dx^2 + dy^2)
-end
-
-# almost twice as fast
-function dist2(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return dx^2 + dy^2
-end
-
-
-
-function dist(a, b, Lx, Ly)  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return sqrt(dx^2 + dy^2)
-end
-
-
-function distance_matrix(new, old, Lx, Ly)
-    m_new, m_old = length(new), length(old)
-    distance_matrix = zeros(m_new, m_old)
-    for j in 1:m_old
-        for i in 1:m_new
-            distance_matrix[i, j] = dist(new[i], old[j], Lx, Ly)
+function remove_negative(input)
+    array = Float64.(copy(input))
+    for i in 1:length(array)
+        if array[i] ≤ 0
+            array[i] = NaN
         end
     end
-    return distance_matrix
+    return array
 end

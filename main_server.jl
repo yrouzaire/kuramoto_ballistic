@@ -216,7 +216,7 @@ const global R0 = 1
 ## Critical velocity at sigma = 0 for ρ < ρc
 rhoc = 4.51 / pi
 #vc(rho) = (rhoc - rho) / rho / cst * π^2 * R0 / 2
-v0s = logspace(1e-3, 0.3, 5, digits=3)
+v0s = logspace(1e-3, 0.3, 15, digits=3)
 sigmas = 0
 rhos = collect(1:0.1:1.44)
 N = Int(1E3)

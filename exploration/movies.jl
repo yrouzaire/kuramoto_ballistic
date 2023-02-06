@@ -40,14 +40,15 @@ function movies(params, every, tmax, dt; particles=false)
 end
 
 ##
-N = Int(1E4)
-rho = 1.7
+N = Int(1E3)
+rho = 1
 T = 0.1 # temperature for angle diffusion
-v = 0 # norm of individual velocities
+v = 0.1 # norm of individual velocities
 σ = 0
 
 # Other parameters
 L = round(Int, sqrt(N / rho))
+params_init
 params = Any[rho, T, v, N, L, σ, params_init] # any to avoid N being interpreted as a Float
 dt = determine_dt(T, σ, v, N, rho)
 
