@@ -5,7 +5,7 @@ gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.
 ######################## Parameters ########################
 Ntarget = Int(1E4)
 aspect_ratio = 1
-rho = 2
+rho = 1
 T = 0.0
 sigma = 1.0
 v0 = 1.0
@@ -42,7 +42,14 @@ update_thetas!(system, ind_neighbours)
 update_positions!(system)
 @btime update_positions!(system)
 
-corr()
+######################## Other Tests ########################
+corr(system, algo="fast", dr=0.445)
+
+spot_defects(system)
+plot_thetas(system, defects=true)
+
+
+
 #= 
 In the end, for N = 1E4, rho = 2 : 
 runtime = 8.3 (find neighbours) + 4 (update thetas) + 3.8 (update positions) = 16.1 ms 

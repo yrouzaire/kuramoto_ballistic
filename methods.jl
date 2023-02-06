@@ -1,8 +1,8 @@
 #"Copyright (c) 2022 Y.Rouzaire All Rights Reserved."
 
 #################### Structure Definitions ####################
-using StaticArrays, BenchmarkTools, Sobol, Parameters
-using Plots, ColorSchemes, LaTeXStrings
+using BenchmarkTools, Sobol, Parameters
+using Plots, ColorSchemes
 mutable struct Agent{F<:AbstractFloat}
     pos::Tuple{F,F}
     theta::F
@@ -150,64 +150,49 @@ function plot_thetas(system; particles=false, vertical=false, size=(512, 512), d
     if particles
         if vertical
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            thetas_cg = cg(pos, thetas, N, Lx, Ly)
-            p2 = heatmap(1:Lx, 1:Ly, mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
+            thetas_cg = cg(system)
+            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
             final_plot = plot(p1, p2, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
         else
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            thetas_cg = cg(pos, thetas, N, Lx, Ly)
-            p2 = heatmap(1:Lx, 1:Ly, mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
+            thetas_cg = cg(system)
+            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
             final_plot = plot(p1, p2, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
+            if defects 
+                defects_p, defects_m =  spot_defects(system)
+                highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
+            end
         end
     else
-        thetas_cg = cg(pos, thetas, N, Lx, Ly)
-        final_plot = heatmap(1:Lx, 1:Ly, mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly), title=title)
+        thetas_cg = cg(system)
+        final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly), title=title)
+        if defects 
+            defects_p, defects_m =  spot_defects(system)
+            highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
+        end
     end
     return final_plot
 end
-# function old_plot(pos, thetas, N, Lx, Ly; particles=false, vertical=false, size=(512, 512), defects=false, title="")
-#     cols = cgrad([:black, :blue, :green, :orange, :red, :black])
-#     if particles
-#         if vertical
-#             p1 = scatter((pos[1, :], pos[2, :]), marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-#             thetas_cg = cg(pos, thetas, N, Lx, Ly)
-#             p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx)
-#             if defects
-#                 defects_p, defects_m = spot_defects(pos, thetas, N, Lx, Ly)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2, Lx, Ly, locP, locN)
-#             end
-#             return plot(p1, p2, layout=(2, 1), size=(size[1], 2 * size[2]), title=title)
-#         else
-#             p1 = scatter((pos[1, :], pos[2, :]), marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-#             thetas_cg = cg(pos, thetas, N, Lx, Ly)
-#             p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx)
-#             if defects
-#                 defects_p, defects_m = spot_defects(pos, thetas, N, Lx, Ly)
-#                 locP = [defects_p[i][1:2] for i in each(defects_p)]
-#                 locN = [defects_m[i][1:2] for i in each(defects_m)]
-#                 highlight_defects!(p2, Lx, Ly, locP, locN)
-#             end
-#             return plot(p1, p2, size=(2 * size[1], size[2]), title=title)
-#         end
-#     else
-#         thetas_cg = cg(pos, thetas, N, Lx, Ly)
-#         p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, title=title)
-#         if defects
-#             defects_p, defects_m = spot_defects(pos, thetas, N, Lx, Ly)
-#             locP = [defects_p[i][1:2] for i in each(defects_p)]
-#             locN = [defects_m[i][1:2] for i in each(defects_m)]
-#             highlight_defects!(p2, Lx, Ly, locP, locN)
-#         end
-#         return p2
-#     end
-# end
+
+function highlight_defects!(p, Lx, Ly, defects_p, defects_m, symbP=:circle, symbM=:utriangle)
+    for defect in defects_p
+        scatter!((defect[1:2]), m=(1.5, 6., symbP, :transparent, stroke(1.2, :grey85)))
+    end
+    for defect in defects_m
+        scatter!((defect[1:2]), m=(1.5, 6., symbM, :transparent, stroke(1.2, :grey85)))
+    end
+    xlims!((1, Lx))
+    ylims!((1, Ly))
+    return p
+end
+
 function mod1_2D(xx::Tuple{T,T}, Lx::Int, Ly::Int) where {T<:Number}
     return (mod1(xx[1], Lx), mod1(xx[2], Ly))
 end
 
-function cg(pos, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
+function cg(system::System{T}) where {T<:AbstractFloat}
+    Lx, Ly = system.Lx, system.Ly
+    pos, thetas = get_pos(system), get_thetas(system)
     mesh_size = R0
     cutoff = 5R0 # for contributions
 
@@ -253,7 +238,8 @@ function cg(pos, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
         end
 
         # compute contributions from those "neighbouring" particles
-        tmp = Complex[]
+        tmp = ComplexF32[]
+        sizehint!(tmp, length(ind_neighbours))
         tmp_density = Float64[]
         for m in ind_neighbours
             r = dist(center_finegrid_cell, pos[m], Lx, Ly)
@@ -267,18 +253,6 @@ function cg(pos, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
     end
     return fine_grid
     # return fine_grid,fine_grid_density
-end
-
-function highlight_defects!(p, Lx, Ly, defects_p, defects_m, symbP=:circle, symbM=:utriangle)
-    for defect in defects_p
-        scatter!((defect), m=(1.5, 1.0, symbP, :transparent, stroke(1.2, :grey85)))
-    end
-    for defect in defects_m
-        scatter!((defect), m=(1.5, 1.0, symbM, :transparent, stroke(1.2, :grey85)))
-    end
-    xlims!((1, Lx))
-    ylims!((1, Ly))
-    return p
 end
 
 ## Time Evolution
@@ -372,6 +346,12 @@ function evolve(system::System, tmax::Number)
     return system
 end
 
+function update!(system::System, N::Int, Lx::Int, Ly::Int, R0::Number)
+    update_positions!(system)
+    ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
+    update_thetas!(system, ind_neighbours)
+end
+
 function update_positions!(system::System{T}) where {T<:AbstractFloat}
     v0, dt = system.v0, system.dt
     Lx, Ly = system.Lx, system.Ly
@@ -401,6 +381,7 @@ function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}})
 end
 
 ## Measurements
+polarOP(system::System) = polarOP(get_thetas(system))
 function polarOP(thetas::Vector{T}) where {T<:AbstractFloat}
     tmp = Complex(0)
     for theta in thetas
@@ -409,6 +390,7 @@ function polarOP(thetas::Vector{T}) where {T<:AbstractFloat}
     return norm(tmp) / length(thetas), angle(tmp)
 end
 
+nematicOP(system::System) = nematicOP(get_thetas(system))
 function nematicOP(thetas::Vector{T}) where {T<:AbstractFloat}
     tmp = Complex(0)
     for theta in thetas
@@ -417,7 +399,8 @@ function nematicOP(thetas::Vector{T}) where {T<:AbstractFloat}
     return norm(tmp) / length(thetas), angle(tmp)
 end
 
-function corr(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr; algo="fast")::Vector{T} where {T<:AbstractFloat}
+corr(system::System; dr=system.R0, algo="fast") = corr(get_pos(system), get_thetas(system), system.N, system.Lx, system.Ly, dr)
+function corr(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr; algo="fast")::Vector{T} where {T<:AbstractFloat}
     if algo == "slow"
         return corr_slow(pos, thetas, N, Lx, Ly, dr)
     elseif algo == "fast"
@@ -425,7 +408,7 @@ function corr(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr; algo="fast")::Ve
     end
 end
 
-function corr_slow(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} where {T<:AbstractFloat}
+function corr_slow(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} where {T<:AbstractFloat}
     # Construct matrix of distances
     Lmin = min(Lx, Ly)
     C = [T[] for i in 1:round(Int, Lmin / 2 / dr)]
@@ -434,7 +417,7 @@ function corr_slow(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} 
     #     distances[i,j] = dist(pos[:,i],pos[:,j],L)
     # end
     for j in 1:N, i in j+1:N
-        d = dist(pos[:, i], pos[:, j], Lx, Ly)
+        d = dist(pos[i], pos[j], Lx, Ly)
         if d ≤ round(Int, Lmin / 2)
             push!(C[min(ceil(Int, d / dr), length(C))], cos(thetas[i] - thetas[j]))
         end
@@ -444,14 +427,14 @@ function corr_slow(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} 
     return vcat(1, Cavg) # 1 to represent C(0,t)
 end
 
-function corr_fast(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} where {T<:AbstractFloat}
+function corr_fast(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} where {T<:AbstractFloat}
     M = 50
     Lmin = min(Lx, Ly)
     C = [T[] for i in 1:round(Int, Lmin / 2 / dr)]
     ms = zeros(Int, round(Int, Lmin / 2 / dr))
 
     for j in 1:N, i in j+1:N
-        d = dist(pos[:, i], pos[:, j], Lx, Ly)
+        d = dist(pos[i], pos[j], Lx, Ly)
         if d ≤ round(Int, Lmin / 2)
             ind = min(ceil(Int, d / dr), length(C))
             push!(C[ind], cos(thetas[i] - thetas[j]))
@@ -530,15 +513,21 @@ function get_vorticity(thetas_mat::Matrix{T}, i::Int, j::Int, Lx::Int, Ly::Int):
     return charge
 end
 
-number_defects(pos, thetas, N, Lx, Ly) = sum(length, spot_defects(pos, thetas, N, Lx, Ly))
-number_defectsP(pos, thetas, N, Lx, Ly) = length(spot_defects(pos, thetas, N, Lx, Ly)[1])
-number_defectsN(pos, thetas, N, Lx, Ly) = length(spot_defects(pos, thetas, N, Lx, Ly)[2])
-function spot_defects(pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
+
+
+number_defects(system::System) = sum(length,spot_defects(system))
+number_defectsP(system::System) = length(spot_defects(system)[1])
+number_defectsN(system::System) = length(spot_defects(system)[2])
+number_positive_defects = number_defectsP
+number_negative_defects = number_defectsN
+
+spot_defects(system::System) = spot_defects(get_pos(system), get_thetas(system), system.N, system.Lx, system.Ly)
+function spot_defects(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
     vortices_plus = Tuple{Int,Int,T}[]
     vortices_minus = Tuple{Int,Int,T}[]
 
-    thetasmod = mod.(cg(pos, thetas, N, Lx, Ly), 2π)
-    relax!(thetasmod)
+    thetasmod = mod.(cg(system), 2π)
+    # relax!(thetasmod)
 
     for i in 1:Lx
         for j in 1:Ly
@@ -629,6 +618,13 @@ mutable struct DefectTracker
 
     function DefectTracker(pos, thetas, N, Lx, Ly, t) # constructor
         vortices, antivortices = spot_defects(pos, thetas, N, Lx, Ly)
+        defectsP = [Defect(id=i, charge=vortices[i][3], loc=vortices[i][1:2], t=t) for i in each(vortices)]
+        defectsN = [Defect(id=i, charge=antivortices[i][3], loc=antivortices[i][1:2], t=t) for i in each(antivortices)]
+        new(defectsP, defectsN, t)
+    end
+
+    function DefectTracker(system, t) # constructor
+        vortices, antivortices = spot_defects(system)
         defectsP = [Defect(id=i, charge=vortices[i][3], loc=vortices[i][1:2], t=t) for i in each(vortices)]
         defectsN = [Defect(id=i, charge=antivortices[i][3], loc=antivortices[i][1:2], t=t) for i in each(antivortices)]
         new(defectsP, defectsN, t)
@@ -783,6 +779,8 @@ function annihilate_defects(dt::DefectTracker, ids_annihilated_defects, Lx, Ly)
     return dt
 end
 
+
+track!(dft::DefectTracker, system::System, times::AbstractVector) = track!(dft, get_pos(system), get_thetas(system), get_omegas(system), get_psis(system), system.T, system.v0, system.N, system.Lx, system.Ly, system.dt, system.t, times)
 function track!(dft::DefectTracker, pos::Matrix{FT}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, T::Number, v0::Number, N::Int, Lx::Int, Ly::Int, dt::Number, t::Number, times::AbstractVector) where {FT<:AbstractFloat}
     if v0 == 0
         return update_and_track_v0!(dft, pos, thetas, omegas, psis, T, v0, N, Lx, Ly, dt, t, times)
@@ -797,8 +795,6 @@ function update_and_track!(dft::DefectTracker, pos::Matrix{FT}, thetas::Vector{F
         ind_neighbours = get_list_neighbours(pos, N, Lx, Ly)
         pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v0, N, Lx, Ly, dt)
         if t ≥ times[token]
-            # p=plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
-            # display(p)
             if number_active_defects(dft) == 0
                 println("Simulation stopped, there is no defects left.")
                 break
