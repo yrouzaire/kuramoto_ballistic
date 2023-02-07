@@ -15,76 +15,75 @@ the relation between moving particles and MF approximation.
 =#
 
 ##
-Ntarget = 100000
-rhos = collect(1:0.2:2)
-Niter = Int(1E2)
+include("../parameters.jl");
+# scanned parameters 
+rhos = collect(1:0.25:2)
 v0s = [0.1, 0.5, 1, 2]
-v0 = 1
-R = 3
+v0s = [1]
+R0s = [1]
+Niter = Int(1E4)
+R = 5
 
-number_interactions = zeros(Ntarget, Niter+1, length(rhos), length(v0s),R)
-z = @elapsed for j in each(rhos), k in each(v0s), r in 1:R
-    rho = rhos[j]
-    v0 = v0s[k]
-    N,L,L = effective_number_particle(Ntarget,rho)
-    pos, thetas, omegas, psis = initialisation(N, L, L, 0, ["disordered", "rand"])
+number_interactions = zeros(Ntarget, Niter + 1, length(rhos), length(v0s), length(R0s), R)
 
-    ID_interactions = [Int[] for i in 1:N]
-   
-    ind_neighbours = get_list_neighbours(pos, N, L, L)
-    for n in 1:min(Ntarget,N)
-        push!(ID_interactions[n], ind_neighbours[n]...)
-        unique!(ID_interactions[n])
-        number_interactions[n, 1, j, k,r] = length(ID_interactions[n])
-    end
+z = @elapsed for j in each(rhos), k in each(v0s), m in each(R0s)
+    Threads.@threads for r in 1:R
+        rho = rhos[j]
+        v0 = v0s[k]
+        R0 = R0s[m]
+        N, L, L = effective_number_particle(Ntarget, rho)
 
-    dt = 0.1
-    for t in 1:Niter
-        # Update position
-        for n in 1:N
-            pos[:, n] += v0 * dt * [cos(psis[n]), sin(psis[n])]
-        end
-        pos = mod.(pos, L)
+        param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio, :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0, :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+        
+        system = System(param)
+        ID_interactions = [Int[] for i in 1:N]
 
-        ind_neighbours = get_list_neighbours(pos, N, L, L)
-        for n in 1:min(Ntarget,N)
-            push!(ID_interactions[n], ind_neighbours[n]...)
-            unique!(ID_interactions[n])
-            number_interactions[n, t+1, j, k,r] = length(ID_interactions[n])
+        dt = 0.1
+        for t in 0:Niter
+            ind_neighbours = get_list_neighbours(get_pos(system), N, L, L, R0)
+            for n in 1:min(Ntarget, N)
+                push!(ID_interactions[n], ind_neighbours[n]...)
+                unique!(ID_interactions[n])
+                number_interactions[n, t+1, j, k, m, r] = length(ID_interactions[n])
+            end
+            update_positions!(system)
         end
     end
 end
-nintavg = mean(number_interactions, dims=(1,5))[1, :, :, :,1]
+nintavg = mean(number_interactions, dims=(1, 6))[1, :, :, :, :, 1]
 prinz(z)
 
-## 
-cst_atan = 3.9
+##
+cst_atan = 0.2
 cst_exp = 1.9
 p = plot(legend=false, uaxis=:log)
 for j in each(rhos)
     for k in 1#each(v0s)
-        rho = rhos[j]
-        v0 = v0s[k]
-        # times = collect(1:Niter)
-        times = collect(0:100)
-        plot!(times, nintavg[1:101, j, k]/N, label="ρ = $rho , v0 = $v0",c=j)
+        for m in 1#each(R0s)
+            rho = rhos[j]
+            v0 = v0s[k]
+            R0 = R0s[m]
+            times = collect(0:Niter)
+            plot!(times, nintavg[1:Niter+1, j, k, m] / N, label="ρ = $rho , v0 = $v0, R0 = $R0", c=j)
 
-        N0 = π * rho * R0^2
-        # plot!(times, t -> N0/N + (N - N0)/N * (1 - exp(-cst_exp * t/N)), c=:black)
-        plot!(t -> N0/N + 2 / pi * (N - N0)/N * atan(0.4 * rho * v0 / N * t), c=j,ls=:dash)
+            N0 = π * rho * R0^2
+            # plot!(times, t -> N0/N + (N - N0)/N * (1 - exp(-cst_exp * t/N)), c=:black)
+            # plot!(t -> N0 / N + 2 / pi * (N - N0) / N * atan(cst_atan * rho * v0 / N * t), c=j, ls=:dash)
+        end
     end
 end
 # plot!(x->0.00071(x)^1)
 p
+
 ##
-nintavg[1, :, :]- pi*(rhos)
+nintavg[1, :, :] - pi * (rhos)
 
 
 ## Effective density
 N = 10000
 rhos = collect(1:0.2:2)
 Ls = round.(Int, sqrt.(N ./ rhos))
-N ./ (Ls.^2) - rhos
+N ./ (Ls .^ 2) - rhos
 
 ## Visualizing the area of seen particules over time
 for v0 in [0.1, 0.5, 1, 2, 5]

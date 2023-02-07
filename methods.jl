@@ -273,7 +273,7 @@ end
 function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cells_y::Int)::Vector{Vector{Int}}
     # In the end, this function is quite fast, it contributes +3ms for N=1E4 particles
     should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
-    if should_take_mod
+    if true
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, mod1(celly + 1, nb_cells_y)], [mod1(cellx + 1, nb_cells_x), celly], [cellx, mod1(celly - 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), celly], [mod1(cellx + 1, nb_cells_x), mod1(celly + 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), mod1(celly - 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), mod1(celly + 1, nb_cells_y)], [mod1(cellx + 1, nb_cells_x), mod1(celly - 1, nb_cells_y)]]
     else
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, celly + 1], [cellx + 1, celly], [cellx, celly - 1], [cellx - 1, celly], [cellx + 1, celly + 1], [cellx - 1, celly - 1], [cellx - 1, celly + 1], [cellx + 1, celly - 1]]
