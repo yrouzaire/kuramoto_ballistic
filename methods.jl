@@ -399,6 +399,7 @@ function nematicOP(thetas::Vector{T}) where {T<:AbstractFloat}
     return norm(tmp) / length(thetas), angle(tmp)
 end
 
+
 corr(system::System; dr=system.R0, algo="fast") = corr(get_pos(system), get_thetas(system), system.N, system.Lx, system.Ly, dr)
 function corr(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr; algo="fast")::Vector{T} where {T<:AbstractFloat}
     if algo == "slow"

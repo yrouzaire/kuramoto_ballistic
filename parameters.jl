@@ -2,7 +2,7 @@ Ntarget = Int(1E3)
 aspect_ratio = 1
 rho = 1
 T = 0.0
-sigma = 1.0
+sigma = 0.0
 v0 = 1.0
 R0 = 1
 
