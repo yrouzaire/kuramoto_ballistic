@@ -192,6 +192,7 @@ end
 
 function cg(system::System{T}) where {T<:AbstractFloat}
     Lx, Ly = system.Lx, system.Ly
+    N = system.N
     pos, thetas = get_pos(system), get_thetas(system)
     mesh_size = R0
     cutoff = 5R0 # for contributions
@@ -330,7 +331,7 @@ function evolve(system::System, tmax::Number)
     # pos, thetas, omegas, psis = get_pos(system), get_thetas(system), get_omegas(system), get_psis(system)
     v0, R0, N, Lx, Ly, dt = system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt
     if v0 == 0
-        ind_neighbours = get_list_neighbours(system.pos, N, Lx, Ly, R0)
+        ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
         while system.t < tmax
             system.t += dt
             update_thetas!(system, ind_neighbours)
@@ -338,7 +339,7 @@ function evolve(system::System, tmax::Number)
     else
         while system.t < tmax
             system.t += dt
-            ind_neighbours = get_list_neighbours(system.pos, N, Lx, Ly, R0)
+            ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
             update_positions!(system)
             update_thetas!(system, ind_neighbours)
         end
@@ -522,8 +523,11 @@ number_defectsN(system::System) = length(spot_defects(system)[2])
 number_positive_defects = number_defectsP
 number_negative_defects = number_defectsN
 
-spot_defects(system::System) = spot_defects(get_pos(system), get_thetas(system), system.N, system.Lx, system.Ly)
-function spot_defects(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly) where {T<:AbstractFloat}
+
+function spot_defects(system::System{T}) where {T<:AbstractFloat}  
+    N = system.N
+    Lx, Ly = system.Lx, system.Ly
+    
     vortices_plus = Tuple{Int,Int,T}[]
     vortices_minus = Tuple{Int,Int,T}[]
 

@@ -15,3 +15,4 @@ r0 = 20.0
 q = 1.0
 params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio, :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0, :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
