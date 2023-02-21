@@ -20,12 +20,12 @@ q = 1.0
 params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
 # Simulation parameters
-v0sigs = [(1,0), (1,0.1), (0.01,0.1)]
-Ntargets = Int.(logspace(1E2,1E4,5,digits=0))
-Ntargets = Int(1E5)
+v0sigs = [(1,0), (1,0.1)]
+Ntargets = Int.(logspace(1E2,2E4,10,digits=0))
 
-tmax = 100
-times = 0:tmax/10:tmax
+tmax = 1E4
+# times = collect(0:tmax/30:tmax) # linear time
+times = logspace(1,tmax,30,digits=1) # log time
 
 P = zeros(length(v0sigs), length(Ntargets), length(times))
 C = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times))
@@ -61,16 +61,7 @@ z = @elapsed for i in each(v0sigs), nn in each(Ntargets)
 end
 prinz(z)
 
-##
-plot(P[1,1,:], label="v0 = $(v0sigs[1][1]), σ = $(v0sigs[1][2])")
-
-
-
-##
-
-
-
-filename = "data/FSS_r$real.jld2"
+filename = "data/FSS_green_r$real.jld2"
 JLD2.@save filename Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime = z
 
 

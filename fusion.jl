@@ -29,7 +29,7 @@ for r in indices
 
     runtimes[r] = runtime
 end
-@save base_filename * ".jld2" Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes
+@save base_filename * ".jld2" Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
 println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
