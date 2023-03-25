@@ -802,13 +802,13 @@ function update_and_track!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas
             break
         end
         println("t = ", round(t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
-        # try
-            update_DefectTracker!(dft, pos, thetas, N, Lx, Ly, t)
-        # catch e
-        #     println(e)
-        #     println("Previous DefectTracker saved instead and immediate return.")
-        #     return dft, pos, thetas, t
-        # end
+        try
+            update_DefectTracker!(dft, system, t)
+        catch e
+            println(e)
+            println("Previous DefectTracker saved instead and immediate return.")
+            return dft, pos, thetas, t
+        end
     end
     return dft, pos, thetas, times[end] # times[end] is the last time of the simulation
 end
@@ -833,8 +833,11 @@ function update_and_track_v0!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, the
     return dft, pos, thetas, t
 end
 
-function update_DefectTracker!(dft::DefectTracker, pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, t) where {T<:AbstractFloat}
+# function update_DefectTracker!(dft::DefectTracker, pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, t) where {T<:AbstractFloat}
+function update_DefectTracker!(dft::DefectTracker, system::System, t) 
     dft.current_time = t
+    
+    Lx, Ly = system.Lx, system.Ly
     vortices_new, antivortices_new = spot_defects(system)
 
     # if BC == "periodic" @assert length(vortices_new) == length(antivortices_new) && length(vortices_old) == length(antivortices_old) end

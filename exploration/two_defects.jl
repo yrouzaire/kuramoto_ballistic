@@ -21,7 +21,7 @@ comments = "From the defects data, one will be able to infer : \n
 A. the separating distance between the two defects R(t) \n
 B. the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
-Ntarget = Int(1E3)
+Ntarget = Int(1E4)
 aspect_ratio = 1
 T = 0.1
 R0 = 1
@@ -37,8 +37,8 @@ params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN,
 
 # Simulation parameters
 v0sigs = [(0.5,0),(0.5,0.1)]
-r0s = 5#:5:35
-tmax = 1E1
+r0s = 5:10:35
+tmax = 1E2
 times = 0:5:tmax # linear time
 
 z = @elapsed for i in each(v0sigs), j in each(r0s)
@@ -55,15 +55,13 @@ z = @elapsed for i in each(v0sigs), j in each(r0s)
         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-    system = System(param)
-
-
     t = 0.0
+    system = System(param)
     dft = DefectTracker(system, t)
-    println("Initialisation done", number_active_defects(dft))
     dft, pos, thetas, t = track!(dft,system,times)
 end
 prinz(z)
+
 
 ## Compute R(t) from dft;  Linear time
 # Rts = Array{Vector{Float64}}(undef, length(r0s), R)
@@ -86,7 +84,7 @@ prinz(z)
 # p
 
 ## Compute R(t*) from dft; Reversed time = time to annihilation
-Rts_reverse = Array{Vector{Float64}}(undef, length(r0s), R)
+Rts_reverse = Array{Vector{Float64}}(undef, length(r0s), length(v0sigs), R)
 for i in each(r0s), r in 1:R
     dft = dfts[i, r]
     Rts_reverse[i, r] = reverse(interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L))
