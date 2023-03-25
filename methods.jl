@@ -578,8 +578,8 @@ function merge_duplicates(list, Lx, Ly; radius=3)
     #= In this list, there might be doubles/triples (2/3 locations for the
     same physical vortex). We thus seek for numerically identified vortices
     which are neighbours and with the same charge to delete them. =#
-    pos = [list[i][1:2] for i in each(list)]
-    charge = [list[i][3] for i in each(list)]
+    pos = [list[i][1:2] for i in eachindex(list)]
+    charge = [list[i][3] for i in eachindex(list)]
     dealt_with = falses(length(pos))
 
     merged_duplicates = []
@@ -844,15 +844,15 @@ function update_DefectTracker!(dt::DefectTracker, pos::Matrix{T}, thetas::Vector
     vortices_new, antivortices_new = spot_defects(pos, thetas, N, Lx, Ly)
 
     # if BC == "periodic" @assert length(vortices_new) == length(antivortices_new) && length(vortices_old) == length(antivortices_old) end
-    locP_old = [last_loc(dt.defectsP[i]) for i in each(dt.defectsP)]
-    locN_old = [last_loc(dt.defectsN[i]) for i in each(dt.defectsN)]
-    chargeP_old = [dt.defectsP[i].charge for i in each(dt.defectsP)]
-    chargeN_old = [dt.defectsN[i].charge for i in each(dt.defectsN)]
+    locP_old = [last_loc(dt.defectsP[i]) for i in eachindex(dt.defectsP)]
+    locN_old = [last_loc(dt.defectsN[i]) for i in eachindex(dt.defectsN)]
+    chargeP_old = [dt.defectsP[i].charge for i in eachindex(dt.defectsP)]
+    chargeN_old = [dt.defectsN[i].charge for i in eachindex(dt.defectsN)]
 
-    locP_new = [vortices_new[i][1:2] for i in each(vortices_new)]
-    locN_new = [antivortices_new[i][1:2] for i in each(antivortices_new)]
-    chargeP_new = [vortices_new[i][3] for i in each(vortices_new)]
-    chargeN_new = [antivortices_new[i][3] for i in each(antivortices_new)]
+    locP_new = [vortices_new[i][1:2] for i in eachindex(vortices_new)]
+    locN_new = [antivortices_new[i][1:2] for i in eachindex(antivortices_new)]
+    chargeP_new = [vortices_new[i][3] for i in eachindex(vortices_new)]
+    chargeN_new = [antivortices_new[i][3] for i in eachindex(antivortices_new)]
 
     Np_new, Np_old = length(locP_new), length(locP_old)
     Nn_new, Nn_old = length(locN_new), length(locN_old)
