@@ -49,18 +49,19 @@ z = @elapsed for i in each(v0sigs), j in each(r0s)
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
 
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    
     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
     system = System(param)
-    
+
 
     t = 0.0
     dft = DefectTracker(system, t)
-
+    println("Initialisation done", number_active_defects(dft))
     dft, pos, thetas, t = track!(dft,system,times)
-
 end
 prinz(z)
 
