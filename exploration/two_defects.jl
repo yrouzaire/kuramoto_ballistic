@@ -16,45 +16,53 @@ Plan :
 A. Study R(t)
 B. If unbounded, study MSD with two defects far apart.=#
 
-## A. Study R(t) 
-Ntarget = Int(1E4)
-rho = 4.51 / π
+## ---------------- Monitor the defects in the green area  ---------------- ##
+comments = "From the defects data, one will be able to infer : \n
+A. the separating distance between the two defects R(t) \n
+B. the MSD and diffusion coeff of an individual defect. "
+# Physical Params 
+Ntarget = Int(1E3)
 aspect_ratio = 1
-N, L, L = effective_number_particle(Ntarget, rho, aspect_ratio)
-T = 0.1 # temperature for angle diffusion
-v0 = 0.25
-sigma = 0.0
-every = 2;
-r0s = 5:5:25
-dt = determine_dt(T, sigma, v0, N, rho)
-every = 2;
-tmax = 400;
-times = every:every:tmax;
-R = 50
+T = 0.1
+R0 = 1
+rho = 1
+rhoc = 4.51 / π
 
-dfts = Array{Union{DefectTracker,Nothing}}(undef, length(r0s), R)
-z = @elapsed for i in each(r0s)
-    Threads.@threads for r in 1:R
-        r0 = r0s[i]
-        params_init = ["random", "pair", r0]
-        pos, thetas, omegas, psis = initialisation(N, L, L, sigma, params_init)
-        t = 0
-        dft = DefectTracker(pos, thetas, N, L, L, t)
-        # try 
-        dft, pos, thetas, t = track!(dft, pos, thetas, omegas, psis, T, v0, N, L, L, dt, t, times)
-        dfts[i, r] = dft
-        # catch e
-        #     println("Error at r0 = $(r0) and r = $(r)")
-        #     println(e)
-        #     dfts[i, r] = nothing
-        # end    
-    end
+# Initialisation parameters
+init_pos = "random"
+init_theta = "pair"
+r0 = 20.0
+q = 1.0
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
+
+# Simulation parameters
+v0sigs = [(0.5,0),(0.5,0.1)]
+r0s = 5#:5:35
+tmax = 1E1
+times = 0:5:tmax # linear time
+
+z = @elapsed for i in each(v0sigs), j in each(r0s)
+    v0, sigma = v0sigs[i]
+    r0 = r0s[j]
+
+    println("v0 = $v0, σ = $sigma, r0 = $r0 ,  $(100i/length(v0sigs))%")
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
+
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+    system = System(param)
+    
+
+    t = 0.0
+    dft = DefectTracker(system, t)
+
+    dft, pos, thetas, t = track!(dft,system,times)
+
 end
 prinz(z)
-
-filename = "data/two_defects_r0s_rho$(rho)_v0$(v0)_sigma$(sigma)_tmax$(tmax)_R$(R)_N$(Ntarget).jld2"
-@save filename dfts tmax times v0 sigma dt r0s Ntarget N L R T rho aspect_ratio runtime = z
-# @load filename dfts tmax times v0 sigma dt r0s Ntarget N L R T rho aspect_ratio runtime 
 
 ## Compute R(t) from dft;  Linear time
 # Rts = Array{Vector{Float64}}(undef, length(r0s), R)

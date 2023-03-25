@@ -1218,6 +1218,8 @@ function vector_of_vector2matrix(x::Vector{Vector{T}}) where {T<:AbstractFloat}
     end
     return matrice
 end
+vecTuple2matrix(vec::Vector{Tuple{F,F}}) where {F<:AbstractFloat} = F.(vector_of_vector2matrix([[vec[n][1], vec[n][2]] for n in 1:length(vec)]))
+# vecTuple2matrix(get_pos(system))
 
 
 function dist(a::Vector{T}, b::Vector{T}, Lx, Ly) where {T<:AbstractFloat}  # euclidian distance with Periodic BCs

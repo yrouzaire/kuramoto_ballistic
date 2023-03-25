@@ -1,7 +1,7 @@
 using JLD2, Parameters
 include("methods.jl");
 
-base_filename = "data/hysteresis_nature_phases_r" # look up in main_server.jl
+base_filename = "data/nature_phase_transition" # look up in main_server.jl
 R = 40 # look up into bash_loog.sh
 indices = [];
 for r in 1:R
@@ -11,27 +11,50 @@ for r in 1:R
 end;
 println("There are $(length(indices))/$R files.")
 
-## Hysteresis and Nature of Phases
-@load base_filename * "_r$(indices[1]).jld2" Ntarget rhos Ts inits_thetas v0sigs P C n xi params_init aspect_ratio times tmax comments rhoc runtime
-Ps = zeros(length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
-Cs = Array{Vector{Float64}}(undef, length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
-ns = zeros(length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
-xis = zeros(length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
+
+## Nature of the phase transition
+@load base_filename * "_r$(indices[1]).jld2" Ntarget rho T params_init v0sigs P C n xi aspect_ratio times tmax comments rhoc runtime
+Ps = zeros(length(v0sigs),length(times),R)
+Cs = Array{Vector{Float64}}(undef, length(v0sigs),length(times),R)
+ns = zeros(length(v0sigs),length(times),R)
+xis = zeros(length(v0sigs),length(times),R)
 runtimes = NaN*zeros(R)
 
 for r in indices
     println("r = $r")
     @load base_filename * "_r$r.jld2" runtime P C n xi 
-    Ps[:,:,:,:, :,r] = P
-    Cs[:,:,:,:, :,r] = C
-    ns[:,:,:,:, :,r] = n
-    xis[:,:,:,:, :,r] = xi
+    Ps[:,:,r] = P
+    Cs[:,:,r] = C
+    ns[:,:,r] = n
+    xis[:,:,r] = xi
 
     runtimes[r] = runtime
 end
 
-@save base_filename * ".jld2" Ntarget rhos Ts inits_thetas v0sigs Ps Cs ns xis params_init aspect_ratio times tmax comments rhoc runtimes R
+@save base_filename * ".jld2" v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
 println("Fusionned data saved in $(base_filename*".jld2") .")
+
+## Hysteresis and Nature of Phases
+# @load base_filename * "_r$(indices[1]).jld2" Ntarget rhos Ts inits_theta v0sigs P C n xi aspect_ratio times tmax comments rhoc runtime
+# Ps = zeros(length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
+# Cs = Array{Vector{Float64}}(undef, length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
+# ns = zeros(length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
+# xis = zeros(length(v0sigs), length(Ts), length(rhos),length(inits_theta), length(times),R)
+# runtimes = NaN*zeros(R)
+
+# for r in indices
+#     println("r = $r")
+#     @load base_filename * "_r$r.jld2" runtime P C n xi 
+#     Ps[:,:,:,:, :,r] = P
+#     Cs[:,:,:,:, :,r] = C
+#     ns[:,:,:,:, :,r] = n
+#     xis[:,:,:,:, :,r] = xi
+
+#     runtimes[r] = runtime
+# end
+
+# @save base_filename * ".jld2" Ntarget rhos Ts inits_thetas v0sigs Ps Cs ns xis params_init aspect_ratio times tmax comments rhoc runtimes R
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
 # ## FSS
