@@ -19,27 +19,34 @@ Ntarget = Int(1E4)
 aspect_ratio = 1
 T = 0.1
 R0 = 1
-rho = 1
+rho = 2
+v0 = 0
+sigma = 0
 rhoc = 4.51 / π
 
 # Initialisation parameters
-init_poss = ["random", "regular", "sobol", "rsa"]
-init_theta = "pair"
+inits_pos = ["random", "square_lattice", "Sobol", "RSA"]
+init_theta = "hightemp"
 r0 = 20.0
 q = 1.0
-params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
+params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q => q)
 
 # Simulation parameters
-v0sigs = [(0.5,0),(0.5,0.1)]
-r0s = 5:10:35
 tmax = 1E2
-times = 0:5:tmax # linear time
+times = logspace(1,tmax,10)
 
-z = @elapsed for i in each(v0sigs), j in each(r0s)
-    v0, sigma = v0sigs[i]
-    r0 = r0s[j]
 
-    println("v0 = $v0, σ = $sigma, r0 = $r0 ,  $(100i/length(v0sigs))%")
+P = zeros(length(inits_pos), length(times))
+C = Array{Vector{Float64}}(undef, length(inits_pos), length(times))
+xi = zeros(length(inits_pos), length(times))
+n = zeros(length(inits_pos), length(times))
+
+
+# Impact on the usual quantities
+z = @elapsed for i in each(inits_pos)
+	init_pos = inits_pos[i]
+
+    println("Init : $(init_pos)")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
 
@@ -51,7 +58,15 @@ z = @elapsed for i in each(v0sigs), j in each(r0s)
 
     t = 0.0
     system = System(param)
-    dft = DefectTracker(system, t)
-    dft, pos, thetas, t = track!(dft,system,times)
+
+	for tt in eachindex(times)
+		evolve(system, times[tt]) # evolves the systems up to times[tt]
+		
+		P[i,tt]  = polarOP(system)[1]
+		corr_tmp = corr(system)
+		C[i,tt]  = corr_tmp
+		xi[i,tt] = corr_length(corr_tmp)
+		n[i,tt]  = number_defects(system)
+	end
 end
 prinz(z)

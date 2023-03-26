@@ -62,7 +62,7 @@ function initialisation_positions(N, Lx, Ly, init_pos)
         pos = rand(2, N)
         pos[1, :] *= Lx
         pos[2, :] *= Ly
-    elseif init_pos in ["square_lattice", "square", "regular_square", "regular_square_lattice"]
+    elseif init_pos in ["square_lattice", "square", "regular_square", "regular_square_lattice", "grid"]
         pos = zeros(2, N)
         for n in 1:N
             pos[1, n] = mod(n, Lx)
@@ -473,7 +473,7 @@ function corr_fast(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr)::V
 
     for j in 1:N, i in j+1:N
         d = dist(pos[i], pos[j], Lx, Ly)
-        if d ≤ round(Int, Lmin / 2)
+        if 0 < d ≤ round(Int, Lmin / 2)
             ind = min(ceil(Int, d / dr), length(C))
             push!(C[ind], cos(thetas[i] - thetas[j]))
             ms[ind] += 1
