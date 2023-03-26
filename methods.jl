@@ -32,7 +32,13 @@ function System(params; float_type=Float32)
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
 
-    pos = initialisation_positions(N, Lx, Ly, init_pos)
+    if init_pos in ["rsa", "RSA"]
+        # the actual number of particles cannot be known beforehand
+        pos = initialisation_positions(Ntarget, Lx, Ly, init_pos)
+        N = length(pos[1, :])
+    else 
+        pos = initialisation_positions(N, Lx, Ly, init_pos)
+    end
     thetas = initialisation_thetas(N, init_theta, r0, q, pos=pos, Lx=Lx, Ly=Ly)
     omegas = initialisation_omegas(N, sigma)
     psis = initialisation_psis(N)
@@ -79,8 +85,51 @@ function initialisation_positions(N, Lx, Ly, init_pos)
         pos = zeros(2, N)
         pos[1, :] = p[sobol_axis[1], :] * Lx
         pos[2, :] = p[sobol_axis[2], :] * Ly
+    elseif init_pos in ["RSA", "rsa"] # Random Sequential Adsorption
+        # pos = Tuple{Float32,Float32}[]
+        # constant = 0.45  # bencharmked value so that the disks are as big as possible
+        # radius = sqrt(Lx * Ly / N / π)
+        # max_number_rejections = 1000
+        # number_rejections = 0
+        # while length(pos) < N && number_rejections < max_number_rejections
+        #     x = Float32(Lx*rand())
+        #     y = Float32(Ly*rand())
+        #     if all(dist((x,y),position,Lx,Ly) > 2radius for position in pos)
+        #         push!(pos, (x, y))
+        #     else 
+        #         number_rejections += 1
+        #         if number_rejections ≥ max_number_rejections
+        #             println("Warning : RSA initialisation stopped after $max_number_rejections rejections. Number of particles in the system : $(length(pos)).")
+        #             break
+        #         end
+        #     end
+        # end
+
+        pos = Tuple{Float32,Float32}[]
+        max_number_rejections = 1000
+        
+        number_rejections = 0
+        constant = 1
+        while number_rejections < max_number_rejections
+            radius = sqrt(Lx * Ly / N / π) * constant
+            x = Float32(Lx*rand())
+            y = Float32(Ly*rand())
+            if all(dist((x,y),position,Lx,Ly) > 2radius for position in pos)
+                push!(pos, (x, y))
+                if length(pos) == N
+                    break
+                end
+            else 
+                number_rejections += 1
+                if number_rejections ≥ max_number_rejections
+                    constant = 0.9 * constant # skrink all the disks and try again for a maximum of max_number_rejections rejections
+                    number_rejections = 0
+                end
+            end
+        end
+        pos = vecTuple2matrix(pos)
     else
-        println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\"")
+        println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\" or \"RSA\".")
     end
     return pos
 end
@@ -1181,7 +1230,7 @@ function corr_length(C::Vector{T}, rs=1:length(C); seuil=exp(-1))::T where {T<:A
     return ξ
 end
 
-########################## Miscellaneous
+########################## Miscellaneous ##########################
 
 function remove_negative(input)
     array = Float64.(copy(input))
