@@ -14,7 +14,7 @@ R0 = 1
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
-init_pos = "rsa"
+init_pos = "random"
 init_theta = "pair"
 r0 = 20.0
 q = 1.0
@@ -26,12 +26,11 @@ system = System(param)
 poss = get_pos(system)
 # scatter(poss,m=2)
 thetas = get_theta(system)
-cg(poss, thetas, Lx, Ly)
+cg(system)
 
 plot_thetas(system)
 plot_thetas(system, particles=true)
 plot_thetas(system, particles=true, vertical=true)
-
 
 ######################## Efficiency Benchmarks ########################
 ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)

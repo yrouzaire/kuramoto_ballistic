@@ -32,16 +32,10 @@ function System(params; float_type=Float32)
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
 
-    if init_pos in ["rsa", "RSA"]
-        # the actual number of particles cannot be known beforehand
-        pos = initialisation_positions(Ntarget, Lx, Ly, init_pos)
-        N = length(pos[1, :])
-    else 
-        pos = initialisation_positions(N, Lx, Ly, init_pos)
-    end
+    pos    = initialisation_positions(N, Lx, Ly, init_pos)
     thetas = initialisation_thetas(N, init_theta, r0, q, pos=pos, Lx=Lx, Ly=Ly)
     omegas = initialisation_omegas(N, sigma)
-    psis = initialisation_psis(N)
+    psis   = initialisation_psis(N)
     vec_agents = Vector{Agent{float_type}}(undef, N)
     for n in 1:N
         vec_agents[n] = Agent{float_type}(Tuple(pos[:, n]), thetas[n], omegas[n], psis[n])
@@ -86,25 +80,18 @@ function initialisation_positions(N, Lx, Ly, init_pos)
         pos[1, :] = p[sobol_axis[1], :] * Lx
         pos[2, :] = p[sobol_axis[2], :] * Ly
     elseif init_pos in ["RSA", "rsa"] # Random Sequential Adsorption
-        # pos = Tuple{Float32,Float32}[]
-        # constant = 0.45  # bencharmked value so that the disks are as big as possible
-        # radius = sqrt(Lx * Ly / N / π)
-        # max_number_rejections = 1000
-        # number_rejections = 0
-        # while length(pos) < N && number_rejections < max_number_rejections
-        #     x = Float32(Lx*rand())
-        #     y = Float32(Ly*rand())
-        #     if all(dist((x,y),position,Lx,Ly) > 2radius for position in pos)
-        #         push!(pos, (x, y))
-        #     else 
-        #         number_rejections += 1
-        #         if number_rejections ≥ max_number_rejections
-        #             println("Warning : RSA initialisation stopped after $max_number_rejections rejections. Number of particles in the system : $(length(pos)).")
-        #             break
-        #         end
-        #     end
-        # end
-
+        #= The algorithm goes as follows. 
+        1. Draw an initial random point in the box and add it to the final list.
+        2. Define a radius (imagine points as the centers of physical coins)
+        radius = sqrt(Lx * Ly / N / π) * constant
+        sqrt(Lx * Ly / N / π) is the radius of a circle that would fit N points in the box
+        constant is a parameter that we can tune to make the radius smaller or bigger
+        3. While the number of rejections is smaller than a maximum number of rejections
+            3.1. Draw a random point in the box
+            3.2. If the point is at a distance of at least 2 * radius from all the points in the final list, add it to the final list
+            3.3. If the final list has N points, stop
+            3.4. If the number of rejections is bigger than the maximum number of rejections, decrease the radius by 10% and loop again until the final list has N points.
+        =#
         pos = Tuple{Float32,Float32}[]
         max_number_rejections = 1000
         
