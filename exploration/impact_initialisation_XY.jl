@@ -3,11 +3,73 @@ using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, Benchma
 include("../methods.jl")
 const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
-pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
 cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
+
+## ---------------- Analysis ---------------- ##
+filename = "data/impact_init_XY.jld2"
+@load filename R runtimes inits_pos Ps Cs ns xis rho T v0 sigma Ntarget params_init aspect_ratio times tmax comments rhoc 
+histogram(runtimes / 3600 / 24, bins=20)
+histogram(runtimes / 3600/24 *100, bins=20)
+
+Ps_avg = nanmean(Ps, 3)[:,:,1]
+ns_avg = nanmean(ns, 3)[:,:,1]
+xis_avg = nanmean(xis, 3)[:,:,1]
+
+indices = [];
+for r in 1:R
+    try Cs[:,:,:,r]
+		push!(indices, r)
+    catch;
+    end
+end;
+
+Cs_avg = Array{Vector}(undef, length(inits_pos), length(times))
+for i in 1:length(inits_pos), k in 1:length(times)
+	Cs_avg[i,k] = mean([Cs[i,k,r] for r in indices])
+end
+
+## 
+p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10, legend=:topleft)
+for i in 1:length(inits_pos)
+	plot!(times, Ps_avg[i,:], label=inits_pos[i], c=i, rib=0)
+end
+plot!(times, x->3.2E-2sqrt(x/log(10x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+p1
+
+##
+p2 = plot(xlabel=L"t", ylabel=L"n+1", xscale=:log10, yscale=:log10, legend=:bottomleft)
+for i in 1:length(inits_pos)
+	plot!(times, ns_avg[i,:] .+ 1, label=inits_pos[i], c=i, rib=0)
+end
+plot!(times, x->7E2log(5x)/x,line=:dash,c=:black, label=L"\log(t)/t}")
+plot!(times, x->1E3/x,line=:dot,c=:black, label=L"1/t}")
+p2
+
+##
+rr = 0:round(Int,Lx/2)
+p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, legend=:topright)
+for i in 1:length(inits_pos)
+	plot!(rr,remove_negative(Cs_avg[i,10]), label=inits_pos[i], c=i, rib=0)
+end
+plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+p3
+
+##
+rr = 0:round(Int,Lx/2)
+p4 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", uaxis=:log, legend=:right)#:topright)
+for i in 1:length(inits_pos)
+	plot!(times, xis_avg[i,:].*sqrt.(ns_avg[i,:]), label=inits_pos[i], c=i, rib=0)
+end
+# plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+p4
+
+##
+plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
+
 
 ## ---------------- Impact of init on XY Model ---------------- ##
 comments = "Investigates the impact of initialisation for the spatial location of the 
@@ -37,7 +99,7 @@ times = logspace(1,tmax,10)
 
 
 P = zeros(length(inits_pos), length(times))
-C = Array{Vector{Float64}}(undef, length(inits_pos), length(times))
+C = Array{Vector{Float32}}(undef, length(inits_pos), length(times))
 xi = zeros(length(inits_pos), length(times))
 n = zeros(length(inits_pos), length(times))
 

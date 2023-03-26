@@ -3,9 +3,9 @@ using Plots, ColorSchemes, BenchmarkTools
 gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 
 ######################## Parameters ########################
-Ntarget = Int(1E3)
+Ntarget = Int(1E5)
 aspect_ratio = 1
-rho = 1
+rho = 2
 T = 0.0
 sigma = 1.0
 v0 = 1.0
@@ -45,6 +45,8 @@ update_positions!(system)
 
 ######################## Other Tests ########################
 corr(system, algo="fast", dr=0.445)
+corr(system)
+system.Lx
 
 spot_defects(system)
 plot_thetas(system, defects=true)
