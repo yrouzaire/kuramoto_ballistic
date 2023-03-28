@@ -9,6 +9,85 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
 
+## ---------------- Analysis ---------------- ##
+filename = "data/nature_phase_transition.jld2"
+@load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
+histogram(runtimes / 3600 / 24, bins=20)
+
+Ps_avg = nanmean(Ps, 3)[:,:,1]
+ns_avg = nanmean(ns, 3)[:,:,1]
+xis_avg = nanmean(xis, 3)[:,:,1]
+
+indices = [];
+for r in 1:R
+    try Cs[:,:,r]
+		push!(indices, r)
+    catch;
+    end
+end;
+indices
+
+Cs_avg = Array{Vector}(undef, length(v0sigs), length(times))
+for i in 1:length(v0sigs), k in 1:length(times)
+	Cs_avg[i,k] = mean([Cs[i,k,r] for r in indices])
+end
+
+
+in_green = [1,2,3,4,5]#,13,14,15,16]
+in_red = [6,7,8,9]#,10,11,12]
+in_all = 1:16
+## 
+p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10, legend=false)#:topleft)
+for i in in_green
+	plot!(times, Ps_avg[i,:], label=v0sigs[i], c=i, rib=0)
+end
+plot!(times, x->3.2E-2sqrt(x/log(8x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+p1
+
+##
+L = sqrt(Ntarget/rho)
+p2 = plot(xlabel=L"t", ylabel=L"n+1",axis=:log, legend=false)#:bottomleft)
+for i in in_green
+	plot!(times, remove_negative(ns_avg[i,:]/L^2), label=v0sigs[i], c=i, rib=0)
+end
+plot!(times, x->7E-2log(3x)/x,line=:dash,c=:black, label=L"\log(t)/t}")
+# plot!(times, x->3E-2/x,line=:dot,c=:black, label=L"1/t}")
+p2
+
+##
+rr = 0:round(Int,sqrt(Ntarget/rho)/2)
+p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", yaxis=:log, ylims=(1E-2,1.1), legend=false)#:topright)
+for i in in_green
+	plot!(rr[2:end],remove_negative(Cs_avg[i,end])[2:end], label=v0sigs[i], c=i, rib=0)
+end
+plot!(rr[2:end], r->0.9 * r^(-0.15),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+# plot!(rr[2:end], r->0.9 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+p3
+
+
+##
+p4 = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",xaxis=:log, legend=false)#:topright)
+for i in in_green
+    tt = length(times)
+	plot!(rr[2:end-1],remove_negative(Cs_avg[i,tt][2:end-1] .- Ps_avg[i,tt].^2), label=v0sigs[i], c=i, rib=0)
+	# plot!(rr[2:end-1],abs.(remove_negative(Cs_avg[i,end])[2:end-1] .- Cs_avg[i,end][end]), label=v0sigs[i], c=i, rib=0)
+end
+# plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+p4
+
+
+##
+p5 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", xaxis=:log, legend=false)#:topright)
+for i in 1:length(v0sigs)
+	plot!(times, xis_avg[i,:].*sqrt.(ns_avg[i,:]), label=v0sigs[i], c=i, rib=0)
+end
+# plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+p5
+
+##
+plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
+
+
 ## ---------------- Nature of the Phase Transition ---------------- ##
 comments = "The goal of this script is to pass through the transition line, 
 in both direction (keeping σ or v0 constant) and to compute correlation functions.
