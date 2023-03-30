@@ -142,7 +142,7 @@ params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, 
 
 # Simulation parameters
 v0sigs = vcat([(0.2,sigm) for sigm in 0:0.025:0.225],[(v,0.1) for v in logspace(0.03,1,10,digits=3)])
-tmax = 3E4
+tmax = 3E1
 # times = collect(0:tmax/30:tmax) # linear time
 times = logspace(1,tmax,30,digits=1) # log time
 
@@ -162,10 +162,10 @@ z = @elapsed for i in each(v0sigs)
         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
     system = System(param)
-
+    
     t = 0.0
     token = 1
-
+ 
     for tt in eachindex(times)
         evolve(system, times[tt]) # evolves the systems up to times[tt]
         
@@ -177,7 +177,8 @@ z = @elapsed for i in each(v0sigs)
     end
 
 end
-prinz(z*19*100)
+prinz(z)
+
 
 filename = "data/nature_phase_transition_r$real.jld2"
 JLD2.@save filename Ntarget v0sigs rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z

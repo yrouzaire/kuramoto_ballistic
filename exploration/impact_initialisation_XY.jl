@@ -132,3 +132,78 @@ z = @elapsed for i in each(inits_pos)
 	end
 end
 prinz(z)
+
+
+## ------------ Visually compare effective number of neighbours ------------ ##
+Ntarget = Int(1E4)
+aspect_ratio = 1
+T = 0.1
+R0 = 1
+rho = 1
+v0 = 0
+sigma = 0
+rhoc = 4.51 / π
+
+# Initialisation parameters
+inits_pos = ["square_lattice", "random", "Sobol", "RSA"]
+init_theta = "hightemp"
+r0 = 20.0
+q = 1.0
+params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q => q)
+
+pp = Vector{Any}(undef,4)
+hh = Vector{Any}(undef,4)
+
+for i in each(inits_pos)
+	init_pos = inits_pos[i]
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
+
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+    t = 0.0
+    system = System(param)
+	nnns = get_number_neighbours(system)
+	hh[i] = nnns
+	p=plot()
+	scatter!(get_pos(system),zcolor=nnns,markersize=1,
+	markerstrokecolor=:black,markerstrokewidth=0.,
+	c=cgrad([:blue,:green,:red]),aspect_ratio=1)#,clims=(0,10))
+	title!(string(init_pos)*" $(round(mean(nnns),digits=1)) ± $(round(std(nnns),digits=1))")
+	pp[i] = p 
+end
+
+plot(pp..., layout=(2,2), size=(800,800))
+
+## Histogram of the number of neighbours
+p=plot()
+for i in 3
+	histogram!(hh[i],normalize=true)
+end
+p
+
+## Debugging
+init_pos = inits_pos[3]
+N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+dt = determine_dt(T, sigma, v0, N, rho)
+
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+
+param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+	:rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+	:N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+t = 0.0
+system = System(param)
+nnns = get_number_neighbours(system)
+p=plot()
+scatter!(get_pos(system),zcolor=nnns,markersize=1,
+markerstrokecolor=:black,markerstrokewidth=0.,
+c=cgrad([:blue,:green,:red]),aspect_ratio=1)#,clims=(0,10))
+title!(string(init_pos)*" $(round(mean(nnns),digits=2)) ± $(round(std(nnns),digits=1))")
+
+system.N/system.Lx/system.Ly

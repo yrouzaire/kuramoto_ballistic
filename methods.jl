@@ -170,7 +170,7 @@ function determine_dt(T, σ, v0, N, rho)
         arbitrary_coeff / estimation_max,
         arbitrary_coeff / π / rho,
         arbitrary_coeff^2 * π / 4 / T])
-end
+    end
 
 function effective_number_particle(Ntarget, rho, aspect_ratio=1)
     Lx = round(Int, sqrt(aspect_ratio * Ntarget / rho))
@@ -362,6 +362,14 @@ function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, 
     end
     return ind_neighbours
 end
+
+function get_number_neighbours(system::System)
+    ind_neighbours = get_list_neighbours(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
+    number_of_neighbours = [length(ind_neighbours[n]) for n in 1:system.N]
+    return number_of_neighbours
+end
+
+
 
 function evolve(system::System, tmax::Number)
     # pos, thetas, omegas, psis = get_pos(system), get_thetas(system), get_omegas(system), get_psis(system)
