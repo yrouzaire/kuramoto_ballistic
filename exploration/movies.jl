@@ -8,79 +8,39 @@ plot();
 cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 
-function movies(params, every, tmax, dt; particles=false)
-    rho, T, v, Ntarget, Lx,Ly, σ, params_init = params
-    N,Lx,Ly = effective_number_particle(Ntarget, rho)
-    pos, thetas, omegas, psis = initialisation(N, Lx, Ly, σ, params_init)
-    # println("N = $N")
-    times = 1:every:round(Int, tmax)
-    Q = zeros(length(times))
-    P = zeros(length(times))
-    anim = @animate for i in 1:length(times)
-        println("$(round(i/length(times)*100,digits=2)) %")
-        ind_neighbours0 = get_list_neighbours(pos, N, Lx, Ly)
-        for j in 1:round(Int, every / dt)
-            if v == 0
-                ind_neighbours = ind_neighbours0
-            else
-                ind_neighbours = get_list_neighbours(pos, N, Lx, Ly)
-            end
-            pos, thetas = update(pos, thetas, omegas, psis, ind_neighbours, T, v, N, Lx, Ly, dt)
-        end
-        titre = "P=$(round(polarOP(thetas)[1],digits=2))"
-        if particles
-            p1 = scatter(pos[1, :], pos[2, :], marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=(512, 512), xlims=(0, Lx), ylims=(0, Ly), title=titre, aspect_ratio=1)
-            p2 = heatmap(mod.(cg(pos, thetas, N, Lx, Ly), 2pi)', clims=(0, 2pi), c=cols, aspect_ratio=1, size=(512, 512))
-            plot(p1, p2, size=(1024, 512))
-        else
-            p2 = heatmap(mod.(cg(pos, thetas, N, Lx, Ly), 2pi)', clims=(0, 2pi), c=cols, aspect_ratio=1, size=(512, 512))
-        end
+## --------------- Small Wrapper --------------- ##
+
+function movies(param, times; particles=false)   
+    system = System(param)
+    anim = @animate for tt in each(times)
+        println(round(times[tt]*100/times[end],digits=3),"%")
+        evolve!(system, times[tt])
+        plot_thetas(system,particles=true,size=(512,512))
+        title!("t = $(round(times[tt],digits=2))")
     end
     return anim
 end
 
-##
-N = Int(1E3)
-rho = 1
-T = 0.1 # temperature for angle diffusion
-v = 0.1 # norm of individual velocities
-σ = 0
+## --------------- Movies --------------- ##
+include("../parameters.jl")
+# inits_pos = ["square_lattice", "random","RSA"]
+# inits_pos = ["random"]
+inits_pos = ["RSA"]
+tmax = 2E3
+# times = collect(0:10:tmax) # linear time
+times = logspace(1,tmax,100) # log time
+anims = []
+z = @elapsed for init_pos in inits_pos
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-# Other parameters
-L = round(Int, sqrt(N / rho))
-params_init
-params = Any[rho, T, v, N, L, σ, params_init] # any to avoid N being interpreted as a Float
-dt = determine_dt(T, σ, v, N, rho)
-
-every = 2;
-tmax = 1000;
-z = @elapsed anim = movies(params, every, tmax, dt, particles=false)
-prinz(z)
-mp4(anim, "films/recoverXY_N$(N)_rho$(rho)_T$(T)_v0$(v)_σ$(σ)_tmax$(tmax)_every$(every).mp4", fps=25)
-
-## pre running for efficiency
-pos, thetas, psis, omegas = initialisation(N, L, σ)
-pos, thetas = update(pos, thetas, psis, omegas, T, v, N, L, dt)
-
-
-## Impact of initialisation type on the XY model (Sobol, random, regular square lattice)
-Ntarget = Int(1E4)
-rho = 2
-aspect_ratio = 1
-N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-T = 0.1 # temperature for angle diffusion
-v = 0 ; σ = 0
-dt = determine_dt(T, σ, v, N, rho)
-every = 2;
-tmax = 1000;
-
-params_init_random = ["hightemp","random"]
-params_init_sobol  = ["hightemp","sobol"]
-params_init_square = ["hightemp","square"]
-
-z = @elapsed for params_init in [params_init_square]
-    params = Any[rho, T, v, N, Lx, Ly, σ, params_init] # any to avoid N being interpreted as a Float
-    anim = movies(params, every, tmax, dt, particles=false)
-    mp4(anim, "films/recoverXY_v00_sigma0/$(params_init[2])__N$(N)_rho$(rho)_T$(T)_v0$(v)_σ$(σ)_tmax$(tmax)_every$(every).mp4", fps=25)
+    anim = movies(param, times, particles=true)
+    push!(anims, anim)
+    filepath = "films/immobile_XY/logtime_$(init_pos)_N$(N)_customJ.mp4"
+    mp4(anim, filepath, fps=25)
 end
 prinz(z)
+
+
