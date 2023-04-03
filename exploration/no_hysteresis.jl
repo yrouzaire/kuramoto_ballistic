@@ -9,6 +9,72 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
 
+## ---------------- Analysis ---------------- ##
+filename = "data/hysteresis_nature_phases.jld2"
+@load filename Ntarget rhos Ts inits_theta v0sigs Ps Cs ns xis aspect_ratio times tmax comments rhoc runtimes R
+histogram(runtimes / 3600 /24, bins=20)
+Ps_avg = nanmean(Ps, 6)[:,:,:,:,:,1]
+ns_avg = nanmean(ns, 6)[:,:,:,:,:,1]
+xis_avg = nanmean(xis, 6)[:,:,:,:,:,1]
+
+indices = [];
+for r in 1:R
+    try Cs[:,:,:,:,:,r]
+		push!(indices, r)
+    catch;
+    end
+end;
+indices
+
+Cs_avg = Array{Vector}(undef, length(v0sigs),length(Ts), length(rhos),length(inits_theta), length(times))
+for i in 1:length(v0sigs), j in 1:length(Ts), k in 1:length(rhos), l in 1:length(inits_theta), m in 1:length(times)
+	Cs_avg[i,j,k,l,m] = mean([Cs[i,j,k,l,m,r] for r in indices])
+end
+
+## Les 6 courbes de P(t)
+ind_rho = 2
+ind_T = 2
+L = sqrt(Ntarget/rhos[ind_rho])
+pa = plot(xlabel=L"t", ylabel=L"P(t)",axis=:log, legend=false)#:topleft)
+for i in each(v0sigs)
+    plot!(times, Ps_avg[i,ind_T,ind_rho,1,:], label=v0sigs[i], c=i, rib=0, line=:solid)
+    plot!(times, Ps_avg[i,ind_T,ind_rho,2,:], label=v0sigs[i], c=i, rib=0, line=:dash)
+end
+plot!(times, x->3.2E-2sqrt(x/log(8x)),c=:black, label=L"\sqrt{t/\log(t)}")
+
+pb = plot(xlabel=L"t", ylabel=L"n(t)/L^2",axis=:log, legend=:outerright,size=(700,400))#:topleft)
+for i in each(v0sigs)
+    plot!(times, remove_negative(ns_avg[i,ind_T,ind_rho,1,:]/L^2), label=L"v_0"*" = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])", c=i, rib=0, line=:solid)
+    plot!(times, remove_negative(ns_avg[i,ind_T,ind_rho,2,:]/L^2), c=i, rib=0, line=:dash)
+end
+plot!(times, x->3.E-2log(8x)/x,c=:black, label="XY model")
+plot!([NaN,NaN],[NaN,NaN],c=:grey, label="Init = disordered")
+plot!([NaN,NaN],[NaN,NaN],line=:dash,c=:grey, label="Init = ordered")
+
+# pc = plot(xlabel=L"t", ylabel=L"ξ(t)",uaxis=:log, legend=false)#:topleft)
+# for i in each(v0sigs)
+#     plot!(times, xis_avg[i,1,1,1,:]/L, label=v0sigs[i], c=i, rib=0, line=:solid)
+#     plot!(times, xis_avg[i,1,1,2,:]/L, label=v0sigs[i], c=i, rib=0, line=:dash)
+# end
+# plot!(times, x->3.2E-2sqrt(x/log(8x)),c=:black, label=L"\sqrt{t/\log(t)}")
+
+layy = @layout [a{0.27w} b{0.63w}]
+plot(pa, pb, layout=layy, size=(1100,400))
+title!("T = $(Ts[ind_T]), ρ = $(rhos[ind_rho])")
+# savefig("figures/no_hysteresis/hysteresis_nature_phases_T$(Ts[ind_T])_rho$(rhos[ind_rho]).png")
+
+## Summary figure
+ind_rho = 1
+L = sqrt(Ntarget/rhos[ind_rho])
+ind_T = 2
+pa = plot(xlabel=L"t", ylabel=L"P(t)",axis=:log, legend=false)#:topleft)
+for i in each(Ts)
+    plot!(times, Ps_avg[i,ind_T,ind_rho,1,:], label=v0sigs[i], c=i, rib=0, line=:solid)
+    plot!(times, Ps_avg[i,ind_T,ind_rho,2,:], label=v0sigs[i], c=i, rib=0, line=:dash)
+end
+plot!(times, x->3.2E-2sqrt(x/log(8x)),c=:black, label=L"\sqrt{t/\log(t)}")
+
+
 ## ---------------- No Hysteresis and Nature Phases ---------------- ##
 comments = "The goal of this script is to show that there is no hysteresis 
 and to compute correlation functions at steady state to determine the nature
