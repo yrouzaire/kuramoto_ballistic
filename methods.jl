@@ -178,6 +178,7 @@ function effective_number_particle(Ntarget, rho, aspect_ratio=1)
     N_effective = round(Int, Lx * Ly * rho)
     return N_effective, Lx, Ly
 end
+effective_number_particles = effective_number_particle
 
 #################### Visualisation methods ####################
 function plot_thetas(system; particles=false, vertical=false, size=(512, 512), defects=false, title="")
@@ -234,8 +235,8 @@ function cg(system::System{T}) where {T<:AbstractFloat}
     cutoff = 5R0 # for contributions
 
     ## Cell List construction
-    nb_cells_x = Int(div(Lx, mesh_size)) + 1
-    nb_cells_y = Int(div(Ly, mesh_size)) + 1
+    nb_cells_x = Int(div(Lx, mesh_size))
+    nb_cells_y = Int(div(Ly, mesh_size))
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
@@ -294,12 +295,13 @@ end
 
 ## Time Evolution
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
-    nb_cells_x = Int(div(Lx, R0)) + 1
-    nb_cells_y = Int(div(Ly, R0)) + 1
+    nb_cells_x = Int(div(Lx, R0))# + 1 # important, here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non) 
+    nb_cells_y = Int(div(Ly, R0))# + 1
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
         cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
+        # here on the contrary, the position are 0 ≤ pos[n][1] < Lx (strict inequality)
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
@@ -310,7 +312,7 @@ end
 function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cells_y::Int)::Vector{Vector{Int}}
     # In the end, this function is quite fast, it contributes +3ms for N=1E4 particles
     should_take_mod = (cellx == 1) || (cellx == nb_cells_x) || (celly == 1) || (celly == nb_cells_y)
-    if true
+    if should_take_mod
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, mod1(celly + 1, nb_cells_y)], [mod1(cellx + 1, nb_cells_x), celly], [cellx, mod1(celly - 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), celly], [mod1(cellx + 1, nb_cells_x), mod1(celly + 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), mod1(celly - 1, nb_cells_y)], [mod1(cellx - 1, nb_cells_x), mod1(celly + 1, nb_cells_y)], [mod1(cellx + 1, nb_cells_x), mod1(celly - 1, nb_cells_y)]]
     else
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, celly + 1], [cellx + 1, celly], [cellx, celly - 1], [cellx - 1, celly], [cellx + 1, celly + 1], [cellx - 1, celly - 1], [cellx - 1, celly + 1], [cellx + 1, celly - 1]]
@@ -330,11 +332,10 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     # neighbouring_cells = [mod1.(neighbouring_cells[i],nb_cells_x) for i in 1:9]
 end
 
-
 function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number) where {T<:AbstractFloat}
     ind_neighbours = Vector{Vector{Int}}(undef, N)
-    nb_cells_x = Int(div(Lx, R0)) + 1
-    nb_cells_y = Int(div(Ly, R0)) + 1
+    nb_cells_x = Int(div(Lx, R0))# + 1
+    nb_cells_y = Int(div(Ly, R0))# + 1
     list, head = construct_cell_list(pos, N, Lx, Ly, R0)
     R02 = R0^2
     # offsets = Vector{Int}[[0,0],[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]
@@ -342,7 +343,7 @@ function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, 
         cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
         poscur = pos[n]
         ind_neighbours_n = Int[]
-        sizehint!(ind_neighbours_n, 10)
+        sizehint!(ind_neighbours_n, 10) # average number of neighbours is ~ 4ρ
         for (i, j) in get_neighbouring_cells(cellx, celly, nb_cells_x, nb_cells_y)
             # After some investigation, the line above is not slow, what takes time is the cell algo itself
             next = head[i, j]
@@ -365,13 +366,12 @@ end
 
 function get_number_neighbours(system::System)
     ind_neighbours = get_list_neighbours(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
-    number_of_neighbours = [length(ind_neighbours[n]) for n in 1:system.N]
-    return number_of_neighbours
+    # number_of_neighbours = [length(ind_neighbours[n]) for n in eachindex(ind_neighbours)]
+    return length.(ind_neighbours)
 end
 
 
-
-function evolve(system::System, tmax::Number)
+function evolve!(system::System, tmax::Number)
     # pos, thetas, omegas, psis = get_pos(system), get_thetas(system), get_omegas(system), get_psis(system)
     v0, R0, N, Lx, Ly, dt = system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt
     if v0 == 0
@@ -410,6 +410,14 @@ end
 
 function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}}) where {FT<:AbstractFloat}
     dt, T = system.dt, system.T
+    # if system.params[:params_init][:init_theta] == "random"
+    #     constant_J = 4/π # mean number of neighbours = π ± 1.79 (benchmarked on 1E5 particles)
+    # elseif system.params[:params_init][:init_theta] in ["RSA","rsa"]
+    #     constant_J = 4/2.88 # mean number of neighbours = 2.88 ± 1.54 (benchmarked on 1E5 particles)
+    # else
+    #     constant_J = 1
+    # end
+    constant_J = 1
     for n in 1:system.N
         agent = system.agents[n]
         if length(ind_neighbours[n]) > 0
@@ -418,7 +426,7 @@ function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}})
             for theta in thetas_neighbours
                 sumsin += sin(theta - agent.theta)
             end
-            agent.theta += dt * (agent.omega + sumsin) + sqrt(2T * dt) * randn()
+            agent.theta += dt * (agent.omega + constant_J*sumsin) + sqrt(2T * dt) * randn()
         else
             agent.theta += dt * agent.omega + sqrt(2T * dt) * randn()
         end
@@ -1239,8 +1247,19 @@ end
 
 logspace(x1, x2, n; digits=1) = unique!(round.([10.0^y for y in range(log10(x1), log10(x2), length=n)], digits=digits))
 
+
 function prinz(z)
-    println("Runtime : $(round(Int,z)) seconds = $(round(z/60,digits=2)) minutes = $(round(z/3600,digits=2)) hours.")
+    ss = "$(round(Int,z)) seconds"
+    mm = "$(round(z/60,digits=2)) minutes"
+    hh = "$(round(z/3600,digits=2)) hours"
+    dd = "$(round(z/86400,digits=2)) days"
+    if z < 60
+        println("Runtime : $ss = $mm")
+    elseif z < 3600
+        println("Runtime : $mm = $hh")
+    else
+        println("Runtime : $hh = $dd")
+    end
     return z
 end
 
@@ -1287,6 +1306,8 @@ function dist2(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclid
     dy = min(dy, Ly - dy)
     return dx^2 + dy^2
 end
+
+# dist2((1,1),(9,1),10,10)
 
 
 
