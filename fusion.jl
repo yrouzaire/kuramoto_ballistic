@@ -12,34 +12,11 @@ end;
 println("There are $(length(indices))/$R files.")
 
 # ## Impact Initialisation on XY
-# @load base_filename * "_r$(indices[1]).jld2" Ntarget rho T inits_pos params_init v0 sigma P C n xi aspect_ratio times tmax comments rhoc runtime
-# Ps = zeros(length(inits_pos),length(times),R)
-# Cs = Array{Vector{Float64}}(undef, length(inits_pos),length(times),R)
-# ns = zeros(length(inits_pos),length(times),R)
-# xis = zeros(length(inits_pos),length(times),R)
-# runtimes = NaN*zeros(R)
-
-# for r in indices
-#     println("r = $r")
-#     @load base_filename * "_r$r.jld2" runtime P C n xi 
-#     Ps[:,:,r] = P
-#     Cs[:,:,r] = C
-#     ns[:,:,r] = n
-#     xis[:,:,r] = xi
-
-#     runtimes[r] = runtime
-# end
-
-# @save base_filename * ".jld2" R runtimes inits_pos Ps Cs ns xis rho T v0 sigma Ntarget params_init aspect_ratio times tmax comments rhoc 
-# println("Fusionned data saved in $(base_filename*".jld2") .")
-
-
-## Nature of the phase transition
-@load base_filename * "_r$(indices[1]).jld2" Ntarget rho T params_init v0sigs P C n xi aspect_ratio times tmax comments rhoc runtime
-Ps = zeros(length(v0sigs),length(times),R)
-Cs = Array{Vector{Float64}}(undef, length(v0sigs),length(times),R)
-ns = zeros(length(v0sigs),length(times),R)
-xis = zeros(length(v0sigs),length(times),R)
+@load base_filename * "_r$(indices[1]).jld2" Ntarget rho T inits_pos params_init v0 sigma P C n xi aspect_ratio times tmax comments rhoc runtime
+Ps = zeros(length(inits_pos),length(times),R)
+Cs = Array{Vector{Float64}}(undef, length(inits_pos),length(times),R)
+ns = zeros(length(inits_pos),length(times),R)
+xis = zeros(length(inits_pos),length(times),R)
 runtimes = NaN*zeros(R)
 
 for r in indices
@@ -53,8 +30,31 @@ for r in indices
     runtimes[r] = runtime
 end
 
-@save base_filename * ".jld2" v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
+@save base_filename * ".jld2" R runtimes inits_pos Ps Cs ns xis rho T v0 sigma Ntarget params_init aspect_ratio times tmax comments rhoc 
 println("Fusionned data saved in $(base_filename*".jld2") .")
+
+
+## Nature of the phase transition
+# @load base_filename * "_r$(indices[1]).jld2" Ntarget rho T params_init v0sigs P C n xi aspect_ratio times tmax comments rhoc runtime
+# Ps = zeros(length(v0sigs),length(times),R)
+# Cs = Array{Vector{Float64}}(undef, length(v0sigs),length(times),R)
+# ns = zeros(length(v0sigs),length(times),R)
+# xis = zeros(length(v0sigs),length(times),R)
+# runtimes = NaN*zeros(R)
+
+# for r in indices
+#     println("r = $r")
+#     @load base_filename * "_r$r.jld2" runtime P C n xi 
+#     Ps[:,:,r] = P
+#     Cs[:,:,r] = C
+#     ns[:,:,r] = n
+#     xis[:,:,r] = xi
+
+#     runtimes[r] = runtime
+# end
+
+# @save base_filename * ".jld2" v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 ## Hysteresis and Nature of Phases
 # @load base_filename * "_r$(indices[1]).jld2" Ntarget rhos Ts inits_theta v0sigs P C n xi aspect_ratio times tmax comments rhoc runtime

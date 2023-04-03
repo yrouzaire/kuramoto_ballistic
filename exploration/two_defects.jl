@@ -21,7 +21,7 @@ comments = "From the defects data, one will be able to infer : \n
 A. the separating distance between the two defects R(t) \n
 B. the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
-Ntarget = Int(1E4)
+Ntarget = Int(1E3)
 aspect_ratio = 1
 T = 0.1
 R0 = 1

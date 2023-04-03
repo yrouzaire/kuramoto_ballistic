@@ -12,7 +12,7 @@ plot()
 ## ---------------- Analysis ---------------- ##
 filename = "data/nature_phase_transition.jld2"
 @load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
-histogram(runtimes / 3600 / 24, bins=20)
+histogram(runtimes / 3600 /24, bins=20)
 
 Ps_avg = nanmean(Ps, 3)[:,:,1]
 ns_avg = nanmean(ns, 3)[:,:,1]
