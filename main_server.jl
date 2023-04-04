@@ -89,9 +89,10 @@ params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN,
 
 # Simulation parameters
 v0sigs = [(1,0),(1,0.1)]
-r0s = 35#5:10:35
+r0s = 5#5:10:35
 tmax = 1E2
 times = 0:5:tmax # linear time
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
 dfts = Array{DefectTracker}(undef, length(v0sigs), length(r0s))
 
@@ -103,7 +104,6 @@ z = @elapsed for i in each(v0sigs), j in each(r0s)
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
 
-    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
     
     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
@@ -112,13 +112,13 @@ z = @elapsed for i in each(v0sigs), j in each(r0s)
     t = 0.0
     system = System(param)
     dft = DefectTracker(system, t)
-    dft, pos, thetas, t = track!(dft,system,times)
+    dft, system = track!(dft,system,times)
 	dfts[i,j] = dft
 end
 prinz(z)
 
 filename = "data/DFT_pair_r$real.jld2"
-JLD2.@save filename Ntarget v0sigs rho params_init T dft aspect_ratio times tmax comments rhoc runtime = z
+JLD2.@save filename Ntarget v0sigs rho params_init T dfts aspect_ratio times tmax comments rhoc runtime = z
 
 
 # ## ---------------- Nature of the Phase Transition ---------------- ##
