@@ -43,17 +43,18 @@ function System(params; float_type=Float32)
     return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params)
 end
 
-#################### Get Methods ####################
-get_pos(syst::System) = [syst.agents[n].pos for n in 1:syst.N]
-get_theta(syst::System) = [syst.agents[n].theta for n in 1:syst.N]
-get_omega(syst::System) = [syst.agents[n].omega for n in 1:syst.N]
-get_psi(syst::System) = [syst.agents[n].psi for n in 1:syst.N]
+## -----------------  Get Methods ----------------- ##
+get_pos(syst::System) = [syst.agents[n].pos for n in eachindex(syst.agents)]
+get_theta(syst::System) = [syst.agents[n].theta for n in eachindex(syst.agents)]
+get_omega(syst::System) = [syst.agents[n].omega for n in eachindex(syst.agents)]
+get_psi(syst::System) = [syst.agents[n].psi for n in eachindex(syst.agents)]
 # and for convenience :
 get_thetas = get_theta
 get_omegas = get_omega
 get_psis = get_psi
 
-#################### Initialisation functions ####################
+
+## ----------------- Initialisation functions ----------------- ##
 initialisation_psis(N) = 2π * rand(N)
 initialisation_omegas(N, σ) = σ * randn(N)
 
@@ -295,16 +296,16 @@ end
 
 ## Time Evolution
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
-    nb_cells_x = Int(div(Lx, R0))# + 1 # important, here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non) 
-    nb_cells_y = Int(div(Ly, R0))# + 1
+    nb_cells_x = Int(div(Lx, R0))# NO "+ 1" here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non respect of PBC) 
+    nb_cells_y = Int(div(Ly, R0))
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
         cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
         # here on the contrary, the position are 0 ≤ pos[n][1] < Lx (strict inequality)
-        if cellx == nb_cells_x + 1 || celly == nb_cells_y + 1
-            println(pos[n], " ", cellx, " ", celly, " ", R0)
-        end
+        # if cellx == nb_cells_x + 1 || celly == nb_cells_y + 1
+        #     println(pos[n], " ", cellx, " ", celly, " ", R0)
+        # end
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
@@ -335,14 +336,13 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     # neighbouring_cells = [mod1.(neighbouring_cells[i],nb_cells_x) for i in 1:9]
 end
 
-get_list_neighbours(system) = get_list_neighbours(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
+get_list_neighbours(system::System) = get_list_neighbours(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
 function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number) where {T<:AbstractFloat}
     ind_neighbours = Vector{Vector{Int}}(undef, N)
-    nb_cells_x = Int(div(Lx, R0))# + 1
-    nb_cells_y = Int(div(Ly, R0))# + 1
     list, head = construct_cell_list(pos, N, Lx, Ly, R0)
+    nb_cells_x, nb_cells_y = size(head)
     R02 = R0^2
-    # offsets = Vector{Int}[[0,0],[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[-1,-1],[1,-1]]
+
     for n in 1:N
         cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
         poscur = pos[n]
@@ -376,10 +376,11 @@ end
 
 
 function evolve!(system::System, tmax::Number)
-    # pos, thetas, omegas, psis = get_pos(system), get_thetas(system), get_omegas(system), get_psis(system)
-    v0, R0, N, Lx, Ly, dt = system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt
+    v0,dt = system.v0, system.dt
+    # v0, R0, N, Lx, Ly, dt = system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt
     if v0 == 0
-        ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
+        ind_neighbours = get_list_neighbours(system)
+        # ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
         while system.t < tmax
             system.t += dt
             update_thetas!(system, ind_neighbours)
@@ -388,27 +389,50 @@ function evolve!(system::System, tmax::Number)
         while system.t < tmax
             system.t += dt
             update_positions!(system)
-            ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
+            ind_neighbours = get_list_neighbours(system)
+            # ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
             update_thetas!(system, ind_neighbours)
         end
     end
     return system
 end
 
-function update!(system::System, N::Int, Lx::Int, Ly::Int, R0::Number)
+function check_agents_in_box(system)
+    Lx, Ly = system.Lx, system.Ly
+    for n in 1:system.N
+        pos = system.agents[n].pos
+        if pos[1] < 0 || pos[1] ≥ Lx || pos[2] < 0 || pos[2] ≥ Ly
+            error("Agent $n is out of the box at time $(system.t), position $(pos), Lx = $(system.Lx), Ly = $(system.Ly)")
+        end
+    end
+end
+
+function update!(system::System)
     update_positions!(system)
-    ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
+    ind_neighbours = get_list_neighbours(system)
     update_thetas!(system, ind_neighbours)
 end
 
+mod0(x::T, y::Int) where {T<:Real} = (m = mod(x, y); ifelse(m == y, zero(m), m)) 
 function update_positions!(system::System{T}) where {T<:AbstractFloat}
     v0, dt = system.v0, system.dt
     Lx, Ly = system.Lx, system.Ly
     for n in 1:system.N
         agent = system.agents[n]
-        x = mod(agent.pos[1] + v0 * dt * cos(agent.psi), Lx)
-        y = mod(agent.pos[2] + v0 * dt * sin(agent.psi), Ly)
-        agent.pos = (x, y)
+        x = agent.pos[1] + v0 * dt * cos(agent.psi)
+        y = agent.pos[2] + v0 * dt * sin(agent.psi)
+        x = round(x, digits=5)
+        y = round(y, digits=5)
+        agent.pos = (mod0(x,Lx), mod0(y,Ly))
+        #= Use of custom modulo function above is required because
+            if a particle passes from +ε to -ε in the x or y direction, 
+            with ε < EPSILON(AbstractFloat), then the result is 
+            contra-intuitive. This issue has already been debated, 
+            cf. https://github.com/JuliaLang/julia/issues/36310. 
+            Since it appears that a simple fix does not exist, 
+            it use the suggested workaround. 
+            Adds 200µs for an update of 10^4 particles, to be compared to 3.750 ms in total (+2%)
+            =#
     end
 end
 
@@ -840,16 +864,7 @@ function annihilate_defects(dt::DefectTracker, ids_annihilated_defects, Lx, Ly)
     return dt
 end
 
-
-track!(dft::DefectTracker, system::System, times::AbstractVector) = track!(dft, get_pos(system), get_thetas(system), get_omegas(system), get_psis(system), system.T, system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt, system.t, times)
-function track!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, T::Number, v0::Number, R0::Number, N::Int, Lx::Int, Ly::Int, dt::Number, t::Number, times::AbstractVector) where {FT<:AbstractFloat}
-    if v0 == 0
-        return update_and_track_v0!(dft, pos, thetas, omegas, psis, T, v0, R0, N, Lx, Ly, dt, t, times)
-    else
-        return update_and_track!(dft, pos, thetas, omegas, psis, T, v0, R0, N, Lx, Ly, dt, t, times)
-    end
-end
-function update_and_track!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, T::Number, v0::Number, R0::Number, N::Int, Lx::Int, Ly::Int, dt::Number, t::Number, times::AbstractVector) where {FT<:AbstractFloat}
+function track!(dft::DefectTracker, system::System, times::AbstractVector)
     for token in each(times)
         evolve!(system, times[token])
         
@@ -857,41 +872,20 @@ function update_and_track!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas
             println("Simulation stopped, there is no defects left.")
             break
         end
-        println("t = ", round(t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
+        println("t = ", round(system.t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
         try
-            update_DefectTracker!(dft, system, t)
+            update_DefectTracker!(dft, system)
         catch e
             println(e)
             println("Previous DefectTracker saved instead and immediate return.")
-            return dft, pos, thetas, t
+            return dft, system
         end
     end
-    return dft, pos, thetas, times[end] # times[end] is the last time of the simulation
-end
-function update_and_track_v0!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, T::Number, v0::Number, N::Int, Lx::Int, Ly::Int, dt::Number, t::Number, times::AbstractVector) where {FT<:AbstractFloat}
-    token = 1
-    ind_neighbours = get_list_neighbours(pos, N, Lx, Ly,R0)
-    while t < times[end]
-        t += dt
-        update_thetas!(system, ind_neighbours)
-        if t ≥ times[token]
-            # p=plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
-            # display(p)
-            if number_active_defects(dft) == 0
-                println("Simulation stopped, there is no defects left.")
-                break
-            end
-            println("t = ", round(t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
-            update_DefectTracker!(dft, pos, thetas, N, Lx, Ly, t)
-            token = min(token + 1, length(times))
-        end
-    end
-    return dft, pos, thetas, t
+    return dft, system # times[end] is the last time of the simulation
 end
 
-# function update_DefectTracker!(dft::DefectTracker, pos::Matrix{T}, thetas::Vector{T}, N, Lx, Ly, t) where {T<:AbstractFloat}
-function update_DefectTracker!(dft::DefectTracker, system::System, t) 
-    dft.current_time = t
+function update_DefectTracker!(dft::DefectTracker, system::System) 
+    dft.current_time = system.t
     
     Lx, Ly = system.Lx, system.Ly
     vortices_new, antivortices_new = spot_defects(system)
