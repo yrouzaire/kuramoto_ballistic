@@ -8,7 +8,6 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 
 ## This files plots the phase space (v0,sigma) of the Kuramoto model for different values of rho
-
 filename = "data/phase_space_rho_sig_v0_N1E3_tmax2500.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 
