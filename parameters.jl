@@ -1,6 +1,6 @@
-Ntarget = Int(1E4)
+Ntarget = Int(1E5)
 aspect_ratio = 1
-rho = 2
+rho = 1
 T = 0.0
 sigma = 0.0
 v0 = 0.0

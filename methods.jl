@@ -302,6 +302,9 @@ function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, 
     for n in 1:N
         cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
         # here on the contrary, the position are 0 ≤ pos[n][1] < Lx (strict inequality)
+        if cellx == nb_cells_x + 1 || celly == nb_cells_y + 1
+            println(pos[n], " ", cellx, " ", celly, " ", R0)
+        end
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
@@ -332,6 +335,7 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     # neighbouring_cells = [mod1.(neighbouring_cells[i],nb_cells_x) for i in 1:9]
 end
 
+get_list_neighbours(system) = get_list_neighbours(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
 function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number) where {T<:AbstractFloat}
     ind_neighbours = Vector{Vector{Int}}(undef, N)
     nb_cells_x = Int(div(Lx, R0))# + 1
@@ -383,8 +387,8 @@ function evolve!(system::System, tmax::Number)
     else
         while system.t < tmax
             system.t += dt
-            ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
             update_positions!(system)
+            ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
             update_thetas!(system, ind_neighbours)
         end
     end
@@ -847,7 +851,7 @@ function track!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas::Vector{FT
 end
 function update_and_track!(dft::DefectTracker, pos::Vector{Tuple{FT,FT}}, thetas::Vector{FT}, omegas::Vector{FT}, psis::Vector{FT}, T::Number, v0::Number, R0::Number, N::Int, Lx::Int, Ly::Int, dt::Number, t::Number, times::AbstractVector) where {FT<:AbstractFloat}
     for token in each(times)
-        evolve(system, times[token])
+        evolve!(system, times[token])
         
         if number_active_defects(dft) == 0
             println("Simulation stopped, there is no defects left.")
