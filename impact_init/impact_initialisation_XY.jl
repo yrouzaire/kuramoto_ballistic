@@ -1,20 +1,18 @@
 cd("D:/Documents/Research/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian, LambertW
 include("../methods.jl")
-const global R0 = 1
+# const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
-gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
 cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
-plot()
-&
 
 ## ---------------- Analysis ---------------- ##
 filename = "data/impact_init_XY.jld2"
 @load filename R runtimes inits_pos Ps Cs ns xis rho T v0 sigma Ntarget params_init aspect_ratio times tmax comments rhoc 
 L = round(Int,sqrt(Ntarget/rho))
 histogram(runtimes / 3600 , bins=20)
-times
+
 Ps_avg = nanmean(Ps, 3)[:,:,1]
 ns_avg = nanmean(ns, 3)[:,:,1]
 xis_avg = nanmean(xis, 3)[:,:,1]
@@ -80,8 +78,8 @@ end
 p5
 
 ##
-plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
-
+plot(p1,p2,p3,p5, layout=(2,2), size=(800,800))
+savefig("impact_init/figures/impact_init_XY.png")
 
 ## ---------------- Impact of init on XY Model ---------------- ##
 comments = "Investigates the impact of initialisation for the spatial location of the 
@@ -145,25 +143,11 @@ z = @elapsed for i in each(inits_pos)
 end
 prinz(z)
 
-## ------------ Visually compare effective number of neighbours ------------ ##
-Ntarget = Int(1E5)
-aspect_ratio = 1
-T = 0.1
-R0 = 1
-rho = 1
-v0 = 0
-sigma = 0
-rhoc = 4.51 / π
-
-# Initialisation parameters
+## ------------ Visually compare graphs and number of neighbours ------------ ##
+pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+include("../parameters.jl")
 inits_pos = ["square_lattice", "random", "Sobol", "RSA"]
-init_theta = "hightemp"
-r0 = 20.0
-q = 1.0
-params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q => q)
-
 pp = Vector{Any}(undef,length(inits_pos))
-hh = Vector{Any}(undef,length(inits_pos))
 
 for i in each(inits_pos)
 	init_pos = inits_pos[i]
@@ -179,23 +163,81 @@ for i in each(inits_pos)
     t = 0.0
     system = System(param)
 	nnns = get_number_neighbours(system)
-	hh[i] = nnns
-	# p=plot()
-	# scatter!(get_pos(system),zcolor=nnns,markersize=2,
-	# markerstrokecolor=:black,markerstrokewidth=0.,
-	# c=cgrad([:blue,:green,:red]),aspect_ratio=1)#,clims=(0,10))
-	# title!(string(init_pos)*" $(round(mean(nnns),digits=1)) ± $(round(std(nnns),digits=1))")
-	# pp[i] = p 
+	p=plot()
+	scatter!(get_pos(system),zcolor=nnns,markersize=1.5,
+	markerstrokecolor=:black,markerstrokewidth=0.,
+	c=cgrad([:blue,:green,:red]),aspect_ratio=1)#,clims=(0,10))
+	title!(string(init_pos)*" $(round(mean(nnns),digits=1)) ± $(round(std(nnns),digits=1))")
+	pp[i] = p 
 end
-plot(pp..., layout=(2,2), size=(800,800))
+plot(pp..., layout=(2,2), size=(800,800));
+savefig("impact_init/figures/vizu_number_neighbours.png")
 
+
+## -------------- More quantitative graph considerations ---------------- ##
+include("../parameters.jl")
+inits_pos = ["square_lattice", "random", "Sobol", "RSA"]
+
+pp = Vector{Any}(undef,length(inits_pos))
+hh = Vector{Any}(undef,length(inits_pos))
+
+for i in each(inits_pos)
+	init_pos = inits_pos[i]
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
+
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+    t = 0.0
+    system = System(param)
+	nnns = get_number_neighbours(system)
+	hh[i] = nnns
+end
 ## Comparing the Distributions of the number of neighbours 
 using StatsBase
-p=plot(yaxis=:log)
+p=plot(yaxis=:log,xlabel="n [Number of Neighbours]",ylabel="Proba(n)")
 for i in [2,3,4]
 	h = fit(Histogram, hh[i], nbins=10)
 	plot!(h.edges[1][1:end-1],h.weights/length(hh[i]), label=inits_pos[i], c=i, rib=0)
 	# histogram!(hh[i],normalize=true,bins=0:10,alpha=0.99)#, label=inits_pos[i], c=i, rib=0)
-	annotate!(2.5,1/10^i,text(string(round.(mean(hh[i]),digits=2))*"±"*string(round.(std(hh[i]),digits=2)),8,ColorSchemes.tab10.colors[i]))
+	annotate!(2.5,1/10^i,text("n = "*string(round.(mean(hh[i]),digits=2))*"±"*string(round.(std(hh[i]),digits=2)),8,ColorSchemes.tab10.colors[i]))
 end
 p
+savefig("impact_init/figures/distrib_number_neighbours.png")
+
+##
+include("../parameters.jl")
+# using Graphs
+init_pos = "RSA"
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
+
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+    t = 0.0
+    system = System(param)
+	nnns = get_number_neighbours(system)
+pos = get_pos(system)
+g = Graph()
+for n in 1:N
+	add_vertex!(g)
+end
+for n in 1:N
+	neighbours  = get_list_neighbours(system)
+	for nn in neighbours[n]
+		add_edge!(g,n,nn)
+	end
+end
+# gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+# using GraphRecipes
+# graphplot(g, curves=false)
+
+# degree(g)
+# degree_histogram(g)
+histogram(length.(connected_components(g)),bins=100,uaxis=:log,normalize=true)
