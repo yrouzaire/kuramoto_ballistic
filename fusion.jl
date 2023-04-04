@@ -13,10 +13,10 @@ println("There are $(length(indices))/$R files.")
 
 
 ## Defects Motion
-@load base_filename*"_r$(indices[1]).jld2" dfts T N rho v_sigmas times transients tmax runtime comments
+@load base_filename*"$(indices[1]).jld2" dfts T Ntarget v0sigs rho params_init T aspect_ratio times tmax comments rhoc runtime
 runtimes = NaN*zeros(R)
-dfts_fusion_undef = Vector{Vector{DefectTracker}}(undef,R)
-dfts_fusion = Vector{DefectTracker}[]
+dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R)
+dfts_fusion = Array{DefectTracker}[]
 for r in indices
     println("r = $r")
     @load base_filename*"_r$r.jld2" dfts runtime
@@ -26,7 +26,7 @@ for r in indices
     runtimes[r] = runtime
 end
 
-@save base_filename*".jld2" dfts_fusion dfts_fusion_undef runtimes T N v_sigmas rho times transients tmax comments R
+@save base_filename*".jld2" dfts_fusion dfts_fusion_undef runtimes T Ntarget v0sigs rho times params_init aspect_ratio tmax comments R
 println("Fusionned data saved in $(base_filename*".jld2") .")
 
 

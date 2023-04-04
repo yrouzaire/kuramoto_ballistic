@@ -1,7 +1,6 @@
 cd("D:/Documents/Research/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian, LambertW
 include("../methods.jl")
-const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
 pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
@@ -9,12 +8,79 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
 
-#= This file investigates the behaviour of two defects. 
-In this project, impossible to isolate one defect, 
-because Free BC are not compatible with the motion of individual particles. 
-Plan : 
-A. Study R(t)
-B. If unbounded, study MSD with two defects far apart.=#
+## ---------------- Analysis ---------------- ##
+filename = "data/DFT_pair.jld2"
+@load filename dfts_fusion dfts_fusion_undef runtimes T Ntarget v0sigs rho times params_init aspect_ratio tmax comments R
+histogram(runtimes / 3600, bins=20)
+times = 0:1:tmax
+Reff = length(dfts_fusion)
+
+# R(t)
+rts = zeros(length(v0sigs), length(r0s), length(times),Reff)
+L = sqrt(Ntarget / aspect_ratio / rho)
+for r in each(dfts_fusion), i in each(v0sigs), j in each(r0s), k in each(times)
+    dft = dfts_fusion[r][i,j]
+    tmp = interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L)
+    ll = min(length(times),length(tmp))
+    rts[i,j,1:ll,r] = tmp[1:ll]
+end
+rts_avg = mean(rts, dims=4)[:,:,:,1]
+
+dft.defectsP[1].pos
+
+# MSD(t) & G(x,t) of individual defects
+dx_P = [[] for i in each(v0sigs), j in each(r0s), k in each(times)]
+dy_P = [[] for i in each(v0sigs), j in each(r0s), k in each(times)]
+SD_P = [[] for i in each(v0sigs), j in each(r0s), k in each(times)]
+dx_M = [[] for i in each(v0sigs), j in each(r0s), k in each(times)]
+dy_M = [[] for i in each(v0sigs), j in each(r0s), k in each(times)]
+SD_M = [[] for i in each(v0sigs), j in each(r0s), k in each(times)]
+
+for r in each(dfts_fusion), i in each(v0sigs), j in each(r0s), k in each(times)
+    dft = dfts_fusion[r][i,j]
+    for tt in 1:min(length(times),length(dft.defectsP[1].pos))
+        d = dft.defectsP[1].pos[tt] .- dft.defectsP[1].pos[1]
+        push!(dx_P[i,j,tt], d[1])
+        push!(dy_P[i,j,tt], d[2])
+        push!(SD_P[i,j,tt], norm(d)^2)
+    end
+    for tt in 1:min(length(times),length(dft.defectsN[1].pos))
+        d = dft.defectsN[1].pos[tt] .- dft.defectsN[1].pos[1]
+        push!(dx_M[i,j,tt], d[1])
+        push!(dy_M[i,j,tt], d[2])
+        push!(SD_M[i,j,tt], norm(d)^2)
+    end
+end
+
+MSD_P = zeros(length(v0sigs), length(r0s), length(times))
+for i in each(v0sigs), j in each(r0s), k in each(times)
+    MSD_P[i,j,k] = mean(SD_P[i,j,k])
+end
+MSD_M = zeros(length(v0sigs), length(r0s), length(times))
+for i in each(v0sigs), j in each(r0s), k in each(times)
+    MSD_M[i,j,k] = mean(SD_M[i,j,k])
+end
+MSD_all = (MSD_P + MSD_M) / 2
+
+## ---------------- Plots R(t) ---------------- ##
+p=plot()
+for i in each(v0sigs), j in each(r0s)
+    plot!(times, rts_avg[i,j,:], label="v0 = $(v0sigs[i][1]), r0 = $(r0s[j])")
+end
+p
+
+## ---------------- Histogram Displacements ---------------- ##
+tt = length(times) ; histogram(vcat(dx_P[1,1,tt],dy_P[1,1,tt],dx_M[1,1,tt],dy_M[1,1,tt]), bins=50)
+
+## ---------------- Plot MSD(t) ---------------- ##
+p=plot()
+for i in each(v0sigs), j in each(r0s)
+    plot!(times, MSD_all[i,j,:], label="v0 = $(v0sigs[i][1]), r0 = $(r0s[j])")
+end
+p
+
+
+
 
 ## ---------------- Monitor the defects in the green area  ---------------- ##
 comments = "From the defects data, one will be able to infer : \n

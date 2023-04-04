@@ -92,19 +92,20 @@ v0sigs = [(1,0),(1,0.1)]
 r0s = 5#5:10:35
 tmax = 1E2
 times = 0:5:tmax # linear time
-params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
 
 dfts = Array{DefectTracker}(undef, length(v0sigs), length(r0s))
 
 z = @elapsed for i in each(v0sigs), j in each(r0s)
     v0, sigma = v0sigs[i]
     r0 = r0s[j]
-
+    
     println("v0 = $v0, σ = $sigma, r0 = $r0")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
-
     
+    
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
