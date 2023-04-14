@@ -194,7 +194,7 @@ function plot_thetas(system; particles=false, vertical=false, size=(512, 512), d
         else
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
             thetas_cg = cg(system)
-            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
+            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho), ylims=(0, Ly/system.rho))
             final_plot = plot(p1, p2, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
             if defects 
                 defects_p, defects_m =  spot_defects(system)
@@ -236,8 +236,10 @@ function cg(system::System{T}) where {T<:AbstractFloat}
     cutoff = 5R0 # for contributions
 
     ## Cell List construction
-    nb_cells_x = Int(div(Lx, mesh_size))
-    nb_cells_y = Int(div(Ly, mesh_size))
+    # nb_cells_x = Int(div(Lx, mesh_size))
+    # nb_cells_y = Int(div(Ly, mesh_size))
+    nb_cells_x = round(Int, Lx / mesh_size,RoundUp)
+    nb_cells_y = round(Int, Ly / mesh_size,RoundUp)
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
@@ -296,8 +298,8 @@ end
 
 ## Time Evolution
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
-    nb_cells_x = Int(div(Lx, R0))# NO "+ 1" here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non respect of PBC) 
-    nb_cells_y = Int(div(Ly, R0))
+    nb_cells_x = round(Int,Lx/R0,RoundUp) # NO "+ 1" here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non respect of PBC) 
+    nb_cells_y = round(Int,Ly/R0,RoundUp) # NO "+ 1" here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non respect of PBC) 
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
@@ -1261,6 +1263,24 @@ function prinz(z)
     return z
 end
 
+function hrun(runtimes,nbins=20)
+    mean_runtime = nanmean(runtimes)
+    if mean_runtime < 60
+        unit = "seconds"
+    elseif mean_runtime < 3600
+        unit = "minutes"
+        runtimes = runtimes/60
+    elseif mean_runtime < 86400
+        unit = "hours"
+        runtimes = runtimes/3600
+    else 
+        unit = "days"
+        runtimes = runtimes/86400
+    end
+    h = histogram(runtimes, nbins=nbins, title=unit)
+    return h
+end
+
 each = eachindex
 
 nanmean(x) = mean(filter(!isnan, x))
@@ -1297,15 +1317,13 @@ function dist(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclidi
 end
 
 # almost twice as fast
-function dist2(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclidian distance with Periodic BCs
+function dist2(a, b, Lx, Ly)  # euclidian distance with Periodic BCs
     dx = abs(a[1] - b[1])
     dx = min(dx, Lx - dx)
     dy = abs(a[2] - b[2])
     dy = min(dy, Ly - dy)
     return dx^2 + dy^2
 end
-
-# dist2((1,1),(9,1),10,10)
 
 
 

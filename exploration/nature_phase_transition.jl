@@ -29,11 +29,10 @@ filename = "data/nature_phase_transition_horizontal.jld2"
 @load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
 # histogram(runtimes / 3600 /24, bins=20)
 v0sigs_horizontal = v0sigs[1:end]
-scatter!(phsp,v0sigs_horizontal[1:2:end],c=:black,m=:circle,ms=3)
+scatter!(phsp,v0sigs_horizontal[1:1:end],c=:black,m=:circle,ms=3.5)
 Ps_avg_horizontal = nanmean(Ps, 3)[:,:,1]
 ns_avg_horizontal = nanmean(ns, 3)[:,:,1]
 xis_avg_horizontal = nanmean(xis, 3)[:,:,1]
-# colors_horizontal = [cols[Ps_avg[i,end]] for i in each(v0sigs_horizontal)]
 
 indices = [];
 for r in 1:R
@@ -53,11 +52,11 @@ end
 filename = "data/nature_phase_transition_vertical.jld2"
 @load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
 # histogram(runtimes / 3600 /24, bins=20)
-v0sigs_vertical = v0sigs[1:end]
-scatter!(phsp,v0sigs_vertical[1:2:end],c=:black,m=:utriangle,ms=3.5)
+v0sigs_vertical = v0sigs
+scatter!(phsp,v0sigs_vertical,c=:black,m=:utriangle,ms=4)
 ylims!(0,0.4)
 xlims!(1E-3,3)
-# savefig("figures/vizu_scan_transition_phase_space.png")
+# savefig(phsp,"figures/nature_phase_transition/vizu_phase_space_scan_transition.png")
 
 Ps_avg_vertical = nanmean(Ps, 3)[:,:,1]
 ns_avg_vertical = nanmean(ns, 3)[:,:,1]
@@ -77,75 +76,124 @@ for i in 1:length(v0sigs_vertical), k in 1:length(times)
 	Cs_avg_vertical[i,k] = mean([Cs[i,k,r] for r in indices])
 end
 
-## 
+## ------------------ Plots Horizontal ------------------ ##
 p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10,
      legend=false,yticks=([1E-2,1E-1,1],[L"10^{-2}",L"10^{-1}",L"10^{0}"]),
-     xticks=([1,10,100,1000],[L"10^{0}",L"10^{1}",L"10^{2}",L"10^{3}"]))
-for i in 1:2:length(v0sigs_horizontal) 
-	plot!(times, Ps_avg_horizontal[i,:], label=v0sigs_horizontal[i], c=Int(1+(i-1)/2), rib=0,m=:circle,ms=3,line=true)
-end
-for i in 1:2:length(v0sigs_vertical) 
-	plot!(times, Ps_avg_vertical[i,:], label=v0sigs_vertical[i], c=Int(1+(i-1)/2), rib=0,m=:utriangle,ms=4,line=true)
+     xticks=([1,10,100,1000,1E4],[L"10^{0}",L"10^{1}",L"10^{2}",L"10^{3}",L"10^{4}"]))
+for i in each(v0sigs_horizontal)
+	plot!(times, Ps_avg_horizontal[i,:], c=i, rib=0,m=:circle,
+    ms=3,line=true, label="σ = $(round(v0sigs_horizontal[i][1],digits=2))")
 end
 plot!(times, x->3.2E-2sqrt(x/log(8x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+annotate!(1.4,0.012,text("(a)",12))
 p1
 
-##
+
 L = sqrt(Ntarget/rho)
 p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10,legend=false,
     yticks=([1E-5,1E-4,1E-3,1E-2],[L"10^{-5}",L"10^{-4}",L"10^{-3}",L"10^{-2}"]),
-    xticks=([1,10,100,1000],[L"10^{0}",L"10^{1}",L"10^{2}",L"10^{3}"]))
-for i in 1:2:length(v0sigs_horizontal) 
-	plot!(times, remove_negative(ns_avg_horizontal[i,:]/L^2), label=v0sigs_horizontal[i], c=Int(1+(i-1)/2), rib=0,m=:circle,ms=3,line=true)
+    xticks=([1,10,100,1000,1E4],[L"10^{0}",L"10^{1}",L"10^{2}",L"10^{3}",L"10^{4}"]))
+for i in each(v0sigs_horizontal)
+    plot!(times, remove_negative(ns_avg_horizontal[i,:]/L^2), label=v0sigs_horizontal[i], c=i, rib=0,m=:circle,ms=3,line=true)
 end
-for i in 1:2:length(v0sigs_vertical) 
-	plot!(times, remove_negative(ns_avg_vertical[i,:]/L^2), label=v0sigs_vertical[i], c=Int(1+(i-1)/2), rib=0,m=:utriangle,ms=4,line=true)
-end
+
 plot!(times[9:end], x->4E-2log(8x)/x,line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+annotate!(1.4,6E-6,text("(b)",12))
 p2
 
-##
+
 rr = 0:round(Int,L/2)
-p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", yaxis=:log, ylims=(1E-1,1.1), legend=false,
+p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, ylims=(1E-1,1.1), legend=true,
      yticks = ([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],[L"10^{-1}","","","","","","","","",L"10^{0}"]))
-for i in 1:2:length(v0sigs_horizontal) 
-	plot!(rr[2:end],remove_negative(Cs_avg_horizontal[i,end])[2:end], label=v0sigs[i], c=Int(1+(i-1)/2), rib=0,m=:circle,ms=3)
+for i in 1:1:length(v0sigs_horizontal) 
+    v = v0sigs_horizontal[i][1]
+    # plot!(rr[2:end], r->r^(-sqrt(max(0,0.005/(v-0.22)))),line=:dot,c=i, label=L"r^{-T/2\pi}")
+	plot!(rr[2:end],remove_negative(Cs_avg_horizontal[i,end])[2:end], label=L"v_0 = "*string(v0sigs_horizontal[i][1]), c=i, rib=0,m=:circle,ms=3)
 end
-for i in 1:2:length(v0sigs_vertical) 
-	plot!(rr[2:end],remove_negative(Cs_avg_vertical[i,end])[2:end], label=v0sigs[i], c=Int(1+(i-1)/2), rib=0,m=:utriangle,ms=4)
-end
-# plot!(rr[2:end], r->0.9 * r^(-0.15),line=:dash,c=:black, label=L"r^{-T/2\pi}")
-plot!(rr[2:end], r->r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+plot!(rr[2:end], r->r^(-T/2π),line=:dot,c=:black, label=L"r^{-T/2\pi}")
+plot!(rr[2:end], r->r^(-0.25),line=:dash,c=:black, label=L"r^{-1/4}")
+annotate!(1.25,0.12,text("(c)",12))
 p3
 
-
-##
 p4 = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",axis=:log, legend=false,
 ylims=(1E-2,1.1), yticks = ([0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],[L"10^{-2}","","","","","","","","",L"10^{-1}","","","","","","","","",L"10^{0}"]),
 xticks = ([1,2,3,4,5,6,7,8,9,10,20,30,40,50],[L"10^{0}","","","","","","","","",L"10^{1}","","","",""]))
 tt = length(times)
-for i in 1:2:length(v0sigs_horizontal) 
-	plot!(rr[2:end],remove_negative(Cs_avg_horizontal[i,tt] .- Ps_avg_horizontal[i,tt].^2)[2:end], label=v0sigs[i], c=Int(1+(i-1)/2), rib=0,m=:circle,ms=3)
+for i in 1:length(v0sigs_horizontal) 
+	plot!(rr[2:end],remove_negative(Cs_avg_horizontal[i,tt] .- Ps_avg_horizontal[i,tt].^2)[2:end], label=v0sigs_horizontal[i], c=i, rib=0,m=:circle,ms=3)
 end
-for i in 1:2:length(v0sigs_vertical) 
-	plot!(rr[2:end],remove_negative(Cs_avg_vertical[i,tt] .- Ps_avg_vertical[i,tt].^2)[2:end], label=v0sigs[i], c=Int(1+(i-1)/2), rib=0,m=:utriangle,ms=4)
-end
+plot!(rr[2:end], r->0.25*r^(-0.25),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+annotate!(1.2,0.013,text("(d)",12))
 p4
 
-
-##
 p5 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", xaxis=:log, legend=false)#:topright)
-# for i in 1:2:length(v0sigs_horizontal) 
-# 	plot!(times[2:end],remove_negative(xis_avg_horizontal[i,2:end].*sqrt.(ns_avg_horizontal[i,2:end])), label=v0sigs_horizontal[i], c=Int(1+(i-1)/2), rib=0,m=:circle,ms=3)
-# end
-for i in 1:2:length(v0sigs_vertical) 
-	plot!(times[2:end],remove_negative(xis_avg_vertical[i,2:end].*sqrt.(ns_avg_vertical[i,2:end])), label=v0sigs_vertical[i], c=Int(1+(i-1)/2), rib=0,m=:circle,ms=3)
+for i in 1:length(v0sigs_horizontal) 
+	plot!(times[2:end],remove_negative(xis_avg_horizontal[i,2:end].*sqrt.(ns_avg_horizontal[i,2:end])), label=v0sigs_horizontal[i], c=i, rib=0,m=:circle,ms=3)
 end
 # plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
 p5
 
-##
 plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
+# savefig("figures/nature_phase_transition/PnCC_horizontal.png")
+
+## ------------------ Plots Vertical ------------------ ##
+p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10,
+     legend=false,yticks=([1E-2,1E-1,1],[L"10^{-2}",L"10^{-1}",L"10^{0}"]),
+     xticks=([1,10,100,1000,1E4],[L"10^{0}",L"10^{1}",L"10^{2}",L"10^{3}",L"10^{4}"]))
+for i in each(v0sigs_vertical)
+	plot!(times, Ps_avg_vertical[i,:], c=i, rib=0,m=:utriangle,
+    ms=3,line=true, label="σ = $(round(v0sigs_vertical[i][2],digits=2))")
+end
+plot!(times, x->3.2E-2sqrt(x/log(8x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+annotate!(1.4,0.012,text("(a)",12))
+p1
+
+L = sqrt(Ntarget/rho)
+p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10,legend=false,
+    yticks=([1E-5,1E-4,1E-3,1E-2],[L"10^{-5}",L"10^{-4}",L"10^{-3}",L"10^{-2}"]),
+    xticks=([1,10,100,1000,1E4],[L"10^{0}",L"10^{1}",L"10^{2}",L"10^{3}",L"10^{4}"]))
+for i in each(v0sigs_vertical)
+    plot!(times, remove_negative(ns_avg_vertical[i,:]/L^2), label=v0sigs_vertical[i], c=i, rib=0,m=:utriangle,ms=3,line=true)
+end
+
+plot!(times[9:end], x->4E-2log(8x)/x,line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+annotate!(1.4,6E-6,text("(b)",12))
+p2
+
+
+rr = 0:round(Int,L/2)
+p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, ylims=(1E-1,1.1), legend=false,
+     yticks = ([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],[L"10^{-1}","","","","","","","","",L"10^{0}"]))
+for i in 1:1:length(v0sigs_vertical) 
+    v = v0sigs_vertical[i][1]
+    # plot!(rr[2:end], r->r^(-sqrt(max(0,0.005/(v-0.22)))),line=:dot,c=i, label=L"r^{-T/2\pi}")
+	plot!(rr[2:end],remove_negative(Cs_avg_vertical[i,end])[2:end], label=L"σ = "*string(v0sigs_vertical[i][2]), c=i, rib=0,m=:utriangle,ms=3)
+end
+plot!(rr[2:end], r->r^(-T/2π),line=:dot,c=:black, label=L"r^{-T/2\pi}")
+plot!(rr[2:end], r->r^(-0.25),line=:dash,c=:black, label=L"r^{-1/4}")
+annotate!(1.25,0.12,text("(c)",12))
+p3
+
+p4 = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",axis=:log, legend=false,
+ylims=(1E-2,1.1), yticks = ([0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],[L"10^{-2}","","","","","","","","",L"10^{-1}","","","","","","","","",L"10^{0}"]),
+xticks = ([1,2,3,4,5,6,7,8,9,10,20,30,40,50],[L"10^{0}","","","","","","","","",L"10^{1}","","","",""]))
+tt = length(times)
+for i in 1:length(v0sigs_vertical) 
+	plot!(rr[2:end],remove_negative(Cs_avg_vertical[i,tt] .- Ps_avg_vertical[i,tt].^2)[2:end], label=v0sigs_vertical[i], c=i, rib=0,m=:utriangle,ms=3)
+end
+plot!(rr[2:end], r->0.25*r^(-0.25),line=:dash,c=:black)
+annotate!(1.2,0.013,text("(d)",12))
+p4
+
+p5 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", xaxis=:log, legend=false)#:topright)
+for i in 1:length(v0sigs_vertical) 
+	plot!(times[2:end],remove_negative(xis_avg_vertical[i,2:end].*sqrt.(ns_avg_vertical[i,2:end])), label=v0sigs_vertical[i], c=i, rib=0,m=:utriangle,ms=3)
+end
+# plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+p5
+
+plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
+# savefig("figures/nature_phase_transition/PnCC_vertical.png")
 
 # ## ---------------- Old Analysis ---------------- ##
 # filename = "data/nature_phase_transition.jld2"

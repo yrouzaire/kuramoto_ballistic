@@ -12,9 +12,7 @@ plot()
 ## Load FSS data
 filename = "data/FSS_green.jld2"
 @load filename Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
-histogram(runtimes / 3600 / 24, bins=20)
-histogram(runtimes / 3600/24 *100, bins=20)
-
+hrun(runtimes) 
 Ps_avg = nanmean(Ps, 4)[:,:,:,1]
 ns_avg = nanmean(ns, 4)[:,:,:,1]
 xis_avg = nanmean(xis, 4)[:,:,:,1]
@@ -42,7 +40,7 @@ plot!(t->4E-2sqrt(t/log(10t)), c=:black )
 p
 
 ## Time to order for several system sizes N
-plot(xlabel="N", ylabel="Relaxation Time", legend=:topleft)
+plot(xlabel="N", ylabel="Relaxation Time τ", legend=:topleft)
 plot!([NaN, NaN], [NaN, NaN], c=1, rib=0, label=L"v_0"*"=$(v0sigs[1][1]), σ=$(v0sigs[1][2])")
 plot!([NaN, NaN], [NaN, NaN], c=2, rib=0, label=L"v_0"*"=$(v0sigs[2][1]), σ=$(v0sigs[2][2])")
 # σ = 0
@@ -56,6 +54,7 @@ plot!(Ntargets, times[finalts],m=true,axis=:log,c=2)
 # fits
 plot!(Ntargets, 2E-2Ntargets.*log.(Ntargets),c=:black,axis=:log, label="N log(N)")
 plot!(Ntargets, 1E-1Ntargets,c=:black,axis=:log, label="N", line=:dash)
+# savefig("figures/FSS_relaxation_time/relaxation_time.png")
 
 ## ------------- Check if Steady State reached ------------- 
 p=plot(axis=:log, legend=false, xlabel="r", ylabel="C(r)", ylims=(1E-1,1.2))
@@ -67,11 +66,11 @@ for nn in 1:length(Ntargets)
 end
 p
 
-p2=plot(yaxis=:log, legend=false, xlabel="r", ylabel=L"C(r) - C(r_{max}) ", ylims=(1E-4,1.2))
+p2=plot(axis=:log, legend=false, xlabel="r", ylabel=L"C(r) - C(r_{max}) ", ylims=(1E-1,1.2))
 for nn in 1:length(Ntargets)
 	for i in 2#:length(v0sigs)
 		cor = remove_negative(Cs_avg[i,nn,end])
-		plot!(1:length(cor)-1, cor[1:end-1] .- cor[end], label="v0 = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])")
+		plot!(1:length(cor)-1, cor[1:end-1] .- Ps_avg[i,nn,end]^2, label="v0 = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])")
 	end
 end
 p2
@@ -81,12 +80,13 @@ plot(p,p2,layout=(1,2),size=(800,400))
 ## ------------- Impact of N on final quantities ------------- 
 ## P 
 times_to_plot = [10,15,20,25,26,27,28,29,30]
-p=plot(axis=:log, legend=:outerright, xlabel="1/N", ylabel="P",size=(600,400))
+p1=plot(axis=:log, legend=:outerright, xlabel="1/N", ylabel="P",size=(600,400))
 for t in times_to_plot
-	plot!([1/Ntargets[i] for i in 1:length(Ntargets)], Ps_avg[1,:,t], rib=0,label="t = $(times[t])",m=true)
+	plot!(1 ./Ntargets, Ps_avg[1,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
 end
-p
-
+plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
+p1
+savefig("figures/FSS_relaxation_time/FSS_.svg")
 ## ------------- Regular plots at fixed N ------------- 
 ## Plot n vs t
 p=plot(axis=:log, legend=false, xlabel="t", ylabel="n(t)/L²")

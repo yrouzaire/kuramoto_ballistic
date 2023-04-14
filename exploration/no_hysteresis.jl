@@ -33,16 +33,17 @@ end
 
 ## Les 6 courbes de P(t)
 ind_rho = 2
-ind_T = 2
+ind_T = 1
 L = sqrt(Ntarget/rhos[ind_rho])
 pa = plot(xlabel=L"t", ylabel=L"P(t)",axis=:log, legend=false)#:topleft)
 for i in each(v0sigs)
     plot!(times, Ps_avg[i,ind_T,ind_rho,1,:], label=v0sigs[i], c=i, rib=0, line=:solid)
     plot!(times, Ps_avg[i,ind_T,ind_rho,2,:], label=v0sigs[i], c=i, rib=0, line=:dash)
 end
-plot!(times, x->3.2E-2sqrt(x/log(8x)),c=:black, label=L"\sqrt{t/\log(t)}")
+plot!(times[1:25], x->3.5E-2sqrt(x/log(10x)),c=:black, label=L"\sqrt{t/\log(t)}")
+ylims!(1E-2,1.1)
 
-pb = plot(xlabel=L"t", ylabel=L"n(t)/L^2",axis=:log, legend=:outerright,size=(700,400))#:topleft)
+pb = plot(xlabel=L"t", ylabel=L"n(t)/L^2",axis=:log, legend=:false,size=(400,400))#:topleft)
 for i in each(v0sigs)
     plot!(times, remove_negative(ns_avg[i,ind_T,ind_rho,1,:]/L^2), label=L"v_0"*" = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])", c=i, rib=0, line=:solid)
     plot!(times, remove_negative(ns_avg[i,ind_T,ind_rho,2,:]/L^2), c=i, rib=0, line=:dash)
@@ -50,18 +51,23 @@ end
 plot!(times, x->3.E-2log(8x)/x,c=:black, label="XY model")
 plot!([NaN,NaN],[NaN,NaN],c=:grey, label="Init = disordered")
 plot!([NaN,NaN],[NaN,NaN],line=:dash,c=:grey, label="Init = ordered")
+ylims!(1E-5,1E-1)
 
-# pc = plot(xlabel=L"t", ylabel=L"ξ(t)",uaxis=:log, legend=false)#:topleft)
-# for i in each(v0sigs)
-#     plot!(times, xis_avg[i,1,1,1,:]/L, label=v0sigs[i], c=i, rib=0, line=:solid)
-#     plot!(times, xis_avg[i,1,1,2,:]/L, label=v0sigs[i], c=i, rib=0, line=:dash)
-# end
-# plot!(times, x->3.2E-2sqrt(x/log(8x)),c=:black, label=L"\sqrt{t/\log(t)}")
+pc = plot(xlabel=L"t", ylabel=L"ξ(t)",axis=:log, legend=:outerright,size=(700,400))
+for i in each(v0sigs)
+    plot!(times, xis_avg[i,1,1,1,:]/L,label=L"v_0"*" = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])", c=i, rib=0, line=:solid)
+    plot!(times, xis_avg[i,1,1,2,:]/L, c=i, rib=0, line=:dash)
+end
+plot!(times[1:20], x->7.2E-2sqrt(x/log(8x)),c=:black, label="XY predictions")
+plot!([NaN,NaN],[NaN,NaN],c=:grey, label="Init = disordered")
+plot!([NaN,NaN],[NaN,NaN],line=:dash,c=:grey, label="Init = ordered")
+ylims!(2E-2,0.6)
 
-layy = @layout [a{0.27w} b{0.63w}]
-plot(pa, pb, layout=layy, size=(1100,400))
+# layy = @layout [a{0.3w} b{0.5w}]
+# plot(pa, pb, pc, layout=layy, size=(1200,400))
+plot(pa, pb, pc, layout=(1,3), size=(1500,400))
 title!("T = $(Ts[ind_T]), ρ = $(rhos[ind_rho])")
-# savefig("figures/no_hysteresis/hysteresis_nature_phases_T$(Ts[ind_T])_rho$(rhos[ind_rho]).png")
+savefig("figures/no_hysteresis/hysteresis_nature_phases_T$(Ts[ind_T])_rho$(rhos[ind_rho]).png")
 
 ## Summary figure
 ind_rho = 1

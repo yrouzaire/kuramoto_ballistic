@@ -3,6 +3,111 @@ include("IDrealisation.jl");
 using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
+## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+comments = "From the defects data, one will be able to infer : \n
+A. the separating distance between the two defects R(t) \n
+B. the MSD and diffusion coeff of an individual defect. "
+# Physical Params 
+Ntarget = Int(1E4)
+aspect_ratio = 1
+T = 0.1
+R0 = 1 
+rhoc = 4.51 / π
+v0 = 0 
+sigma = 0
+q = 1.0
+params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
+tmax = 1E1
+times = 0:5:tmax # linear time
+
+rhos = [1,2]
+inits_pos = ["square_lattice","random","rsa"]
+inits_thetas = ["pair","single"]
+r0s = 20#5:10:35
+dfts = Array{DefectTracker}(undef, length(rhos), length(inits_pos),length(inits_thetas), length(r0s))
+
+z = @elapsed for  i in each(rhos), j in each(inits_pos), k in each(inits_thetas), m in each(r0s)
+    rho = rhos[i]
+    init_pos = inits_pos[j]
+    init_theta = inits_thetas[k]
+    r0 = r0s[m]
+
+    println("$init_pos, $init_theta, r0 = $r0, ρ = $rho")
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
+
+    
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+    t = 0.0
+    system = System(param)
+    dft = DefectTracker(system, t)
+    dft, system = track!(dft,system,times)
+	dfts[i,j,k,m] = dft
+end
+prinz(z)
+
+filename = "data/immobile_DFT_pair_r$real.jld2"
+JLD2.@save filename r0s rhos inits_pos inits_thetas dfts params_init Ntarget v0 sigma  T aspect_ratio times tmax comments rhoc runtime = z
+
+
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# comments = "From the defects data, one will be able to infer : \n
+# A. the separating distance between the two defects R(t) \n
+# B. the MSD and diffusion coeff of an individual defect. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# T = 0.1
+# R0 = 1 
+# rhoc = 4.51 / π
+# v0 = 0 
+# sigma = 0
+
+# # Initialisation parameters
+# rhos = [1,2]
+# init_pos = ["random","rsa"]
+# init_theta = "pair"
+# r0 = 20.0
+# q = 1.0
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
+
+# # Simulation parameters
+# r0s = 30#5:10:35
+# tmax = 1E2
+# times = 0:5:tmax # linear time
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
+
+# dfts = Array{DefectTracker}(undef, length(v0sigs), length(r0s))
+
+# z = @elapsed for i in each(v0sigs), j in each(r0s)
+#     r0 = r0s[j]
+    
+#     println("v0 = $v0, σ = $sigma, r0 = $r0")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#     dt = determine_dt(T, sigma, v0, N, rho)
+
+    
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+#     t = 0.0
+#     system = System(param)
+#     dft = DefectTracker(system, t)
+#     dft, system = track!(dft,system,times)
+# 	dfts[i,j] = dft
+# end
+# prinz(z)
+
+# filename = "data/immobile_DFT_pair_r$real.jld2"
+# JLD2.@save filename Ntarget v0 sigma rhos inits_pos params_init T dfts aspect_ratio times tmax comments rhoc runtime = z
+
+
 # # ## ---------------- Impact of init on XY Model ---------------- ##
 # comments = "Investigates the impact of initialisation for the spatial location of the 
 # spins in the XY model. Even though no symmetry is broken, it seems that having the spins
@@ -68,58 +173,58 @@ include("methods.jl");
 # filename = "data/impact_init_XY_r$real.jld2"
 # JLD2.@save filename Ntarget v0 sigma inits_pos rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z
 
-## ---------------- Tracking a pair of defects ---------------- ##
-comments = "From the defects data, one will be able to infer : \n
-A. the separating distance between the two defects R(t) \n
-B. the MSD and diffusion coeff of an individual defect. "
-# Physical Params 
-Ntarget = Int(1E4)
-aspect_ratio = 1
-T = 0.1
-R0 = 1
-rho = 1
-rhoc = 4.51 / π
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# comments = "From the defects data, one will be able to infer : \n
+# A. the separating distance between the two defects R(t) \n
+# B. the MSD and diffusion coeff of an individual defect. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# T = 0.1
+# R0 = 1
+# rho = 1
+# rhoc = 4.51 / π
 
-# Initialisation parameters
-init_pos = "random"
-init_theta = "pair"
-r0 = 20.0
-q = 1.0
-params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
+# # Initialisation parameters
+# init_pos = "random"
+# init_theta = "pair"
+# r0 = 20.0
+# q = 1.0
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
 
-# Simulation parameters
-v0sigs = [(1,0),(1,0.1)]
-r0s = 5#5:10:35
-tmax = 1E2
-times = 0:5:tmax # linear time
-params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
+# # Simulation parameters
+# v0sigs = [(1,0),(1,0.1)]
+# r0s = 5#5:10:35
+# tmax = 1E2
+# times = 0:5:tmax # linear time
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => NaN, :q => q)
 
-dfts = Array{DefectTracker}(undef, length(v0sigs), length(r0s))
+# dfts = Array{DefectTracker}(undef, length(v0sigs), length(r0s))
 
-z = @elapsed for i in each(v0sigs), j in each(r0s)
-    v0, sigma = v0sigs[i]
-    r0 = r0s[j]
+# z = @elapsed for i in each(v0sigs), j in each(r0s)
+#     v0, sigma = v0sigs[i]
+#     r0 = r0s[j]
     
-    println("v0 = $v0, σ = $sigma, r0 = $r0")
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    dt = determine_dt(T, sigma, v0, N, rho)
+#     println("v0 = $v0, σ = $sigma, r0 = $r0")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#     dt = determine_dt(T, sigma, v0, N, rho)
     
     
-    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-    t = 0.0
-    system = System(param)
-    dft = DefectTracker(system, t)
-    dft, system = track!(dft,system,times)
-	dfts[i,j] = dft
-end
-prinz(z)
+#     t = 0.0
+#     system = System(param)
+#     dft = DefectTracker(system, t)
+#     dft, system = track!(dft,system,times)
+# 	dfts[i,j] = dft
+# end
+# prinz(z)
 
-filename = "data/DFT_pair_r$real.jld2"
-JLD2.@save filename Ntarget v0sigs rho params_init T dfts aspect_ratio times tmax comments rhoc runtime = z
+# filename = "data/DFT_pair_r$real.jld2"
+# JLD2.@save filename Ntarget v0sigs rho params_init T dfts aspect_ratio times tmax comments rhoc runtime = z
 
 
 # ## ---------------- Nature of the Phase Transition ---------------- ##

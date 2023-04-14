@@ -1,7 +1,6 @@
 cd("D:/Documents/Research/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian, LambertW
 include("../methods.jl")
-# const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
 pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
@@ -11,7 +10,7 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 filename = "data/impact_init_XY.jld2"
 @load filename R runtimes inits_pos Ps Cs ns xis rho T v0 sigma Ntarget params_init aspect_ratio times tmax comments rhoc 
 L = round(Int,sqrt(Ntarget/rho))
-histogram(runtimes / 3600 , bins=20)
+hrun(runtimes)
 
 Ps_avg = nanmean(Ps, 3)[:,:,1]
 ns_avg = nanmean(ns, 3)[:,:,1]
@@ -19,14 +18,16 @@ xis_avg = nanmean(xis, 3)[:,:,1]
 
 indices = [];
 for r in 1:R
-    try Cs[:,:,:,r]
+    try Cs[:,:,r]
 		push!(indices, r)
     catch;
     end
 end;
 
+
 Cs_avg = Array{Vector}(undef, length(inits_pos), length(times))
 for i in 1:length(inits_pos), k in 1:length(times)
+	println("i = $i, k = $k")
 	Cs_avg[i,k] = mean([Cs[i,k,r] for r in indices])
 end
 
@@ -41,11 +42,11 @@ p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10, legend=:toplef
 for i in 1:length(inits_pos)
 	plot!(times, Ps_avg[i,:], label=inits_pos[i], c=i, rib=0)
 end
-plot!(times, x->3.2E-2sqrt(x/log(10x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+plot!(times, x->3.2E-2sqrt(x/log(10x)),line=:dash,c=:black)
 p1
 
-##
-p2 = plot(xlabel=L"t", ylabel=L"n+1", xscale=:log10, yscale=:log10, legend=false)#:bottomleft)
+
+p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10, legend=false)#:bottomleft)
 for i in 1:length(inits_pos)
 	plot!(times, remove_negative(ns_avg[i,:]/L^2), label=inits_pos[i], c=i, rib=0)
 end
@@ -53,33 +54,33 @@ plot!(times, x->1.2E-2log(10x)/x,line=:dash,c=:black, label=L"\log(t)/t}")
 # plot!(times, x->1E3/x,line=:dot,c=:black, label=L"1/t}")
 p2
 
-##
+
 rr = 0:round(Int,L/2)
-p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, legend=:bottomleft)
+p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, legend=false)
 for i in 1:length(inits_pos)
 	plot!(rr[2:end],remove_negative(Cs_avg[i,40])[2:end], label=inits_pos[i], c=i, rib=0)
 end
 plot!(rr[2:end], r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
 p3
 
-##
-p4 = plot(xlabel=L"t", ylabel=L"ξ", axis=:log, legend=:topleft)
+
+p4 = plot(xlabel=L"t", ylabel=L"ξ/L", axis=:log, legend=false)
 for i in 1:length(inits_pos)
 	plot!(times, xis_avg[i,:]/L, label=inits_pos[i], c=i, rib=0)
 end
 plot!(times, x->3.2E-2sqrt(x/log(10x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
 p4
 
-##
+
 p5 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", axis=:log, legend=:bottomleft)#:topright)
 for i in 1:length(inits_pos)
 	plot!(times, xis_avg[i,:].*sqrt.(ns_avg[i,:]), label=inits_pos[i], c=i, rib=0)
 end
 p5
 
-##
-plot(p1,p2,p3,p5, layout=(2,2), size=(800,800))
-savefig("impact_init/figures/impact_init_XY.png")
+plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
+# savefig("impact_init/figures/impact_init_XY.png")
+
 
 ## ---------------- Impact of init on XY Model ---------------- ##
 comments = "Investigates the impact of initialisation for the spatial location of the 

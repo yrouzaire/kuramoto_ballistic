@@ -1,7 +1,6 @@
-cd("D:/Documents/Research/projects/kuramoto_ballistic")
+cd("D:/Documents/Researéch/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian, Sobol
 include("../methods.jl")
-const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
 gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
@@ -23,12 +22,12 @@ end
 
 ## --------------- Movies --------------- ##
 include("../parameters.jl")
-# inits_pos = ["square_lattice", "random","RSA"]
-# inits_pos = ["random"]
-inits_pos = ["RSA"]
-tmax = 2E3
-# times = collect(0:10:tmax) # linear time
-times = logspace(1,tmax,100) # log time
+inits_pos = ["square_lattice","random","RSA"]
+inits_pos = ["random","RSA"]
+# inits_pos = ["square_lattice"]
+tmax = 5E2
+times = collect(0:5:tmax) # linear time
+# times = logspace(1,tmax,10) # log time
 anims = []
 z = @elapsed for init_pos in inits_pos
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
@@ -38,9 +37,8 @@ z = @elapsed for init_pos in inits_pos
 
     anim = movies(param, times, particles=true)
     push!(anims, anim)
-    filepath = "films/immobile_XY/logtime_$(init_pos)_N$(N)_customJ.mp4"
-    mp4(anim, filepath, fps=25)
+    filepath = "impact_init/films/tests_$(init_theta)_$(init_pos)_N$(N)_ρ$(rho)_R0$(round(R0,digits=2))_T$(T).mp4"
+    mp4(anim, filepath, fps=30)
 end
 prinz(z)
-
 
