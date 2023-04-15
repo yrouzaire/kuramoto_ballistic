@@ -426,14 +426,13 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, celly + 1], [cellx + 1, celly], [cellx, celly - 1], [cellx - 1, celly], [cellx + 1, celly + 1], [cellx - 1, celly - 1], [cellx - 1, celly + 1], [cellx + 1, celly - 1]]
     end
 
-    #= For non-integer R0, part of the last cell is empty. 
-    This implies that some of the agents of the first cell
-    interact not only with the last cell but also with the before-last cell.=# 
+    #= For non-integer L/R0, part of the last cell is empty. 
+    This implies that some of the agents of the first row
+    interact not only with the last row but also with the before-last row.=# 
     if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
     if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end
-    # if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1]) end
-    # if cellx == nb_cells_x push!(neighbouring_cells, [2, celly]) end
-    # if celly == nb_cells_y push!(neighbouring_cells, [cellx, 2]) end
+    # Note that this pb does not exist for the last row, which only interacts with the first row and not the second one 
+    
     return neighbouring_cells
 
     # Code below as fast but less clear
