@@ -70,55 +70,161 @@ function initialisation_positions(N, Lx, Ly, init_pos)
             pos[2, n] = mod(floor(n / Ly), Ly)
         end
     elseif init_pos in ["sobol", "Sobol"]
-        @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
-        dimm = 10
-        good_sobol_axes = [(1, 3), (1, 4), (1, 8), (2, 3), (2, 4), (2, 8), (3, 1), (3, 2), (3, 5), (3, 8), (3, 7), (4, 1), (4, 2), (4, 5), (4, 7), (5, 3), (6, 5), (6, 9), (7, 3), (7, 4), (7, 8), (7, 9), (8, 1), (8, 2), (8, 3), (8, 7), (9, 6), (9, 7), (5, 10), (7, 10), (10, 5), (10, 7)]
-        # this 32-element list of good sobol axis (for a total dimension of dimm = 10) was obtained by visual inspection. We wanted to have a good spread of points in the 2D plane, with low discrepancy.
-        sobol_axis = rand(good_sobol_axes)
-        sobol = SobolSeq(dimm) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
-        p = reduce(hcat, next!(sobol) for i = 1:N)
-        pos = zeros(2, N)
-        pos[1, :] = p[sobol_axis[1], :] * Lx
-        pos[2, :] = p[sobol_axis[2], :] * Ly
+        pos = sobol(N, Lx, Ly)
     elseif init_pos in ["RSA", "rsa"] # Random Sequential Adsorption
-        #= The algorithm goes as follows. 
-        1. Draw an initial random point in the box and add it to the final list.
-        2. Define a radius (imagine points as the centers of physical coins)
-        radius = sqrt(Lx * Ly / N / π) * constant
-        sqrt(Lx * Ly / N / π) is the radius of a circle that would fit N points in the box
-        constant is a parameter that we can tune to make the radius smaller or bigger
-        3. While the number of rejections is smaller than a maximum number of rejections
-            3.1. Draw a random point in the box
-            3.2. If the point is at a distance of at least 2 * radius from all the points in the final list, add it to the final list
-            3.3. If the final list has N points, stop
-            3.4. If the number of rejections is bigger than the maximum number of rejections, decrease the radius by 10% and loop again until the final list has N points.
-        =#
-        pos = Tuple{Float32,Float32}[]
-        max_number_rejections = 1000
-        
-        number_rejections = 0
-        constant = 1
-        while number_rejections < max_number_rejections
-            radius = sqrt(Lx * Ly / N / π) * constant
-            x = Float32(Lx*rand())
-            y = Float32(Ly*rand())
-            if all(dist((x,y),position,Lx,Ly) > 2radius for position in pos)
-                push!(pos, (x, y))
-                if length(pos) == N
+        pos = rsa(N, Lx, Ly)
+    elseif init_pos in ["PDS", "pds", "Poisson", "PoissonDisc", "PoissonDisk"] # Poisson Disc Sampling
+        generated_points = 0
+        pos = zeros(2, N) #
+        for i in 1:10
+            pos_tmp, generated_points_tmp = pds(N, Lx, Ly)
+            if generated_points_tmp > generated_points
+                generated_points = generated_points_tmp
+                pos = pos_tmp
+                if generated_points == N
                     break
-                end
-            else 
-                number_rejections += 1
-                if number_rejections ≥ max_number_rejections
-                    constant = 0.9 * constant # skrink all the disks and try again for a maximum of max_number_rejections rejections
-                    number_rejections = 0
                 end
             end
         end
-        pos = vecTuple2matrix(pos)
     else
         println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\" or \"RSA\".")
     end
+    return pos
+end
+
+function pds(N, Lx, Ly)
+    #= Poisson Disc Sampling
+    A set of 2D points is said to be Poisson-disc if no two points 
+    are closer than a given distance r.
+    To acheive this rapidly, mainly to avoid computing N² distances everytime, 
+    one maintains 2 datastrcutures :
+    - a list of active points, from which we try to generate new points. 
+    Note that a point is active if it has not yet generated k failed points. 
+    - a grid of size Lx x Ly, where each cell contains the index of the points contained in it.
+    The grid is used to check if a point is too close to another one.
+    =#
+    constant = 0.792 # benchmarked for N = 1E4 and Lx = Ly = 100 such that it almost does not generates N points   
+    r = constant*sqrt(Lx * Ly / N)
+    k = 30
+
+    active = []
+    nb_cells_x = ceil(Int, Lx / r)
+    nb_cells_y = ceil(Int, Ly / r)
+    grid = [Int[] for i in 1:nb_cells_x, j in 1:nb_cells_y]
+    pos = zeros(2, N)
+    generated_points = 0
+
+    # initial point
+    x,y = rand(2) .* [Lx, Ly]
+    pos[:, 1] = [x,y]
+    push!(active,1) # list of points from which we try to generate new points
+    generated_points += 1 
+    push!(grid[ceil(Int, x / r), ceil(Int, y / r)],1)
+
+    while generated_points < N && !isempty(active)
+        i = rand(active)
+        for j in 1:k
+            # Garde-fou
+            if j == k  
+                deleteat!(active, findall(x -> x == i, active)) 
+                # println("Point $i deleted from active list, which now contains $(length(active)) points.")
+            end
+
+            # Generate a new point
+            theta = 2π * rand()
+            rj = r * (1 + rand())
+            x = mod(pos[1, i] + rj * cos(theta),Lx)
+            y = mod(pos[2, i] + rj * sin(theta),Ly)
+
+            # Get the cell of the new point
+            cell_x = ceil(Int, x / r)
+            cell_y = ceil(Int, y / r)
+
+            # Get neighbouring cells
+            cells = [(mod1(cell_x + i, nb_cells_x), mod1(cell_y + j, nb_cells_y)) for i in -1:1, j in -1:1]
+
+            # Get points in the neighbouring cells
+            points = [grid[cell...] for cell in cells]
+            points = vcat(points...)
+
+            # Check if the new point is too close to another one
+            too_close = false
+            for p in points
+                if dist(pos[:, p] , [x,y], Lx,Ly) < r
+                    too_close = true
+                    # println("too close")
+                    break # exits this for loop
+                end
+            end
+
+            # If the new point is not too close to another one, add it to the list of active points
+            if !too_close
+                generated_points += 1
+                pos[:, generated_points] = [x,y]
+                push!(active, generated_points)
+                push!(grid[cell_x, cell_y], generated_points)
+                # println("Point $generated_points added to active list, which now contains $(length(active)) points.")
+                break # exits the "for j in 1:k" loop, pick another active point and try to generate a new point from it
+            end
+        end
+    end
+    # println("Generated $generated_points points.")
+    return pos, generated_points
+end
+    
+
+
+function sobol(N, Lx, Ly)
+    @assert Lx == Ly "Error : Lx and Ly should be equal for Sobol initialisation"
+    dimm = 10
+    good_sobol_axes = [(1, 3), (1, 4), (1, 8), (2, 3), (2, 4), (2, 8), (3, 1), (3, 2), (3, 5), (3, 8), (3, 7), (4, 1), (4, 2), (4, 5), (4, 7), (5, 3), (6, 5), (6, 9), (7, 3), (7, 4), (7, 8), (7, 9), (8, 1), (8, 2), (8, 3), (8, 7), (9, 6), (9, 7), (5, 10), (7, 10), (10, 5), (10, 7)]
+    # this 32-element list of good sobol axis (for a total dimension of dimm = 10) was obtained by visual inspection. We wanted to have a good spread of points in the 2D plane, with low discrepancy.
+    sobol_axis = rand(good_sobol_axes)
+    sobol = SobolSeq(dimm) # points in [0,1]^2 (therefore we multiply by Lx and Ly and Lx should be equal to Ly)
+    p = reduce(hcat, next!(sobol) for i = 1:N)
+    pos = zeros(2, N)
+    pos[1, :] = p[sobol_axis[1], :] * Lx
+    pos[2, :] = p[sobol_axis[2], :] * Ly
+
+    return pos
+end
+
+function rsa(N, Lx, Ly)
+    #= The algorithm goes as follows. 
+    1. Draw an initial random point in the box and add it to the final list.
+    2. Define a radius (imagine points as the centers of physical coins)
+    radius = sqrt(Lx * Ly / N / π) * constant
+    sqrt(Lx * Ly / N / π) is the radius of a circle that would fit N points in the box
+    constant is a parameter that we can tune to make the radius smaller or bigger
+    3. While the number of rejections is smaller than a maximum number of rejections
+        3.1. Draw a random point in the box
+        3.2. If the point is at a distance of at least 2 * radius from all the points in the final list, add it to the final list
+        3.3. If the final list has N points, stop
+        3.4. If the number of rejections is bigger than the maximum number of rejections, decrease the radius by 10% and loop again until the final list has N points.
+    =#
+    pos = Tuple{Float32,Float32}[]
+    max_number_rejections = 1000
+    
+    number_rejections = 0
+    constant = 1
+    while number_rejections < max_number_rejections
+        radius = sqrt(Lx * Ly / N / π) * constant
+        x = Float32(Lx*rand())
+        y = Float32(Ly*rand())
+        if all(dist((x,y),position,Lx,Ly) > 2radius for position in pos)
+            push!(pos, (x, y))
+            if length(pos) == N
+                break
+            end
+        else 
+            number_rejections += 1
+            if number_rejections ≥ max_number_rejections
+                constant = 0.9 * constant # skrink all the disks and try again for a maximum of max_number_rejections rejections
+                number_rejections = 0
+            end
+        end
+    end
+    pos = vecTuple2matrix(pos)
     return pos
 end
 
@@ -189,7 +295,7 @@ function plot_thetas(system; particles=false, vertical=false, size=(512, 512), d
         if vertical
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
             thetas_cg = cg(system)
-            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
+            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho), ylims=(0, Ly/system.rho))
             final_plot = plot(p1, p2, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
         else
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
@@ -203,7 +309,7 @@ function plot_thetas(system; particles=false, vertical=false, size=(512, 512), d
         end
     else
         thetas_cg = cg(system)
-        final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly), title=title)
+        final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho), ylims=(0, Ly/system.rho), title=title)
         if defects 
             defects_p, defects_m =  spot_defects(system)
             highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
@@ -297,23 +403,19 @@ function cg(system::System{T}) where {T<:AbstractFloat}
 end
 
 ## Time Evolution
+construct_cell_list(system) = construct_cell_list(get_pos(system), system.N, system.Lx, system.Ly, R0)
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
-    nb_cells_x = round(Int,Lx/R0,RoundUp) # NO "+ 1" here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non respect of PBC) 
-    nb_cells_y = round(Int,Ly/R0,RoundUp) # NO "+ 1" here since Lx is an integer, you don't need the + 1 (otherwise you would have an extra range of cells, leading to non respect of PBC) 
+    nb_cells_x = ceil(Lx/R0)
+    nb_cells_y = ceil(Ly/R0)
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
-        cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
-        # here on the contrary, the position are 0 ≤ pos[n][1] < Lx (strict inequality)
-        # if cellx == nb_cells_x + 1 || celly == nb_cells_y + 1
-        #     println(pos[n], " ", cellx, " ", celly, " ", R0)
-        # end
+        cellx, celly = floor(pos[n][1]/R0) + 1, floor(pos[n][2]/R0) + 1 # cell to which particle n belongs
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
     return list, head
 end
-
 
 function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cells_y::Int)::Vector{Vector{Int}}
     # In the end, this function is quite fast, it contributes +3ms for N=1E4 particles
@@ -323,6 +425,15 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     else
         neighbouring_cells = Vector{Int}[[cellx, celly], [cellx, celly + 1], [cellx + 1, celly], [cellx, celly - 1], [cellx - 1, celly], [cellx + 1, celly + 1], [cellx - 1, celly - 1], [cellx - 1, celly + 1], [cellx + 1, celly - 1]]
     end
+
+    #= For non-integer R0, part of the last cell is empty. 
+    This implies that some of the agents of the first cell
+    interact not only with the last cell but also with the before-last cell.=# 
+    if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
+    if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end
+    # if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1]) end
+    # if cellx == nb_cells_x push!(neighbouring_cells, [2, celly]) end
+    # if celly == nb_cells_y push!(neighbouring_cells, [cellx, 2]) end
     return neighbouring_cells
 
     # Code below as fast but less clear
