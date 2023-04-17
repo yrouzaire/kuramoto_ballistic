@@ -9,7 +9,7 @@ R0 = 1.415
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
-init_pos = "pds"
+init_pos = "square_lattice"
 init_theta = "hightemp"
 r0 = 30.0
 q = 1.0
