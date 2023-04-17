@@ -8,10 +8,11 @@ comments = "From the defects data, one will be able to infer : \n
 A. the separating distance between the two defects R(t) \n
 B. the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
-Ntarget = Int(1E4)
+Ntarget = Int(1E3)
 aspect_ratio = 1
 T = 0.1
-R0 = 1 
+R0 = 1
+rho = 1 
 rhoc = 4.51 / π
 v0 = 0 
 sigma = 0
@@ -20,19 +21,19 @@ params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
 tmax = 1E1
 times = 0:5:tmax # linear time
 
-rhos = [1,2]
-inits_pos = ["square_lattice","random","rsa"]
+R0s = [1]
+inits_pos = ["square_lattice","random","rsa","pds"]
 inits_thetas = ["pair","single"]
-r0s = 20#5:10:35
-dfts = Array{DefectTracker}(undef, length(rhos), length(inits_pos),length(inits_thetas), length(r0s))
+r0s = 10:10:30
+dfts = Array{DefectTracker}(undef, length(R0s), length(inits_pos),length(inits_thetas), length(r0s))
 
-z = @elapsed for  i in each(rhos), j in each(inits_pos), k in each(inits_thetas), m in each(r0s)
-    rho = rhos[i]
+z = @elapsed for  i in each(R0s), j in each(inits_pos), k in each(inits_thetas), m in each(r0s)
+    R0 = R0s[i]
     init_pos = inits_pos[j]
     init_theta = inits_thetas[k]
     r0 = r0s[m]
 
-    println("$init_pos, $init_theta, r0 = $r0, ρ = $rho")
+    println("$init_pos, $init_theta, r0 = $r0, R0 = $R0")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     dt = determine_dt(T, sigma, v0, N, rho)
 
@@ -51,7 +52,7 @@ end
 prinz(z)
 
 filename = "data/immobile_DFT_pair_r$real.jld2"
-JLD2.@save filename r0s rhos inits_pos inits_thetas dfts params_init Ntarget v0 sigma  T aspect_ratio times tmax comments rhoc runtime = z
+JLD2.@save filename r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments rhoc runtime = z
 
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##

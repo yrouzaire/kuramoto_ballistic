@@ -24,7 +24,7 @@ include("../parameters.jl")
 inits_pos = ["square_lattice","random","RSA","PDS"]
 inits_pos = ["random","RSA","PDS"]
 # inits_pos = ["square_lattice"]
-tmax = 1E3
+tmax = 1E2
 times = collect(0:2:tmax) # linear time
 # times = logspace(1,tmax,10) # log time
 anims = []

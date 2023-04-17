@@ -12,7 +12,7 @@ end;
 println("There are $(length(indices))/$R files.")
 
 # ## Defects Motion (immobile particles)
-@load base_filename*"_r$(indices[1]).jld2" r0s rhos inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtime
+@load base_filename*"_r$(indices[1]).jld2" r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtime
 runtimes = NaN*zeros(R)
 dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R)
 dfts_fusion = Array{DefectTracker}[]
@@ -25,7 +25,7 @@ for r in indices
     runtimes[r] = runtime
 end
 
-@save base_filename*".jld2" R r0s rhos inits_pos inits_thetas dfts_fusion_undef dfts_fusion params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtimes
+@save base_filename*".jld2" R r0s R0s inits_pos inits_thetas dfts_fusion_undef dfts_fusion params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtimes
 println("Fusionned data saved in $(base_filename*".jld2") .")
 
 

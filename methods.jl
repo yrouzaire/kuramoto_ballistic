@@ -74,18 +74,7 @@ function initialisation_positions(N, Lx, Ly, init_pos)
     elseif init_pos in ["RSA", "rsa"] # Random Sequential Adsorption
         pos = rsa(N, Lx, Ly)
     elseif init_pos in ["PDS", "pds", "Poisson", "PoissonDisc", "PoissonDisk"] # Poisson Disc Sampling
-        generated_points = 0
-        pos = zeros(2, N) #
-        for i in 1:10
-            pos_tmp, generated_points_tmp = pds(N, Lx, Ly)
-            if generated_points_tmp > generated_points
-                generated_points = generated_points_tmp
-                pos = pos_tmp
-                if generated_points == N
-                    break
-                end
-            end
-        end
+        pos,~ = pds(N, Lx, Ly)
     else
         println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\" or \"RSA\".")
     end
@@ -103,7 +92,7 @@ function pds(N, Lx, Ly)
     - a grid of size Lx x Ly, where each cell contains the index of the points contained in it.
     The grid is used to check if a point is too close to another one.
     =#
-    constant = 0.792 # benchmarked for N = 1E4 and Lx = Ly = 100 such that it almost does not generates N points   
+    constant = 0.796 # benchmarked for N = 1E4 and Lx = Ly = 100 such that it almost does not generates N points   
     r = constant*sqrt(Lx * Ly / N)
     k = 30
 
@@ -405,12 +394,12 @@ end
 ## Time Evolution
 construct_cell_list(system) = construct_cell_list(get_pos(system), system.N, system.Lx, system.Ly, R0)
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
-    nb_cells_x = ceil(Lx/R0)
-    nb_cells_y = ceil(Ly/R0)
+    nb_cells_x = ceil(Int,Lx/R0)
+    nb_cells_y = ceil(Int,Ly/R0)
     head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
-        cellx, celly = floor(pos[n][1]/R0) + 1, floor(pos[n][2]/R0) + 1 # cell to which particle n belongs
+        cellx, celly = floor(Int,pos[n][1]/R0) + 1, floor(Int,pos[n][2]/R0) + 1 # cell to which particle n belongs
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
@@ -431,7 +420,7 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     interact not only with the last row but also with the before-last row.=# 
     if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
     if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end
-    # Note that this pb does not exist for the last row, which only interacts with the first row and not the second one 
+    # Note that this problem does not exist for the last row, which only interacts with the first row and not the second one 
     
     return neighbouring_cells
 

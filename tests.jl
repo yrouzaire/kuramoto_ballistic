@@ -30,7 +30,8 @@ cg(system)
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 system = System(param)
 poss = get_pos(system)
-# scatter(poss,m=2)
+scatter(poss,m=1)
+
 thetas = get_theta(system)
 cg(system)
 
