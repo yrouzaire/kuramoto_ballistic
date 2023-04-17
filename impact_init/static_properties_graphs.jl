@@ -183,3 +183,72 @@ p3 = plot(p3a,p3b,layout=(1,2),size=(800,400))
 # savefig("impact_init/figures/static_properties_graphs/ncc_fcc_R0s.png")
 
 ## --------------- Structure Factor --------------- ##
+function structure_factor(system)
+	pos = get_pos(system)
+	N = system.N
+	Lx,Ly = system.Lx, system.Ly
+	qs = collect(0.0:0.1:10)
+	S = zeros(ComplexF32,length(qs))
+	for i in 1:N
+		pos_i = pos[i]
+		for j in i:N
+			distance  = dist(pos_i,pos[j],Lx,Ly)
+			S += 2exp.(-im*distance*qs)
+		end
+	end
+	S = S/N
+	return qs,S
+end
+
+include("../parameters.jl")
+system = System(param)
+system.N
+qs,S = structure_factor(system)
+plot(qs,imag(S))
+@btime structure_factor(system)
+
+
+## ChatGPT
+using FFTW
+
+function compute_structure_factor(lattice_points, N, grid_size)
+    # Input: lattice_points - an array of N points in the lattice with coordinates (x_i, y_i)
+    #        N - total number of points in the lattice
+    #        grid_size - size of the 2D grid for FFT, should be a power of 2
+    # Output: structure_factor - the computed structure factor of the lattice
+
+    # Scale the lattice points to fit within the grid size
+    scaled_points = ceil.(Int, lattice_points .* grid_size)
+    
+    # Create a 2D grid of size grid_size x grid_size and initialize with zeros
+    grid = zeros(grid_size, grid_size)
+    
+    # Loop through all the scaled lattice points and increment the corresponding grid cell by 1
+    for i in 1:N
+        x = scaled_points[i, 1]
+        y = scaled_points[i, 2]
+        grid[x, y] += 1
+    end
+    
+    # Perform 2D FFT on the grid
+    fft_grid = fftshift(fft(grid))
+    
+    # Compute the squared magnitude of the FFT result
+    power_spectrum = abs2.(fft_grid)
+    
+    # Normalize the power spectrum
+    structure_factor = power_spectrum / (grid_size^2)
+    
+    return structure_factor
+end
+
+# Example usage:
+# Generate random lattice points in [0,1]
+N = 1000
+lattice_points = rand(N, 2)
+
+# Set the grid size for FFT
+grid_size = 256
+
+# Compute structure factor
+structure_factorr = compute_structure_factor(lattice_points, N, grid_size)
