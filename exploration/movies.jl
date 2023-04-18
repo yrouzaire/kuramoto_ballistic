@@ -21,18 +21,21 @@ function movies(param, times; particles=false, verbose=true)
 end
 
 ## --------------- Warming up --------------- ##
+include("../parameters.jl")
 system = System(param)
 evolve!(system, 10)
+evolve!(system, 20)
+plot_thetas(system,particles=true,defects=true,size=(512,512))
 
 ## --------------- Movies --------------- ##
 include("../parameters.jl")
 inits_pos = ["square_lattice","random","RSA","PDS"]
 # inits_pos = ["random","RSA","PDS"]
-# inits_pos = ["PDS"]
+inits_pos = ["square_lattice"]
 
 inits_theta = ["hightemp","pair"]
-# inits_theta = ["pair"]
-tmax = 500
+inits_theta = ["single"]
+tmax = 5E2
 times = collect(0:2:tmax) # linear time
 # times = logspace(1,tmax,10) # log time
 anims = []

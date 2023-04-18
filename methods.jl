@@ -24,6 +24,7 @@ mutable struct System{F<:AbstractFloat}
     dt::Number
     t::Number
     params::Dict
+    periodic::Bool
 end
 
 function System(params; float_type=Float32)
@@ -40,7 +41,13 @@ function System(params; float_type=Float32)
     for n in 1:N
         vec_agents[n] = Agent{float_type}(Tuple(pos[:, n]), thetas[n], omegas[n], psis[n])
     end
-    return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params)
+    if init_theta == "single" 
+        @assert system.v0 == 0 "Error : v0 should be 0 if PBC not satisfied."
+        periodic = false
+    else 
+        periodic = true
+    end
+    return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params, periodic)
 end
 
 ## -----------------  Get Methods ----------------- ##
@@ -437,6 +444,7 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     # neighbouring_cells = [mod1.(neighbouring_cells[i],nb_cells_x) for i in 1:9]
 end
 
+
 get_list_neighbours(system::System) = get_list_neighbours(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
 function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number) where {T<:AbstractFloat}
     ind_neighbours = Vector{Vector{Int}}(undef, N)
@@ -478,20 +486,24 @@ end
 
 function evolve!(system::System, tmax::Number)
     v0,dt = system.v0, system.dt
-    # v0, R0, N, Lx, Ly, dt = system.v0, system.R0, system.N, system.Lx, system.Ly, system.dt
     if v0 == 0
         ind_neighbours = get_list_neighbours(system)
-        # ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
-        while system.t < tmax
-            system.t += dt
-            update_thetas!(system, ind_neighbours)
+        if system.periodic
+            while system.t < tmax
+                system.t += dt
+                update_thetas!(system, ind_neighbours)
+            end
+        else
+            while system.t < tmax
+                system.t += dt
+                update_thetas_nonperiodic!(system, ind_neighbours)
+            end
         end
     else
         while system.t < tmax
             system.t += dt
             update_positions!(system)
             ind_neighbours = get_list_neighbours(system)
-            # ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
             update_thetas!(system, ind_neighbours)
         end
     end
@@ -531,7 +543,7 @@ function update_positions!(system::System{T}) where {T<:AbstractFloat}
             contra-intuitive. This issue has already been debated, 
             cf. https://github.com/JuliaLang/julia/issues/36310. 
             Since it appears that a simple fix does not exist, 
-            it use the suggested workaround. 
+            I use the suggested workaround. 
             Adds 200µs for an update of 10^4 particles, to be compared to 3.750 ms in total (+2%)
             =#
     end
@@ -539,14 +551,6 @@ end
 
 function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}}) where {FT<:AbstractFloat}
     dt, T = system.dt, system.T
-    # if system.params[:params_init][:init_theta] == "random"
-    #     constant_J = 4/π # mean number of neighbours = π ± 1.79 (benchmarked on 1E5 particles)
-    # elseif system.params[:params_init][:init_theta] in ["RSA","rsa"]
-    #     constant_J = 4/2.88 # mean number of neighbours = 2.88 ± 1.54 (benchmarked on 1E5 particles)
-    # else
-    #     constant_J = 1
-    # end
-    constant_J = 1
     for n in 1:system.N
         agent = system.agents[n]
         if length(ind_neighbours[n]) > 0
@@ -555,9 +559,37 @@ function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}})
             for theta in thetas_neighbours
                 sumsin += sin(theta - agent.theta)
             end
-            agent.theta += dt * (agent.omega + constant_J*sumsin) + sqrt(2T * dt) * randn()
+            agent.theta += dt * (agent.omega + sumsin) + sqrt(2T * dt) * randn()
         else
             agent.theta += dt * agent.omega + sqrt(2T * dt) * randn()
+        end
+    end
+end
+function update_thetas_nonperiodic!(system::System{FT}, ind_neighbours::Vector{Vector{Int}}) where {FT<:AbstractFloat}
+    dt, T = system.dt, system.T
+    R0 = system.R0
+    Lx,Ly = system.Lx, system.Ly
+    for n in 1:system.N
+        agent = system.agents[n]
+        x,y = agent.pos
+        cellx = ceil(Int, x/R0)
+        celly = ceil(Int, y/R0)
+        nb_cells_x = ceil(Int, Lx/R0)
+        nb_cells_y = ceil(Int, Ly/R0)
+        on_the_edge = cellx == 1 || cellx == nb_cells_x || celly == 1 || celly == nb_cells_y
+        if !on_the_edge
+            if length(ind_neighbours[n]) > 0
+                thetas_neighbours = [system.agents[i].theta for i in ind_neighbours[n]]
+                sumsin = 0.0
+                for theta in thetas_neighbours
+                    sumsin += sin(theta - agent.theta)
+                end
+                agent.theta += dt * (agent.omega + sumsin) + sqrt(2T * dt) * randn()
+            else
+                agent.theta += dt * agent.omega + sqrt(2T * dt) * randn()
+            end
+        else 
+            # do nothing, leave the edges unchanged thoughout the simulation
         end
     end
 end
