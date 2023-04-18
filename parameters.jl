@@ -1,4 +1,4 @@
-Ntarget = Int(1E3)
+Ntarget = Int(1E4)
 aspect_ratio = 1
 rho = 1
 T = 0.1
@@ -11,7 +11,7 @@ N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 # Initialisation parameters
 init_pos = "square_lattice"
 init_theta = "hightemp"
-r0 = 30.0
+r0 = round(Int,Lx/2)
 q = 1.0
 
 tmax = 1E2

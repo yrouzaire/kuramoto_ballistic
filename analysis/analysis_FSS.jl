@@ -31,7 +31,7 @@ for i in 1:length(v0sigs), j in 1:length(Ntargets), k in 1:length(times)
 end
 
 ## Plot P vs t
-p=plot(axis=:log, legend=:bottomright, xlabel="t", ylabel="P(t)")
+p=plot(xaxis=:log, legend=:bottomright, xlabel="t", ylabel="P(t)")
 for i in 1:length(v0sigs)
 	plot!(times[2:end], Ps_avg[i,10,2:end], m=true,label="v0 = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])")
 end
@@ -80,13 +80,25 @@ plot(p,p2,layout=(1,2),size=(800,400))
 ## ------------- Impact of N on final quantities ------------- 
 ## P 
 times_to_plot = [10,15,20,25,26,27,28,29,30]
-p1=plot(axis=:log, legend=:outerright, xlabel="1/N", ylabel="P",size=(600,400))
+p1=plot(xaxis=:log, legend=false, xlabel="1/N", ylabel="P",size=(400,400))
 for t in times_to_plot
-	plot!(1 ./Ntargets, Ps_avg[1,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
+	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
 end
 plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
+plot!(1 ./Ntargets, 8.2E-1 * (Ntargets).^-0.012, c=:black,line=:dot, label=L"1/\sqrt{N}")
+# plot!(1 ./Ntargets, 8E-0 ./ log.(Ntargets), c=:black,line=:dot, label=L"1/\sqrt{N}")
 p1
-savefig("figures/FSS_relaxation_time/FSS_.svg")
+
+
+p2=plot(axis=:log, legend=:outerright, xlabel="1/N", ylabel="P",size=(600,400))
+for t in times_to_plot
+	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
+end
+plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
+plot!(1 ./Ntargets, 8.2E-1 * (Ntargets).^-0.012, c=:black,line=:dot, label=L"N^{-0.012}")
+p2
+plot(p1,p2,layout=(1,2),size=(1000,400))
+# savefig("figures/FSS_relaxation_time/FSS_.svg")
 ## ------------- Regular plots at fixed N ------------- 
 ## Plot n vs t
 p=plot(axis=:log, legend=false, xlabel="t", ylabel="n(t)/L²")

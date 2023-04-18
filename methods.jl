@@ -284,12 +284,12 @@ function plot_thetas(system; particles=false, vertical=false, size=(512, 512), d
         if vertical
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
             thetas_cg = cg(system)
-            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho), ylims=(0, Ly/system.rho))
+            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
             final_plot = plot(p1, p2, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
         else
             p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
             thetas_cg = cg(system)
-            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho), ylims=(0, Ly/system.rho))
+            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
             final_plot = plot(p1, p2, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
             if defects 
                 defects_p, defects_m =  spot_defects(system)
@@ -298,7 +298,7 @@ function plot_thetas(system; particles=false, vertical=false, size=(512, 512), d
         end
     else
         thetas_cg = cg(system)
-        final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho), ylims=(0, Ly/system.rho), title=title)
+        final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0), title=title)
         if defects 
             defects_p, defects_m =  spot_defects(system)
             highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
