@@ -21,9 +21,9 @@ params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
 tmax = 1E1
 times = 0:5:tmax # linear time
 
-R0s = [1]
+R0s = [1.415]
 inits_pos = ["square_lattice","random","rsa","pds"]
-inits_thetas = ["pair","single"]
+inits_thetas = ["single"]
 r0s = 10:10:30
 dfts = Array{DefectTracker}(undef, length(R0s), length(inits_pos),length(inits_thetas), length(r0s))
 

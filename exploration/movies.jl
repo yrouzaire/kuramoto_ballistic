@@ -30,8 +30,8 @@ plot_thetas(system,particles=true,defects=true,size=(512,512))
 ## --------------- Movies --------------- ##
 include("../parameters.jl")
 inits_pos = ["square_lattice","random","RSA","PDS"]
-# inits_pos = ["random","RSA","PDS"]
-inits_pos = ["square_lattice"]
+inits_pos = ["random","RSA","PDS"]
+# inits_pos = ["square_lattice"]
 
 inits_theta = ["hightemp","pair"]
 inits_theta = ["single"]

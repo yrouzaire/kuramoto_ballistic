@@ -316,13 +316,14 @@ end
 
 function highlight_defects!(p, Lx, Ly, defects_p, defects_m, symbP=:circle, symbM=:utriangle)
     for defect in defects_p
+        # scatter!((defect[2],Ly-defect[1]), m=(1.5, 6., symbP, :transparent, stroke(1.2, :grey85)))
         scatter!((defect[1:2]), m=(1.5, 6., symbP, :transparent, stroke(1.2, :grey85)))
     end
     for defect in defects_m
         scatter!((defect[1:2]), m=(1.5, 6., symbM, :transparent, stroke(1.2, :grey85)))
     end
-    xlims!((1, Lx))
-    ylims!((1, Ly))
+    # xlims!((1, Lx))
+    # ylims!((1, Ly))
     return p
 end
 
@@ -623,14 +624,12 @@ function corr(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr; algo="f
     end
 end
 
+
 function corr_slow(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} where {T<:AbstractFloat}
-    # Construct matrix of distances
+    #= Iterates over all (unique) pairs of particles (hence i in j+1:N), and computes the correlation function
+    Regroup the results in bins of size dr, and compute the average correlation in each bin. =#
     Lmin = min(Lx, Ly)
     C = [T[] for i in 1:round(Int, Lmin / 2 / dr)]
-    # distances = zeros(N,N)
-    # for j in 1:N , i in j+1:N
-    #     distances[i,j] = dist(pos[:,i],pos[:,j],L)
-    # end
     for j in 1:N, i in j+1:N
         d = dist(pos[i], pos[j], Lx, Ly)
         if d ≤ round(Int, Lmin / 2)
@@ -643,7 +642,8 @@ function corr_slow(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr)::V
 end
 
 function corr_fast(pos::Vector{Tuple{T,T}}, thetas::Vector{T}, N, Lx, Ly, dr)::Vector{T} where {T<:AbstractFloat}
-    M = 50
+    #= Same as before, but stops the computation when the number of pairs in all bins exceeds M =#
+    M = 50 # benchmarked so that corr_fast is quantitatively equivalent to corr_slow
     Lmin = min(Lx, Ly)
     C = [T[] for i in 1:round(Int, Lmin / 2 / dr)]
     ms = zeros(Int, round(Int, Lmin / 2 / dr))

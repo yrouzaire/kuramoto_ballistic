@@ -17,6 +17,7 @@ Ps_avg = nanmean(Ps, 4)[:,:,:,1]
 ns_avg = nanmean(ns, 4)[:,:,:,1]
 xis_avg = nanmean(xis, 4)[:,:,:,1]
 
+
 indices = [];
 for r in 1:R
     try Cs[:,:,:,r]
