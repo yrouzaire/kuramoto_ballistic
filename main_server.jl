@@ -8,7 +8,7 @@ comments = "From the defects data, one will be able to infer : \n
 A. the separating distance between the two defects R(t) \n
 B. the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
-Ntarget = Int(1E3)
+Ntarget = Int(1E4)
 aspect_ratio = 1
 T = 0.1
 R0 = 1
@@ -18,10 +18,10 @@ v0 = 0
 sigma = 0
 q = 1.0
 params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
-tmax = 1E1
+tmax = 2E3
 times = 0:5:tmax # linear time
 
-R0s = [1.415]
+R0s = [1.415,2]
 inits_pos = ["square_lattice","random","rsa","pds"]
 inits_thetas = ["single"]
 r0s = 10:10:30

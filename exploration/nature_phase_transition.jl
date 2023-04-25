@@ -115,7 +115,7 @@ plot!(rr[2:end], r->r^(-0.25),line=:dash,c=:black, label=L"r^{-1/4}")
 annotate!(1.25,0.12,text("(c)",12))
 p3
 
-p4 = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",axis=:log, legend=false,
+p4 = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",yaxis=:log, legend=false,
 ylims=(1E-2,1.1), yticks = ([0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],[L"10^{-2}","","","","","","","","",L"10^{-1}","","","","","","","","",L"10^{0}"]),
 xticks = ([1,2,3,4,5,6,7,8,9,10,20,30,40,50],[L"10^{0}","","","","","","","","",L"10^{1}","","","",""]))
 tt = length(times)
@@ -135,6 +135,18 @@ p5
 
 plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
 # savefig("figures/nature_phase_transition/PnCC_horizontal.png")
+
+#
+p4_loglin = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",yaxis=:log, legend=false,
+ylims=(1E-2,1.1)) 
+tt = length(times)
+for i in 1:length(v0sigs_horizontal) 
+	plot!(rr[2:end],remove_negative(Cs_avg_horizontal[i,tt] .- Ps_avg_horizontal[i,tt].^2)[2:end], label=v0sigs_horizontal[i], c=i, rib=0)
+end
+plot!(rr[2:end], r->0.25*r^(-0.25),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+annotate!(4,0.014,text("(d)",12))
+p4_loglin
+# savefig("figures/nature_phase_transition/loglinCC_horizontal.png")
 
 ## ------------------ Plots Vertical ------------------ ##
 p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10,
@@ -191,6 +203,19 @@ for i in 1:length(v0sigs_vertical)
 end
 # plot!(rr, r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
 p5
+
+#
+p4_loglin = plot(xlabel=L"r", ylabel=L"C(r,t_∞) - P^2",yaxis=:log, legend=false,
+ylims=(1E-2,1.1)) 
+tt = length(times)
+for i in 1:length(v0sigs_vertical) 
+	plot!(rr[2:end],remove_negative(Cs_avg_vertical[i,tt] .- Ps_avg_horizontal[i,tt].^2)[2:end], label=v0sigs_horizontal[i], c=i, rib=0)
+end
+plot!(rr[2:end], r->0.25*r^(-0.25),line=:dash,c=:black, label=L"r^{-T/2\pi}")
+annotate!(4,0.014,text("(d)",12))
+p4_loglin
+# savefig("figures/nature_phase_transition/loglin_CC_vertical.png")
+#
 
 plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
 # savefig("figures/nature_phase_transition/PnCC_vertical.png")
