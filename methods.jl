@@ -284,33 +284,71 @@ end
 effective_number_particles = effective_number_particle
 
 #################### Visualisation methods ####################
-function plot_thetas(system; particles=false, vertical=false, size=(512, 512), defects=false, title="")
+function plot_thetas(system; particles=false, vertical=false, 
+    size=(512, 512), defects=false, title="", nb_neighbours = false, 
+    cols = cgrad([:black, :blue, :green, :orange, :red, :black]))
+
     pos, thetas, N, Lx, Ly = get_pos(system), get_thetas(system), system.N, system.Lx, system.Ly
-    cols = cgrad([:black, :blue, :green, :orange, :red, :black])
-    if particles
-        if vertical
-            p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            thetas_cg = cg(system)
-            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
-            final_plot = plot(p1, p2, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
-        else
-            p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
-            thetas_cg = cg(system)
-            p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
-            final_plot = plot(p1, p2, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
-            if defects 
-                defects_p, defects_m =  spot_defects(system)
-                highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
-            end
-        end
-    else
-        thetas_cg = cg(system)
-        final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0), title=title)
-        if defects 
-            defects_p, defects_m =  spot_defects(system)
-            highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
-        end
+    
+    if particles 
+        p_particles = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
     end
+
+    if nb_neighbours
+        msss = 1 
+        list_nnn = length.(get_list_neighbours(system))    
+        p_nb_neighbours = plot(aspect_ratio=1)
+        scatter!(pos, marker_z=list_nnn, 
+        markerstrokewidth=0, markersize=msss,size=size,
+        c=cgrad([:black, :blue, :green, :orange, :red]))
+    end
+    
+    thetas_cg = cg(system)
+    p_cg = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
+    if defects 
+        defects_p, defects_m =  spot_defects(system)
+        highlight_defects!(p_cg, system.Lx, system.Ly, defects_p, defects_m)
+    end
+
+    if vertical 
+        if particles && nb_neighbours
+            final_plot = plot(p_particles,p_cg, p_nb_neighbours, layout=(3, 1), size=(size[1], size[2] * 3), title=title)
+        elseif particles
+            final_plot = plot(p_particles, p_cg, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
+        elseif nb_neighbours
+            final_plot = plot(p_cg, p_nb_neighbours, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
+        else
+            final_plot = plot(p_cg, layout=(1, 1), size=size, title=title)
+        end
+    else 
+        if particles && nb_neighbours
+            final_plot = plot(p_particles, p_cg, p_nb_neighbours, layout=(1, 3), size=(size[1] * 3, size[2]), title=title)
+        elseif particles
+            final_plot = plot(p_particles, p_cg, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
+        elseif nb_neighbours
+            final_plot = plot(p_cg, p_nb_neighbours, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
+        else
+            final_plot = plot(p_cg, layout=(1, 1), size=size, title=title)
+        end
+    end 
+    # if particles
+    #     if vertical
+    #         p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
+    #         final_plot = plot(p1, p2, layout=(2, 1), size=(size[1], size[2] * 2), title=title)
+    #     else
+    #         p1 = scatter(pos, marker_z=mod.(thetas, 2pi), color=cols, clims=(0, 2pi), ms=275 / Lx, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx), ylims=(0, Ly))
+    #         thetas_cg = cg(system)
+    #         p2 = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
+    #         final_plot = plot(p1, p2, layout=(1, 2), size=(size[1] * 2, size[2]), title=title)
+    #     end
+    # else
+    #     thetas_cg = cg(system)
+    #     final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0), title=title)
+    #     if defects 
+    #         defects_p, defects_m =  spot_defects(system)
+    #         highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
+    #     end
+    # end
     return final_plot
 end
 

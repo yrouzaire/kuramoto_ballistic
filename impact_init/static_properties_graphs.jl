@@ -53,25 +53,9 @@ lattice_type = "random"
 lattice_type = "pds"
 params_init[:init_pos] = lattice_type
 param[:params_init] = params_init
-system = System(param)
-g = system2graph(system)
-# gplot(g)
-connected_components(g)
-seuil_cluster = 
-sum(length.(connected_components(g)) .≥ seuil_cluster)
-##
-histogram(log.(length.(connected_components(g))))
 
-plot(connected_components(g))
 
-collect(keys(degree_histogram(g)))
-meann = round(mean(length.(get_list_neighbours(system))),digits=2)
-varr = round(var(length.(get_list_neighbours(system))),digits=2)
-histogram(length.(get_list_neighbours(system)),bins=5, title="Mean : $meann ± $varr")
 
-collect(values(degree_histogram(g)))
-
-components(1:N)
 
 ## --------------- Systems Generation  --------------- ##
 include("../parameters.jl")
@@ -88,7 +72,7 @@ for i in each(lattice_types)
 	push!(graphs, system2graph(system))
 end
 
-# --------------- Distributions --------------- ##
+## --------------- Distributions --------------- ##
 # p1 = plot(yaxis=:log, legend=:topright,xlabel="Number of neighbours", ylabel="Frequency")
 # vline!([8],c=1)
 # for i in 2:length(systems)
@@ -106,7 +90,7 @@ end
 # p1
 # savefig("impact_init/figures/static_properties_graphs/degree_distribution.png")
 ## --------------- Visualisation nnn and components --------------- ##
-mss = 1
+msss = 1
 p2_subs = Array{Any}(undef, 3, length(lattice_types))
 # gplot
 for i in each(graphs)
@@ -118,7 +102,7 @@ for i in each(systems)
 	tmp = plot(aspect_ratio=1)
 	scatter!([el[1] for el in pos], [el[2] for el in pos], 
 	marker_z=length.(get_list_neighbours(systems[i])), 
-	markerstrokewidth=0, markersize=mss,size=(500,400),
+	markerstrokewidth=0, markersize=msss,size=(500,400),
 	c=cgrad([:black, :blue, :green, :orange, :red]))
 	p2_subs[2,i] = tmp
 end
@@ -128,7 +112,7 @@ for i in each(systems)
 	tmp = plot(aspect_ratio=1)
 	scatter!([el[1] for el in pos], [el[2] for el in pos], 
 	marker_z=ids_connected_component(graphs[i]), 
-	markerstrokewidth=0, markersize=mss,size=(500,400),
+	markerstrokewidth=0, markersize=msss,size=(500,400),
 	c=cgrad([:black, :blue, :green, :orange, :red]))
 	p2_subs[3,i] = tmp
 end
@@ -136,10 +120,10 @@ end
 # p2_subs[3,1], p2_subs[3,2], p2_subs[3,3], p2_subs[3,4], 
 # layout=(2,length(lattice_types)), size=(2000,800))
 
-# p2_subs[2,4]
+p2_subs[2,4]
 
-p2 = plot(p2_subs[2,:]..., layout=(1,length(lattice_types)), size=(2000,400))
-title!("Number of neighbours")
+# p2 = plot(p2_subs[2,:]..., layout=(1,length(lattice_types)), size=(2000,400))
+# title!("Number of neighbours")
 # savefig("impact_init/figures/static_properties_graphs/vizu_nnn_cc.png")
 
 
