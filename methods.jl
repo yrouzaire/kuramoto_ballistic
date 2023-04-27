@@ -100,7 +100,7 @@ function pds(N, Lx, Ly)
     The grid is used to check if a point is too close to another one.
     =#
     constant = 0.796 # benchmarked for N = 1E4 and Lx = Ly = 100 such that it almost does not generates N points   
-    r = constant*sqrt(Lx * Ly / N)
+    r = 1*sqrt(Lx * Ly / N)
     k = 30
 
     active = []
@@ -112,17 +112,16 @@ function pds(N, Lx, Ly)
 
     # initial point
     x,y = rand(2) .* [Lx, Ly]
-    pos[:, 1] = [x,y]
-    push!(active,1) # list of points from which we try to generate new points
     generated_points += 1 
-    push!(grid[ceil(Int, x / r), ceil(Int, y / r)],1)
+    pos[:, generated_points] = [x,y]
+    push!(active,generated_points) # list of points from which we try to generate new points
+    push!(grid[ceil(Int, x / r), ceil(Int, y / r)],generated_points)
 
     while generated_points < N && !isempty(active)
         i = rand(active)
         for j in 1:k
-            # Garde-fou
-            if j == k  
-                deleteat!(active, findall(x -> x == i, active)) 
+            if j == k  # Garde-fou contre les loops infinies
+                deleteat!(active, findfirst(x -> x == i, active)) 
                 # println("Point $i deleted from active list, which now contains $(length(active)) points.")
             end
 
@@ -133,11 +132,12 @@ function pds(N, Lx, Ly)
             y = mod(pos[2, i] + rj * sin(theta),Ly)
 
             # Get the cell of the new point
-            cell_x = ceil(Int, x / r)
-            cell_y = ceil(Int, y / r)
+            cellx = ceil(Int, x / r)
+            celly = ceil(Int, y / r)
 
             # Get neighbouring cells
-            cells = [(mod1(cell_x + i, nb_cells_x), mod1(cell_y + j, nb_cells_y)) for i in -1:1, j in -1:1]
+            # cells = vec([(mod1(cellx + i, nb_cells_x), mod1(celly + j, nb_cells_y)) for i in -1:1, j in -1:1])
+            cells = get_neighbouring_cells(cellx, celly, nb_cells_x, nb_cells_y)
 
             # Get points in the neighbouring cells
             points = [grid[cell...] for cell in cells]
@@ -158,7 +158,7 @@ function pds(N, Lx, Ly)
                 generated_points += 1
                 pos[:, generated_points] = [x,y]
                 push!(active, generated_points)
-                push!(grid[cell_x, cell_y], generated_points)
+                push!(grid[cellx, celly], generated_points)
                 # println("Point $generated_points added to active list, which now contains $(length(active)) points.")
                 break # exits the "for j in 1:k" loop, pick another active point and try to generate a new point from it
             end
@@ -295,14 +295,23 @@ function plot_thetas(system; particles=false, vertical=false,
     end
 
     if nb_neighbours
-        msss = 1 
+        msss = 1
         list_nnn = length.(get_list_neighbours(system))    
         p_nb_neighbours = plot(aspect_ratio=1)
         scatter!(pos, marker_z=list_nnn, 
         markerstrokewidth=0, markersize=msss,size=size,
         c=cgrad([:black, :blue, :green, :orange, :red]))
+        if defects 
+            defects_p, defects_m =  spot_defects(system)
+            for defp in defects_p
+                scatter!(defp[1:2].*system.R0,marker=:circle,ms=5)
+            end
+            for defm in defects_m
+                scatter!(defm[1:2].*system.R0,marker=:circle,ms=5)
+            end
+        end
     end
-    
+    defects_p
     thetas_cg = cg(system)
     p_cg = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
     if defects 
@@ -369,7 +378,64 @@ function mod1_2D(xx::Tuple{T,T}, Lx::Int, Ly::Int) where {T<:Number}
     return (mod1(xx[1], Lx), mod1(xx[2], Ly))
 end
 
+
 function cg(system::System{T}) where {T<:AbstractFloat}
+    Lx, Ly = system.Lx, system.Ly
+    N = system.N
+    pos, thetas = get_pos(system), get_thetas(system)
+    mesh_size = R0
+    cutoff = 4R0 # for contributions
+
+    list, head = construct_cell_list(system) 
+    
+    nb_cells_x = ceil(Int,Lx / mesh_size)
+    nb_cells_y = ceil(Int,Ly / mesh_size)
+    fine_grid = NaN * zeros(nb_cells_x, nb_cells_y)
+    fine_grid_density = NaN * zeros(nb_cells_x, nb_cells_y)
+    for i in 1:nb_cells_x, j in 1:nb_cells_y # scan fine_grid cells
+        center_finegrid_cell = T.([(i - 0.5) * mesh_size, (j - 0.5) * mesh_size])
+
+        # find cell from coarse mesh correponding to cell i,j belonging to fine_grid
+        cellx, celly = Int(div(center_finegrid_cell[1], mesh_size)) + 1, Int(div(center_finegrid_cell[2], mesh_size)) + 1
+        a = round(Int, cutoff / mesh_size)
+        neighbouring_cells = vec([(ii, jj) for ii in -a:a, jj in -a:a])
+        neighbouring_cells = [mod1_2D(el .+ (cellx, celly), nb_cells_x, nb_cells_y) for el in neighbouring_cells]
+
+        # get indices of particles within those cells (cells belonging to the coarse mesh)
+        ind_neighbours = Int[]
+        for (i, j) in neighbouring_cells
+            next = head[i, j]
+            if next ≠ -1
+                if dist(center_finegrid_cell, pos[next], Lx, Ly) < cutoff
+                    push!(ind_neighbours, next)
+                end
+                while list[next] ≠ -1
+                    if dist(center_finegrid_cell, pos[list[next]], Lx, Ly) < cutoff
+                        push!(ind_neighbours, list[next])
+                    end
+                    next = list[next]
+                end
+            end
+        end
+
+        # compute contributions from those "neighbouring" particles
+        tmp = ComplexF32[]
+        sizehint!(tmp, length(ind_neighbours))
+        tmp_density = Float64[]
+        for m in ind_neighbours
+            r = dist(center_finegrid_cell, pos[m], Lx, Ly)
+            if r < cutoff
+                push!(tmp, exp(im * thetas[m] - r / R0))
+                # push!(tmp_density,exp(-r/R0))
+            end
+        end
+        fine_grid[i, j] = angle(mean(tmp))
+        # fine_grid_density[i,j] = sum(tmp_density)
+    end
+    return fine_grid
+end
+
+function cg_old(system::System{T}) where {T<:AbstractFloat}
     Lx, Ly = system.Lx, system.Ly
     N = system.N
     pos, thetas = get_pos(system), get_thetas(system)
@@ -464,8 +530,11 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     #= For non-integer L/R0, part of the last cell is empty. 
     This implies that some of the agents of the first row
     interact not only with the last row but also with the before-last row.=# 
-    if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
-    if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end
+    # if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
+    # if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end
+    # if cellx == nb_cells_x push!(neighbouring_cells, [2, celly], [2, mod1(celly+1, nb_cells_y)], [2, mod1(celly-1, nb_cells_y)]) end
+    # if celly == nb_cells_y push!(neighbouring_cells, [cellx, 2], [mod1(cellx+1, nb_cells_x), 2], [mod1(cellx-1, nb_cells_x), 2]) end
+    
     # Note that this problem does not exist for the last row, which only interacts with the first row and not the second one 
     
     return neighbouring_cells
@@ -521,7 +590,6 @@ function get_number_neighbours(system::System)
     # number_of_neighbours = [length(ind_neighbours[n]) for n in eachindex(ind_neighbours)]
     return length.(ind_neighbours)
 end
-
 
 function evolve!(system::System, tmax::Number)
     v0,dt = system.v0, system.dt
@@ -767,8 +835,10 @@ function get_vorticity(thetas_mat::Matrix{T}, i::Int, j::Int, Lx::Int, Ly::Int):
 end
 
 
-
-number_defects(system::System) = sum(length,spot_defects(system))
+function number_defects(system::System)
+    defects = spot_defects(system)
+    return length(defects[1]) + length(defects[2])
+end
 number_defectsP(system::System) = length(spot_defects(system)[1])
 number_defectsN(system::System) = length(spot_defects(system)[2])
 number_positive_defects = number_defectsP
@@ -776,14 +846,12 @@ number_negative_defects = number_defectsN
 
 
 function spot_defects(system::System{T}) where {T<:AbstractFloat}  
-    N = system.N
-    Lx, Ly = system.Lx, system.Ly
     
     vortices_plus = Tuple{Int,Int,T}[]
     vortices_minus = Tuple{Int,Int,T}[]
 
     thetasmod = mod.(cg(system), 2π)
-    # relax!(thetasmod)
+    Lx,Ly = size(thetasmod)
 
     for i in 1:Lx
         for j in 1:Ly
@@ -797,9 +865,10 @@ function spot_defects(system::System{T}) where {T<:AbstractFloat}
     end
     vortices_plus_no_duplicates = merge_duplicates(vortices_plus, Lx, Ly)
     vortices_minus_no_duplicates = merge_duplicates(vortices_minus, Lx, Ly)
-
+    
     return vortices_plus_no_duplicates, vortices_minus_no_duplicates
 end
+
 
 function relax!(thetas::Matrix{FT}, trelax=0.3) where {FT<:AbstractFloat}
     t = 0.0
@@ -1469,23 +1538,7 @@ vecTuple2matrix(vec::Vector{Tuple{F,F}}) where {F<:AbstractFloat} = F.(vector_of
 # vecTuple2matrix(get_pos(system))
 
 
-function dist(a::Vector{T}, b::Vector{T}, Lx, Ly) where {T<:AbstractFloat}  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return sqrt(dx^2 + dy^2)
-end
-
-function dist(a::Tuple{T,T}, b::Tuple{T,T}, Lx, Ly) where {T<:Number}  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return sqrt(dx^2 + dy^2)
-end
-
-# almost twice as fast
+dist(a, b, Lx, Ly) = sqrt(dist2(a, b, Lx, Ly))
 function dist2(a, b, Lx, Ly)  # euclidian distance with Periodic BCs
     dx = abs(a[1] - b[1])
     dx = min(dx, Lx - dx)
@@ -1493,17 +1546,6 @@ function dist2(a, b, Lx, Ly)  # euclidian distance with Periodic BCs
     dy = min(dy, Ly - dy)
     return dx^2 + dy^2
 end
-
-
-
-function dist(a, b, Lx, Ly)  # euclidian distance with Periodic BCs
-    dx = abs(a[1] - b[1])
-    dx = min(dx, Lx - dx)
-    dy = abs(a[2] - b[2])
-    dy = min(dy, Ly - dy)
-    return sqrt(dx^2 + dy^2)
-end
-
 
 function distance_matrix(new, old, Lx, Ly)
     m_new, m_old = length(new), length(old)

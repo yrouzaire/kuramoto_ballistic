@@ -3,56 +3,56 @@ include("IDrealisation.jl");
 using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
-## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
-comments = "From the defects data, one will be able to infer : \n
-A. the separating distance between the two defects R(t) \n
-B. the MSD and diffusion coeff of an individual defect. "
-# Physical Params 
-Ntarget = Int(1E4)
-aspect_ratio = 1
-T = 0.1
-R0 = 1
-rho = 1 
-rhoc = 4.51 / π
-v0 = 0 
-sigma = 0
-q = 1.0
-params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
-tmax = 2E3
-times = 0:5:tmax # linear time
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# comments = "From the defects data, one will be able to infer : \n
+# A. the separating distance between the two defects R(t) \n
+# B. the MSD and diffusion coeff of an individual defect. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# T = 0.1
+# R0 = 1
+# rho = 1 
+# rhoc = 4.51 / π
+# v0 = 0 
+# sigma = 0
+# q = 1.0
+# params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
+# tmax = 2E3
+# times = 0:5:tmax # linear time
 
-R0s = [1.415,2]
-inits_pos = ["square_lattice","random","rsa","pds"]
-inits_thetas = ["single"]
-r0s = 10:10:30
-dfts = Array{DefectTracker}(undef, length(R0s), length(inits_pos),length(inits_thetas), length(r0s))
+# R0s = [1.415,2]
+# inits_pos = ["square_lattice","random","rsa","pds"]
+# inits_thetas = ["single"]
+# r0s = 10:10:30
+# dfts = Array{DefectTracker}(undef, length(R0s), length(inits_pos),length(inits_thetas), length(r0s))
 
-z = @elapsed for  i in each(R0s), j in each(inits_pos), k in each(inits_thetas), m in each(r0s)
-    R0 = R0s[i]
-    init_pos = inits_pos[j]
-    init_theta = inits_thetas[k]
-    r0 = r0s[m]
+# z = @elapsed for  i in each(R0s), j in each(inits_pos), k in each(inits_thetas), m in each(r0s)
+#     R0 = R0s[i]
+#     init_pos = inits_pos[j]
+#     init_theta = inits_thetas[k]
+#     r0 = r0s[m]
 
-    println("$init_pos, $init_theta, r0 = $r0, R0 = $R0")
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    dt = determine_dt(T, sigma, v0, N, rho)
+#     println("$init_pos, $init_theta, r0 = $r0, R0 = $R0")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#     dt = determine_dt(T, sigma, v0, N, rho)
 
     
-    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-    t = 0.0
-    system = System(param)
-    dft = DefectTracker(system, t)
-    dft, system = track!(dft,system,times)
-	dfts[i,j,k,m] = dft
-end
-prinz(z)
+#     t = 0.0
+#     system = System(param)
+#     dft = DefectTracker(system, t)
+#     dft, system = track!(dft,system,times)
+# 	dfts[i,j,k,m] = dft
+# end
+# prinz(z)
 
-filename = "data/immobile_DFT_pair_r$real.jld2"
-JLD2.@save filename r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments rhoc runtime = z
+# filename = "data/immobile_DFT_pair_r$real.jld2"
+# JLD2.@save filename r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments rhoc runtime = z
 
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
@@ -356,66 +356,66 @@ JLD2.@save filename r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 s
 # JLD2.@save filename Ntarget v0sigs rhos inits_theta Ts P C n xi aspect_ratio times tmax comments rhoc runtime = z
 
 
-# ## ---------------- Finite Size Scaling ---------------- ##
-# comments = "The goal of this script is to evaluate the change in polarisation for given (v0, σ) when L varies."
-# # Physical Params 
-# aspect_ratio = 1
-# T = 0.1
-# R0 = 1
-# rho = 1.0
-# rhoc = 4.51 / π
+## ---------------- Finite Size Scaling ---------------- ##
+comments = "The goal of this script is to evaluate the change in polarisation for given (v0, σ) when L varies."
+# Physical Params 
+aspect_ratio = 1
+T = 0.1
+R0 = 1
+rho = 1.0
+rhoc = 4.51 / π
 
-# # Initialisation parameters
-# init_pos = "random"
-# init_theta = "hightemp"
-# r0 = 20.0
-# q = 1.0
-# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+# Initialisation parameters
+init_pos = "random"
+init_theta = "hightemp"
+r0 = 20.0
+q = 1.0
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
-# # Simulation parameters
-# v0sigs = [(1,0), (1,0.1)]
-# Ntargets = Int.(logspace(1E2,2E4,10,digits=0))
+# Simulation parameters
+v0sigs = [(1,0), (1,0.1)]
+Ntargets = Int.(logspace(50,4E4,14,digits=0))
 
-# tmax = 1E4
-# # times = collect(0:tmax/30:tmax) # linear time
-# times = logspace(1,tmax,30,digits=1) # log time
+tmax = 4E4
+# times = collect(0:tmax/30:tmax) # linear time
+times = logspace(1,tmax,30,digits=1) # log time
 
-# P = zeros(length(v0sigs), length(Ntargets), length(times))
-# C = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times))
-# xi = zeros(length(v0sigs), length(Ntargets), length(times))
-# n = zeros(length(v0sigs), length(Ntargets), length(times))
+P = zeros(length(v0sigs), length(Ntargets), length(times))
+C = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times))
+xi = zeros(length(v0sigs), length(Ntargets), length(times))
+n = zeros(length(v0sigs), length(Ntargets), length(times))
 
-# z = @elapsed for i in each(v0sigs), nn in each(Ntargets)
-#     v0, sigma = v0sigs[i]
-#     Ntarget = Ntargets[nn]
-#     println("v0 = $v0, σ = $sigma, Ntarget = $Ntarget")
-#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-#     dt = determine_dt(T, sigma, v0, N, rho)
+z = @elapsed for i in each(v0sigs), nn in each(Ntargets)
+    v0, sigma = v0sigs[i]
+    Ntarget = Ntargets[nn]
+    println("v0 = $v0, σ = $sigma, Ntarget = $Ntarget")
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
 
-#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-#     system = System(param)
+    system = System(param)
 
-#     t = 0.0
-#     token = 1
+    t = 0.0
+    token = 1
 
-#     for tt in eachindex(times)
-#         evolve(system, times[tt]) # evolves the systems up to times[tt]
+    for tt in eachindex(times)
+        evolve!(system, times[tt]) # evolves the systems up to times[tt]
         
-#         P[i,nn,tt]  = polarOP(system)[1]
-#         corr_tmp    = corr(system)
-#         C[i,nn,tt]  = corr_tmp
-#         xi[i,nn,tt] = corr_length(corr_tmp)
-#         n[i,nn,tt]  = number_defects(system)
-#     end
+        P[i,nn,tt]  = polarOP(system)[1]
+        corr_tmp    = corr(system)
+        C[i,nn,tt]  = corr_tmp
+        xi[i,nn,tt] = corr_length(corr_tmp)
+        n[i,nn,tt]  = number_defects(system)
+    end
 
-# end
-# prinz(z)
+end
+prinz(z)
 
-# filename = "data/FSS_green_r$real.jld2"
-# JLD2.@save filename Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime = z
+filename = "data/FSS_green_r$real.jld2"
+JLD2.@save filename Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime = z
 
 
 

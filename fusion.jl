@@ -11,22 +11,22 @@ for r in 1:R
 end;
 println("There are $(length(indices))/$R files.")
 
-# ## Defects Motion (immobile particles)
-@load base_filename*"_r$(indices[1]).jld2" r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtime
-runtimes = NaN*zeros(R)
-dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R)
-dfts_fusion = Array{DefectTracker}[]
-for r in indices
-    println("r = $r")
-    @load base_filename*"_r$r.jld2" dfts runtime
-    dfts_fusion_undef[r] = dfts
-    push!(dfts_fusion,dfts)
+# # ## Defects Motion (immobile particles)
+# @load base_filename*"_r$(indices[1]).jld2" r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtime
+# runtimes = NaN*zeros(R)
+# dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R)
+# dfts_fusion = Array{DefectTracker}[]
+# for r in indices
+#     println("r = $r")
+#     @load base_filename*"_r$r.jld2" dfts runtime
+#     dfts_fusion_undef[r] = dfts
+#     push!(dfts_fusion,dfts)
 
-    runtimes[r] = runtime
-end
+#     runtimes[r] = runtime
+# end
 
-@save base_filename*".jld2" R r0s R0s inits_pos inits_thetas dfts_fusion_undef dfts_fusion params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtimes
-println("Fusionned data saved in $(base_filename*".jld2") .")
+# @save base_filename*".jld2" R r0s R0s inits_pos inits_thetas dfts_fusion_undef dfts_fusion params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtimes
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
 # ## Defects Motion (mobile particles)
@@ -115,26 +115,26 @@ println("Fusionned data saved in $(base_filename*".jld2") .")
 # println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
-# ## FSS
-# @load base_filename * "_r$(indices[1]).jld2" Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime
-# Ps = zeros(length(v0sigs), length(Ntargets), length(times),R)
-# ns = zeros(length(v0sigs), length(Ntargets), length(times),R)
-# xis = zeros(length(v0sigs), length(Ntargets), length(times),R)
-# Cs = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times),R)
-# runtimes = NaN*zeros(R)
+## FSS
+@load base_filename * "_r$(indices[1]).jld2" Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime
+Ps = zeros(length(v0sigs), length(Ntargets), length(times),R)
+ns = zeros(length(v0sigs), length(Ntargets), length(times),R)
+xis = zeros(length(v0sigs), length(Ntargets), length(times),R)
+Cs = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times),R)
+runtimes = NaN*zeros(R)
 
-# for r in indices
-#     println("r = $r")
-#     @load base_filename * "_r$r.jld2" runtime P C n xi 
-#     Ps[:,:,:,r] = P
-#     Cs[:,:,:,r] = C
-#     ns[:,:,:,r] = n
-#     xis[:,:,:,r] = xi
+for r in indices
+    println("r = $r")
+    @load base_filename * "_r$r.jld2" runtime P C n xi 
+    Ps[:,:,:,r] = P
+    Cs[:,:,:,r] = C
+    ns[:,:,:,r] = n
+    xis[:,:,:,r] = xi
 
-#     runtimes[r] = runtime
-# end
-# @save base_filename * ".jld2" Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
-# println("Fusionned data saved in $(base_filename*".jld2") .")
+    runtimes[r] = runtime
+end
+@save base_filename * ".jld2" Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
+println("Fusionned data saved in $(base_filename*".jld2") .")
 
 ## Phase Diagram
 # @load base_filename*"_r$(indices[1]).jld2" Ts inits Ns v0s rhos sigmas times_log tmax comments

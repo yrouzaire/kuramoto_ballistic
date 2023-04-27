@@ -4,14 +4,15 @@ rho = 1
 T = 0.1
 sigma = 0.0
 v0 = 0
-R0 = 1.415
+R0 = sqrt(2.0)
+# R0 = 2
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
-init_pos = "PDS"
-init_theta = "pair"
-r0 = round(Int,Lx/2)
+init_pos = "square_lattice"
+init_theta = "hightemp"
+r0 = 20#round(Int,Lx/2)
 q = 1.0
 
 tmax = 1E2
