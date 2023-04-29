@@ -39,6 +39,8 @@ plot_thetas(system)
 plot_thetas(system, particles=true)
 plot_thetas(system, particles=true, vertical=true)
 
+"petit test"
+
 ## ------------------ Efficiency Benchmarks ------------------ ##
 ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)
 pos = get_pos(system)
