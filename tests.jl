@@ -1,6 +1,26 @@
+cd("D:/Documents/Research/projects/kuramoto_ballistic")
+using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian, Sobol
 include("methods.jl")
-using Plots, ColorSchemes, BenchmarkTools
+using Plots, ColorSchemes, LaTeXStrings
 gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
+plot()
+
+## ----------------- Initialisation and Visualisation Tests ----------------- ##
+include("parameters.jl")
+system = System(param)
+plot_thetas(system, particles=true, vertical=true)
+evolve!(system, 1E1)
+# ndef = number_defects(system)
+# plot_thetas(system, particles=false, vertical=true,defects=true,title="n = $ndef")
+
+dft = DefectTracker(system,0)
+times = 5:5:100
+track!(dft, system, times, verbose=true)
+
+mmsd = MSD(dft, Lx, Ly)[1]
+plot(vcat(0,times), mmsd)
+
 
 ## -------------------- Parameters -------------------- ##
 Ntarget = Int(2E3)
@@ -27,19 +47,6 @@ evolve!(system, 1E2)
 plot_thetas(system, particles=false, vertical=true)
 cg(system)
 
-## ----------------- Initialisation and Visualisation Tests ----------------- ##
-system = System(param)
-poss = get_pos(system)
-scatter(poss,m=1)
-
-thetas = get_theta(system)
-cg(system)
-
-plot_thetas(system)
-plot_thetas(system, particles=true)
-plot_thetas(system, particles=true, vertical=true)
-
-"petit test 2"
 
 ## ------------------ Efficiency Benchmarks ------------------ ##
 ind_neighbours = get_list_neighbours(get_pos(system), N, Lx, Ly, R0)

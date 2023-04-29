@@ -5,12 +5,12 @@ T = 0.1
 sigma = 0.0
 v0 = 0
 R0 = sqrt(2.0)
-# R0 = 2
+R0 = sqrt(5/4)
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
-init_pos = "square_lattice"
+init_pos = "tri"
 init_theta = "hightemp"
 r0 = 20#round(Int,Lx/2)
 q = 1.0

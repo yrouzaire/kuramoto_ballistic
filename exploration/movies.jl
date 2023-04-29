@@ -34,13 +34,13 @@ number_defects(system)
 plot_thetas(system,particles=true,nb_neighbours=true,defects=true,vertical=true,size=(512,512))
 ## --------------- Movies --------------- ##
 include("../parameters.jl")
-inits_pos = ["square_lattice","random","RSA","PDS"]
+inits_pos = ["square","tri","random","RSA","PDS"]
 # inits_pos = ["random","PDS"]
-inits_pos = ["rsa"]
+inits_pos = ["square","tri"]
 
 inits_theta = ["hightemp","pair"]
-inits_theta = ["pair"]
-tmax = Int(1E1)
+inits_theta = ["hightemp"]
+tmax = Int(4E2)
 times = collect(0:2:tmax) # linear time
 # times = logspace(1,tmax,10) # log time
 anims = Array{Any}(undef,length(inits_pos),length(inits_theta))
@@ -58,12 +58,12 @@ z = @elapsed for i in each(inits_pos), j in each(inits_theta)
     try 
         anim = movies(param, times, 
                 particles=true,
-                defects=true,
+                defects=false,
                 nb_neighbours=true,
                 verbose=true)
 
         anims[i,j] = anim
-        filepath = "impact_init/films/$(init_theta)/D_$(init_pos)_N$(N)_ρ$(rho)_R0$(round(R0,digits=2))_T$(T).mp4"
+        filepath = "impact_init/films/$(init_theta)/E_$(init_pos)_N$(N)_ρ$(rho)_R0$(round(R0,digits=2))_T$(T).mp4"
         mp4(anim, filepath, fps=30)
     catch e 
         println(e)

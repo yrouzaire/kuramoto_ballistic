@@ -70,11 +70,20 @@ function initialisation_positions(N, Lx, Ly, init_pos)
         pos = rand(2, N)
         pos[1, :] *= Lx
         pos[2, :] *= Ly
-    elseif init_pos in ["square_lattice", "square", "regular_square", "regular_square_lattice", "grid"]
+    elseif init_pos in ["square_lattice", "square", "squ"]
         pos = zeros(2, N)
         for n in 1:N
             pos[1, n] = mod(n, Lx)
             pos[2, n] = mod(floor(n / Ly), Ly)
+        end
+    elseif init_pos in ["triangular_lattice", "triangular","tri"]
+        pos = zeros(2, N)
+        for n in 1:N
+            pos[1, n] = mod(n, Lx)
+            pos[2, n] = mod(floor(n / Ly), Ly)
+            if pos[2, n] % 2 == 1
+                pos[1, n] += 0.5
+            end
         end
     elseif init_pos in ["sobol", "Sobol"]
         pos = sobol(N, Lx, Ly)
@@ -311,11 +320,10 @@ function plot_thetas(system; particles=false, vertical=false,
             end
         end
     end
-    defects_p
     thetas_cg = cg(system)
     p_cg = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
     if defects 
-        defects_p, defects_m =  spot_defects(system)
+        defects_p, defects_m = spot_defects(system)
         highlight_defects!(p_cg, system.Lx, system.Ly, defects_p, defects_m)
     end
 
@@ -384,7 +392,7 @@ function cg(system::System{T}) where {T<:AbstractFloat}
     N = system.N
     pos, thetas = get_pos(system), get_thetas(system)
     mesh_size = R0
-    cutoff = 4R0 # for contributions
+    cutoff = 2R0 # for contributions
 
     list, head = construct_cell_list(system) 
     
@@ -791,9 +799,10 @@ function arclength(theta1::T, theta2::T)::T where {T<:AbstractFloat}
     return signe * shortest_unsigned_arclength
 end
 
-function get_neighbours(thetas::Matrix{<:T}, i::Int, j::Int, bulk::Bool=false)::Vector{T} where {T<:AbstractFloat}
+function get_neighbours(thetas::Matrix{<:T}, i::Int, j::Int)::Vector{T} where {T<:AbstractFloat}
     Lx, Ly = size(thetas)
     # convention depuis la droite et sens trigo
+    bulk = is_in_bulk(i, j, Lx, Ly)
     if bulk
         jm = j - 1
         jp = j + 1
@@ -815,22 +824,39 @@ function get_neighbours(thetas::Matrix{<:T}, i::Int, j::Int, bulk::Bool=false)::
     return angles
 end
 
+function get_angles_plaquette(thetas::Matrix{<:T}, i::Int, j::Int)::Vector{T} where {T<:AbstractFloat}
+    Lx, Ly = size(thetas)
+    # By convention, the 4 angles are taken from the topleft corner and counterclockwise
+    bulk = is_in_bulk(i, j, Lx, Ly)
+    if bulk
+        jp = j + 1
+        ip = i + 1
+    else
+        jp = mod1(j + 1, Ly)
+        ip = mod1(i + 1, Lx)
+    end
+
+    @inbounds angles_plaquette =
+        [thetas[i, j],
+            thetas[ip, j],
+            thetas[ip, jp],
+            thetas[i, jp]]
+
+    return angles_plaquette
+end
+
 is_on_border(i::Int, j::Int, Lx::Int, Ly::Int) = (i == 1) || (j == 1) || (i == Lx) || (j == Ly)
 is_in_bulk(i::Int, j::Int, Lx::Int, Ly::Int) = !is_on_border(i, j, Lx, Ly)
 
 function get_vorticity(thetas_mat::Matrix{T}, i::Int, j::Int, Lx::Int, Ly::Int)::T where {T<:AbstractFloat}
-    # Note : thetas_mat = mod.(thetas,2π)
-    angles_corners = get_neighbours(thetas_mat, i, j, is_in_bulk(i, j, Lx, Ly))
+    # Note : thetas_mat = mod.(cg(thetas),2π) # coarsegrained thetas
+    angles_corners = get_angles_plaquette(thetas_mat, i, j)
     perimeter_covered = 0.0
-    for i in 1:length(angles_corners)-1
-        perimeter_covered += arclength(angles_corners[i], angles_corners[i+1])
+    nnn = length(angles_corners)
+    for i in 1:nnn
+        perimeter_covered += arclength(angles_corners[i], angles_corners[mod1(i+1,nnn)])
     end
-    if !isempty(angles_corners)
-        perimeter_covered += arclength(angles_corners[end], angles_corners[1])
-        charge = round(perimeter_covered / 2π, digits=1)
-    else
-        charge = NaN
-    end
+    charge = round(perimeter_covered / 2π, digits=1)
     return charge
 end
 
@@ -841,33 +867,61 @@ function number_defects(system::System)
 end
 number_defectsP(system::System) = length(spot_defects(system)[1])
 number_defectsN(system::System) = length(spot_defects(system)[2])
-number_positive_defects = number_defectsP
-number_negative_defects = number_defectsN
-
+number_positive_defects = number_defects_pos = number_defectsP
+number_negative_defects = number_defects_neg = number_defectsN
 
 function spot_defects(system::System{T}) where {T<:AbstractFloat}  
-    
-    vortices_plus = Tuple{Int,Int,T}[]
-    vortices_minus = Tuple{Int,Int,T}[]
+    vortices_plus = Tuple{T,T,T}[]
+    vortices_minus = Tuple{T,T,T}[]
 
     thetasmod = mod.(cg(system), 2π) # Coarse-graining 
     Lx,Ly = size(thetasmod)
 
-    for i in 1:Lx
-        for j in 1:Ly
+    if system.periodic 
+        range_i = 1:Lx
+        range_j = 1:Ly
+    else
+        range_i = 3:Lx-2 # to prevent artifical detection of defects on the borders (2:L-1 was not enough in some L,R0 situations)
+        range_j = 3:Ly-2
+    end
+    for i in range_i
+        for j in range_j
             q = get_vorticity(thetasmod, i, j, Lx, Ly)
+            x,y = i+0.5 , j+0.5 # defects live on the dual lattice
             if q > +0.1
-                push!(vortices_plus, (i, j, q)) # we want to keep ±½ defects, and not rounding errors
+                push!(vortices_plus, (x,y,q)) # we want to keep ±½ defects, and not rounding errors
             elseif q < -0.1
-                push!(vortices_minus, (i, j, q))
+                push!(vortices_minus, (x,y,q))
             end
         end
     end
-    vortices_plus_no_duplicates = merge_duplicates(vortices_plus, Lx, Ly)
-    vortices_minus_no_duplicates = merge_duplicates(vortices_minus, Lx, Ly)
     
-    return vortices_plus_no_duplicates, vortices_minus_no_duplicates
+    return vortices_plus, vortices_minus
 end
+
+# function spot_defects_old(system::System{T}) where {T<:AbstractFloat}  
+
+#     vortices_plus = Tuple{Int,Int,T}[]
+#     vortices_minus = Tuple{Int,Int,T}[]
+
+#     thetasmod = mod.(cg(system), 2π) # Coarse-graining 
+#     Lx,Ly = size(thetasmod)
+
+#     for i in 1:Lx
+#         for j in 1:Ly
+#             q = get_vorticity(thetasmod, i, j, Lx, Ly)
+#             if q > +0.1
+#                 push!(vortices_plus, (i, j, q)) # we want to keep ±½ defects, and not rounding errors
+#             elseif q < -0.1
+#                 push!(vortices_minus, (i, j, q))
+#             end
+#         end
+#     end
+#     vortices_plus_no_duplicates = merge_duplicates(vortices_plus, Lx, Ly)
+#     vortices_minus_no_duplicates = merge_duplicates(vortices_minus, Lx, Ly)
+    
+#     return vortices_plus_no_duplicates, vortices_minus_no_duplicates
+# end
 
 
 function relax!(thetas::Matrix{FT}, trelax=0.3) where {FT<:AbstractFloat}
@@ -883,7 +937,7 @@ function relax!(thetas::Matrix{FT}, trelax=0.3) where {FT<:AbstractFloat}
         for j in 1:Ly
             for i in 1:Lx
                 θ = thetas_old[i, j]
-                angle_neighbours = get_neighbours(thetas_old, i, j, is_in_bulk(i, j, Lx, Ly))
+                angle_neighbours = get_neighbours(thetas_old, i, j)
                 thetas[i, j] += dt * sum(sin, angle_neighbours .- θ)
                 # thetas[i,j] += dt*sum(sin,angle_neighbours .- θ) + sqrt(2T*dt)*randn(FT)
             end
@@ -1104,7 +1158,7 @@ function annihilate_defects(dt::DefectTracker, ids_annihilated_defects, Lx, Ly)
     return dt
 end
 
-function track!(dft::DefectTracker, system::System, times::AbstractVector)
+function track!(dft::DefectTracker, system::System, times::AbstractVector;verbose=false)
     for token in each(times)
         evolve!(system, times[token])
         
@@ -1112,7 +1166,9 @@ function track!(dft::DefectTracker, system::System, times::AbstractVector)
             println("Simulation stopped, there is no defects left.")
             break
         end
-        println("t = ", round(system.t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
+        if verbose 
+            println("t = ", round(system.t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
+        end
         try
             update_DefectTracker!(dft, system)
         catch e
