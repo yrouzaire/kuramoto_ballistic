@@ -850,7 +850,7 @@ function spot_defects(system::System{T}) where {T<:AbstractFloat}
     vortices_plus = Tuple{Int,Int,T}[]
     vortices_minus = Tuple{Int,Int,T}[]
 
-    thetasmod = mod.(cg(system), 2π)
+    thetasmod = mod.(cg(system), 2π) # Coarse-graining 
     Lx,Ly = size(thetasmod)
 
     for i in 1:Lx
