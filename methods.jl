@@ -269,11 +269,11 @@ function determine_dt(T, σ, v0, N, rho)
     estimation_max = sqrt(2log(N)) * σ # from math.stackexchange.com/questions/89030, simple answer of Sivaraman
     arbitrary_coeff = π / 20
     return minimum(
-        [1 / 5 / v0,
-        arbitrary_coeff / estimation_max,
-        arbitrary_coeff / π / rho,
-        arbitrary_coeff^2 * π / 4 / T])
-    end
+            [1 / 5 / v0,
+            arbitrary_coeff / estimation_max,
+            arbitrary_coeff / π / rho,
+            arbitrary_coeff^2 * π / 4 / T])
+end
 
 function effective_number_particle(Ntarget, rho, aspect_ratio=1)
     Lx = round(Int, sqrt(aspect_ratio * Ntarget / rho))
