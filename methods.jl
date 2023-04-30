@@ -827,6 +827,7 @@ number_negative_defects = number_defects_neg = number_defectsN
 function spot_defects(system::System{T}) where {T<:AbstractFloat}  
     vortices_plus = Tuple{T,T,T}[]
     vortices_minus = Tuple{T,T,T}[]
+    R0 = system.R0
 
     thetasmod = mod.(cg(system), 2π) # Coarse-graining 
     Lx,Ly = size(thetasmod)
@@ -841,7 +842,9 @@ function spot_defects(system::System{T}) where {T<:AbstractFloat}
     for i in range_i
         for j in range_j
             q = get_vorticity(thetasmod, i, j, Lx, Ly)
-            x,y = i+0.5 , j+0.5 # defects live on the dual lattice
+            x,y = (R0).*((i+0.5) ,(j+0.5)) # 
+            # NB1 : since defects live on the dual lattice, the coordinates are shifted by 0.5
+            # NB2 : defects are localized in the coarse grained lattice, so we need to multiply by R0 to recover the real coordinates
             if q > +0.1
                 push!(vortices_plus, (x,y,q)) # we want to keep ±½ defects, and not rounding errors
             elseif q < -0.1
