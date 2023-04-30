@@ -74,23 +74,31 @@ function initialisation_positions(N, Lx, Ly, init_pos)
         pos = zeros(2, N)
         for n in 1:N
             pos[1, n] = mod(n, Lx)
-            pos[2, n] = mod(floor(n / Ly), Ly)
+            pos[2, n] = Ly/Lx*mod(floor(n / Ly), Ly)
         end
-    elseif init_pos in ["triangular_lattice", "triangular","tri"]
-        pos = zeros(2, N)
-        for n in 1:N
-            pos[1, n] = mod(n, Lx)
-            pos[2, n] = mod(floor(n / Ly), Ly)
-            if pos[2, n] % 2 == 1
-                pos[1, n] += 0.5
-            end
-        end
+    # elseif init_pos in ["triangular_lattice", "triangular","tri"]
+    #     pos = zeros(2, N)
+    #     for n in 1:N
+    #         pos[1, n] = mod(n, Lx)
+    #         pos[2, n] = mod(floor(n / Ly), Ly)
+    #         if pos[2, n] % 2 == 1
+    #             pos[1, n] += 0.5
+    #         end
+    #     end
     elseif init_pos in ["sobol", "Sobol"]
         pos = sobol(N, Lx, Ly)
     elseif init_pos in ["RSA", "rsa"] # Random Sequential Adsorption
         pos = rsa(N, Lx, Ly)
     elseif init_pos in ["PDS", "pds", "Poisson", "PoissonDisc", "PoissonDisk"] # Poisson Disc Sampling
-        pos,~ = pds(N, Lx, Ly)
+        attempts = 0
+        pos,generated_points = pds(N, Lx, Ly)
+        while generated_points < N && attempts < 10
+            pos,generated_points = pds(N, Lx, Ly)
+            attempts += 1
+            if attempts == 10
+                println("Error : PDS could not generate $N points in $attempts attempts.")
+            end
+        end
     else
         println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\" or \"RSA\".")
     end
@@ -108,22 +116,28 @@ function pds(N, Lx, Ly)
     - a grid of size Lx x Ly, where each cell contains the index of the points contained in it.
     The grid is used to check if a point is too close to another one.
     =#
-    constant = 0.796 # benchmarked for N = 1E4 and Lx = Ly = 100 such that it almost does not generates N points   
-    r = 1*sqrt(Lx * Ly / N)
+    
+    # Ugly but benchmarked so that for N ≤ 1E5 at ρ = 1, one is sure to obtain N points and no big void in the system
+    if N > 1E4 constant = 0.791
+    elseif N > 1E3 constant = 0.7921
+    elseif N > 1E2 constant = 0.793
+    else constant = 0.794
+    end 
+    r = constant*sqrt(Lx * Ly / N)
     k = 30
 
+    pos = zeros(2, N) 
+    generated_points = 0
     active = []
     nb_cells_x = ceil(Int, Lx / r)
     nb_cells_y = ceil(Int, Ly / r)
     grid = [Int[] for i in 1:nb_cells_x, j in 1:nb_cells_y]
-    pos = zeros(2, N)
-    generated_points = 0
 
     # initial point
-    x,y = rand(2) .* [Lx, Ly]
     generated_points += 1 
-    pos[:, generated_points] = [x,y]
     push!(active,generated_points) # list of points from which we try to generate new points
+    x,y = rand(2) .* [Lx, Ly]
+    pos[:, 1] = [x,y]
     push!(grid[ceil(Int, x / r), ceil(Int, y / r)],generated_points)
 
     while generated_points < N && !isempty(active)
@@ -145,16 +159,15 @@ function pds(N, Lx, Ly)
             celly = ceil(Int, y / r)
 
             # Get neighbouring cells
-            # cells = vec([(mod1(cellx + i, nb_cells_x), mod1(celly + j, nb_cells_y)) for i in -1:1, j in -1:1])
             cells = get_neighbouring_cells(cellx, celly, nb_cells_x, nb_cells_y)
 
-            # Get points in the neighbouring cells
-            points = [grid[cell...] for cell in cells]
-            points = vcat(points...)
-
+            # Get points ids in the neighbouring cells
+            id_points = [grid[cell...] for cell in cells]
+            id_points = vcat(id_points...)
+            
             # Check if the new point is too close to another one
             too_close = false
-            for p in points
+            for p in id_points
                 if dist(pos[:, p] , [x,y], Lx,Ly) < r
                     too_close = true
                     # println("too close")
@@ -173,10 +186,10 @@ function pds(N, Lx, Ly)
             end
         end
     end
-    # println("Generated $generated_points points.")
-    return pos, generated_points
+    println("PDS generated $generated_points points.")
+
+    return pos,generated_points
 end
-    
 
 
 function sobol(N, Lx, Ly)

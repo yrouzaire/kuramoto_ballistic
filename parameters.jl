@@ -1,4 +1,5 @@
-Ntarget = Int(1E4)
+# Physical parameters 
+Ntarget = Int(1E3)
 aspect_ratio = 1
 rho = 1
 T = 0.1
@@ -6,15 +7,17 @@ sigma = 0.0
 v0 = 0
 R0 = sqrt(2.0)
 R0 = sqrt(5/4)
+R0 = 1
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
-init_pos = "tri"
+init_pos = "pds"
 init_theta = "hightemp"
 r0 = 20#round(Int,Lx/2)
 q = 1.0
 
+# Time parameters
 tmax = 1E2
 times = collect(0:1:tmax) # linear time
 # times = logspace(1,tmax,30,digits=1) # log time

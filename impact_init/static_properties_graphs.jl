@@ -48,7 +48,7 @@ end
 
 ##
 include("../parameters.jl")
-lattice_type = "square_lattice"
+lattice_type = "square"
 lattice_type = "random"
 lattice_type = "pds"
 params_init[:init_pos] = lattice_type
@@ -59,8 +59,8 @@ param[:params_init] = params_init
 
 ## --------------- Systems Generation  --------------- ##
 include("../parameters.jl")
-lattice_types = ["square_lattice", "random", "rsa", "pds"]
-labels = ["Square lattice", "Random", "RSA", "PDS"]
+lattice_types = ["square", "random", "rsa", "pds"]
+labels = ["Square", "Random", "RSA", "PDS"]
 
 systems = []
 graphs = []
@@ -165,6 +165,34 @@ p3b
 
 p3 = plot(p3a,p3b,layout=(1,2),size=(800,400))
 # savefig("impact_init/figures/static_properties_graphs/ncc_fcc_R0s.png")
+
+## --------------- Influence R0 on mean number of neighbours --------------- ##
+include("../parameters.jl")
+R0ss = collect(1.0:0.1:2)
+R = 10
+nnns = zeros(length(R0ss),length(systems),R)
+for i in each(systems)
+	println("i = $i/$(length(systems))")
+	for j in each(R0ss)
+		Threads.@threads for r in 1:R
+			param[:R0] = R0ss[j]
+			params_init[:init_pos] = lattice_types[i]
+			param[:params_init] = params_init		
+			system = System(param)
+			g = system2graph(system)
+			nnns[j,i,r] = mean(length.(get_list_neighbours(system)))
+		end
+	end
+end
+nnns_avg = mean(nnns,dims=3)[:,:,1]
+##
+p4=plot(xlabel=L"R_0^2",ylabel="Number of Neighbours",uaxis=:log)
+for i in each(systems)
+	plot!(R0ss.^2,nnns_avg[:,i],label=labels[i],m=true,ms=2)
+end
+yticks!(0:2:12)
+plot!(R0ss.^2,pi*R0ss.^2 .-pi .+2.5,c=:black,)
+p4
 
 ## --------------- Structure Factor --------------- ##
 function structure_factor(system)

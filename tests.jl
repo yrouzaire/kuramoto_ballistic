@@ -9,8 +9,12 @@ plot()
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 include("parameters.jl")
 system = System(param)
+poss = get_pos(system)
+# histogram([el[2] for el in poss], bins=50, label="x")
+scatter(poss, markersize=2, legend=false, xlims=(0,Lx), ylims=(0,Ly), xlabel=L"x", ylabel=L"y", title="N = $(length(poss))")
+
+evolve!(system, 4E2)
 plot_thetas(system, particles=true, vertical=true)
-evolve!(system, 1E1)
 # ndef = number_defects(system)
 # plot_thetas(system, particles=false, vertical=true,defects=true,title="n = $ndef")
 
