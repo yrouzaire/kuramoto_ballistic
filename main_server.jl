@@ -20,7 +20,7 @@ params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
 tmax = 1E2
 times = 0:5:tmax # linear time
 
-inits_pos = ["square","rsa","random"]
+inits_pos = ["square","rsa","random","pds"]
 R0s = [2,2,1.95]
 init_theta = "single"
 qs = [+1,-1]

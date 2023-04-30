@@ -61,7 +61,6 @@ z = @elapsed for i in each(inits_pos), j in each(inits_theta) , k in each(omegas
         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, 
         :params_phonons => params_phonons)
 
-
     try 
         anim = movies(param, times, 
                 particles=false,
