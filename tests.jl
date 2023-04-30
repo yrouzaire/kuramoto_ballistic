@@ -9,7 +9,7 @@ plot()
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 include("parameters.jl")
 system = System(param)
-energy(system)
+# energy(system)
 	# poss = get_pos(system)
 # histogram([el[2] for el in poss], bins=50, label="x")
 # scatter(poss, markersize=1, legend=false, xlims=(0,Lx), ylims=(0,Ly), xlabel=L"x", ylabel=L"y", title="N = $(length(poss))")
@@ -20,6 +20,7 @@ plot_thetas(system, particles=true, vertical=true, defects=true)
 # plot_thetas(system, particles=false, vertical=true,defects=true,title="n = $ndef")
 
 dft = DefectTracker(system,0)
+interdefect_distance(dft.defectsN[1], dft.defectsP[1], Lx, Ly)
 times = 5:5:100
 track!(dft, system, times, verbose=true)
 

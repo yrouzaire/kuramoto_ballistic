@@ -27,7 +27,7 @@ inits_pos = ["square"]
 R0s = [2,2,1.95]
 init_theta = "pair"
 r0s = 10:10:30
-r0s = [20]
+r0s = [40]
 dfts = Array{DefectTracker}(undef, length(inits_pos),length(Ts), length(r0s))
 
 z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
@@ -36,7 +36,7 @@ z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
 	r0 = r0s[j]
 	T = Ts[k]
 
-    println("$init_pos, R0 = $R0, r0 = $r0, T = $T")
+    println("$init_pos, $init_theta R0 = $R0, r0 = $r0, T = $T")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
@@ -51,6 +51,8 @@ z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
 	dfts[i,j,k] = dft
 end
 prinz(z)
+interdefect_distance(dfts[1,1].defectsP[1],dfts[1,1].defectsN[1],100,100)
+
 
 filename = "data/immobile_DFT_pair_r$real.jld2"
 JLD2.@save filename r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z

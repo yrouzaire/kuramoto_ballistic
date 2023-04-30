@@ -11,7 +11,7 @@ N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
 init_pos = "random"
-init_theta = "hightemp"
+init_theta = "pair"
 r0 = 20#round(Int,Lx/2)
 q = 1.0
 
