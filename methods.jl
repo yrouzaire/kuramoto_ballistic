@@ -28,12 +28,11 @@ mutable struct System{F<:AbstractFloat}
 end
 
 function System(params; float_type=Float32)
-    @unpack Ntarget, aspect_ratio, rho, Ntarget, T, sigma, v0, R0, params_init = params
+    @unpack Ntarget, aspect_ratio, rho, T, sigma, v0, R0, params_init = params
     @unpack init_pos, init_theta, r0, q = params_init
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    dt = determine_dt(T, sigma, v0, N, rho)
-
-    pos    = initialisation_positions(N, Lx, Ly, init_pos)
+    Ntarget2, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    
+    pos,N  = initialisation_positions(Ntarget2, Lx, Ly, init_pos)
     thetas = initialisation_thetas(N, init_theta, r0, q, pos=pos, Lx=Lx, Ly=Ly)
     omegas = initialisation_omegas(N, sigma)
     psis   = initialisation_psis(N)
@@ -47,6 +46,7 @@ function System(params; float_type=Float32)
     else 
         periodic = true
     end
+    dt = determine_dt(T, sigma, v0, N, rho)
     return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params, periodic)
 end
 
@@ -90,19 +90,25 @@ function initialisation_positions(N, Lx, Ly, init_pos)
     elseif init_pos in ["RSA", "rsa"] # Random Sequential Adsorption
         pos = rsa(N, Lx, Ly)
     elseif init_pos in ["PDS", "pds", "Poisson", "PoissonDisc", "PoissonDisk"] # Poisson Disc Sampling
-        attempts = 0
-        pos,generated_points = pds(N, Lx, Ly)
-        while generated_points < N && attempts < 10
-            pos,generated_points = pds(N, Lx, Ly)
-            attempts += 1
-            if attempts == 10
-                println("Error : PDS could not generate $N points in $attempts attempts.")
+        # Since the number of points generated is not always N, we try 10 times to generate as close to N points
+        attempts = 1
+        pos, generated_points = pds(N, Lx, Ly)
+        for r in 1:attempts-1
+            pos_tmp, generated_points_tmp = pds(N, Lx, Ly)
+            closer_to_N_than_before = abs(N - generated_points) ≥ abs(N - generated_points_tmp)
+            if closer_to_N_than_before
+                pos = pos_tmp
+                generated_points = generated_points_tmp
+                if generated_points == N
+                    break
+                end
             end
         end
     else
-        println("Error : init_pos should be \"random\" or \"square_lattice\" or \"sobol\" or \"RSA\".")
+        println("Error : init_pos should be \"random\" or \"square\" or \"sobol\" or \"RSA\".")
     end
-    return pos
+    Neff = size(pos, 2)
+    return pos,Neff
 end
 
 function pds(N, Lx, Ly)
@@ -119,14 +125,18 @@ function pds(N, Lx, Ly)
     
     # Ugly but benchmarked so that for N ≤ 1E5 at ρ = 1, one is sure to obtain N points and no big void in the system
     if N > 1E4 constant = 0.791
-    elseif N > 1E3 constant = 0.7921
+    elseif N > 1E3 constant = 0.7925
     elseif N > 1E2 constant = 0.793
     else constant = 0.794
     end 
     r = constant*sqrt(Lx * Ly / N)
     k = 30
 
-    pos = zeros(2, N) 
+    pos = zeros(2, 2N) 
+    #= Preallocate and take margin for safety 
+        because the final number of generated points 
+        is a random variable. In the end, only returns 
+        actually generated points. =#
     generated_points = 0
     active = []
     nb_cells_x = ceil(Int, Lx / r)
@@ -140,7 +150,8 @@ function pds(N, Lx, Ly)
     pos[:, 1] = [x,y]
     push!(grid[ceil(Int, x / r), ceil(Int, y / r)],generated_points)
 
-    while generated_points < N && !isempty(active)
+    # while generated_points < N && !isempty(active)
+    while !isempty(active)
         i = rand(active)
         for j in 1:k
             if j == k  # Garde-fou contre les loops infinies
@@ -187,8 +198,7 @@ function pds(N, Lx, Ly)
         end
     end
     println("PDS generated $generated_points points.")
-
-    return pos,generated_points
+    return pos[:,1:generated_points],generated_points
 end
 
 
@@ -551,11 +561,8 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     #= For non-integer L/R0, part of the last cell is empty. 
     This implies that some of the agents of the first row
     interact not only with the last row but also with the before-last row.=# 
-    # if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
-    # if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end
-    # if cellx == nb_cells_x push!(neighbouring_cells, [2, celly], [2, mod1(celly+1, nb_cells_y)], [2, mod1(celly-1, nb_cells_y)]) end
-    # if celly == nb_cells_y push!(neighbouring_cells, [cellx, 2], [mod1(cellx+1, nb_cells_x), 2], [mod1(cellx-1, nb_cells_x), 2]) end
-    
+    if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
+    if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end    
     # Note that this problem does not exist for the last row, which only interacts with the first row and not the second one 
     
     return neighbouring_cells

@@ -174,6 +174,7 @@ nnns = zeros(length(R0ss),length(systems),R)
 for i in each(systems)
 	println("i = $i/$(length(systems))")
 	for j in each(R0ss)
+		println("j = $j/$(length(R0ss))")
 		Threads.@threads for r in 1:R
 			param[:R0] = R0ss[j]
 			params_init[:init_pos] = lattice_types[i]

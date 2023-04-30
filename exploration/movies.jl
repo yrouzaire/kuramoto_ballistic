@@ -35,11 +35,11 @@ plot_thetas(system,particles=true,nb_neighbours=true,defects=true,vertical=true,
 ## --------------- Movies --------------- ##
 include("../parameters.jl")
 inits_pos = ["square","tri","random","RSA","PDS"]
-# inits_pos = ["random","PDS"]
 inits_pos = ["square","tri"]
+inits_pos = ["PDS"]
 
 inits_theta = ["hightemp","pair"]
-inits_theta = ["hightemp"]
+# inits_theta = ["pair"]
 tmax = Int(4E2)
 times = collect(0:2:tmax) # linear time
 # times = logspace(1,tmax,10) # log time

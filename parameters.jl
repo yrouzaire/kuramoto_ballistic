@@ -1,5 +1,5 @@
 # Physical parameters 
-Ntarget = Int(1E3)
+Ntarget = Int(1E4)
 aspect_ratio = 1
 rho = 1
 T = 0.1
@@ -7,7 +7,8 @@ sigma = 0.0
 v0 = 0
 R0 = sqrt(2.0)
 R0 = sqrt(5/4)
-R0 = 1
+R0 = sqrt(3/pi)*2
+# R0 = 1.95
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
