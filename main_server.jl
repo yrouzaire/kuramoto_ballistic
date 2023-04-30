@@ -115,7 +115,7 @@ spins in the XY model. "
 # Physical Params 
 Ntarget = Int(1E4)
 aspect_ratio = 1
-T = 0.1
+Ts = [0.1,0.2,0.4]
 rho = 1
 v0 = 0
 sigma = 0
@@ -133,18 +133,19 @@ params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q =>
 tmax = 1E2
 times = logspace(1,tmax,10)
 
-P = zeros(length(inits_pos), length(times))
-C = Array{Vector{Float64}}(undef, length(inits_pos), length(times))
-xi = zeros(length(inits_pos), length(times))
-n = zeros(length(inits_pos), length(times))
-E = zeros(length(inits_pos), length(times))
+P = zeros(length(inits_pos),length(Ts), length(times))
+C = Array{Vector{Float64}}(undef, length(inits_pos),length(Ts), length(times))
+xi = zeros(length(inits_pos),length(Ts), length(times))
+n = zeros(length(inits_pos),length(Ts), length(times))
+E = zeros(length(inits_pos),length(Ts), length(times))
 
 # Impact on the usual quantities
-z = @elapsed for i in each(inits_pos)
+z = @elapsed for i in each(inits_pos), j in each(Ts)
 	init_pos = inits_pos[i]
 	R0 = R0s[i]
+	T = Ts[j]
 
-    println("Init : $(init_pos)")
+    println("Init : $(init_pos), $init_theta")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
@@ -157,18 +158,18 @@ z = @elapsed for i in each(inits_pos)
 	for tt in eachindex(times)
 		evolve!(system, times[tt]) # evolves the systems up to times[tt]
 		
-		P[i,tt]  = polarOP(system)[1]
+		P[i,j,tt]  = polarOP(system)[1]
 		corr_tmp = corr(system)
-		C[i,tt]  = corr_tmp
-		xi[i,tt] = corr_length(corr_tmp)
-		n[i,tt]  = number_defects(system)
-		E[i,tt]  = energy(system)
+		C[i,j,tt]  = corr_tmp
+		xi[i,j,tt] = corr_length(corr_tmp)
+		n[i,j,tt]  = number_defects(system)
+		E[i,j,tt]  = energy(system)
 	end
 end
 prinz(z)
 
 filename = "data/impact_init_XY_r$real.jld2"
-JLD2.@save filename inits_pos R0s P C n xi E Ntarget v0 sigma rho params_init T aspect_ratio times tmax comments runtime = z
+JLD2.@save filename inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime = z
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
 # comments = "From the defects data, one will be able to infer : \n

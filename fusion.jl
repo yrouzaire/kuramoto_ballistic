@@ -48,27 +48,27 @@ println("There are $(length(indices))/$R files.")
 
 
 ## Impact Initialisation on XY
-@load base_filename * "_r$(indices[1]).jld2" inits_pos R0s P C n xi E Ntarget v0 sigma rho params_init T aspect_ratio times tmax comments runtime
-Ps = zeros(length(inits_pos),length(times),R)
-Cs = Array{Vector{Float64}}(undef, length(inits_pos),length(times),R)
-ns = zeros(length(inits_pos),length(times),R)
-xis = zeros(length(inits_pos),length(times),R)
-Es = zeros(length(inits_pos),length(times),R)
+@load base_filename * "_r$(indices[1]).jld2" inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime
+Ps = zeros(length(inits_pos),length(Ts),length(times),R)
+Cs = Array{Vector{Float64}}(undef, length(inits_pos),length(Ts),length(times),R)
+ns = zeros(length(inits_pos),length(Ts),length(times),R)
+xis = zeros(length(inits_pos),length(Ts),length(times),R)
+Es = zeros(length(inits_pos),length(Ts),length(times),R)
 runtimes = NaN*zeros(R)
 
 for r in indices
     println("r = $r")
     @load base_filename * "_r$r.jld2" runtime P C n xi E
-    Ps[:,:,r] = P
-    Cs[:,:,r] = C
-    ns[:,:,r] = n
-    xis[:,:,r] = xi
-    Es[:,:,r] = E
+    Ps[:,:,:,r] = P
+    Cs[:,:,:,r] = C
+    ns[:,:,:,r] = n
+    xis[:,:,:,r] = xi
+    Es[:,:,:,r] = E
 
     runtimes[r] = runtime
 end
 
-@save base_filename * ".jld2" R inits_pos R0s Ps Cs ns xis Es Ntarget v0 sigma rho params_init T aspect_ratio times tmax comments runtimes
+@save base_filename * ".jld2" R inits_pos R0s Ts Ps Cs ns xis Es Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtimes
 println("Fusionned data saved in $(base_filename*".jld2") .")
 
 

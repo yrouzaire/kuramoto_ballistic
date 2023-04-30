@@ -8,77 +8,95 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 
 ## ---------------- Analysis ---------------- ##
 filename = "data/impact_init_XY.jld2"
-@load filename R runtimes inits_pos Ps Cs ns xis rho T v0 sigma Ntarget params_init aspect_ratio times tmax comments rhoc 
+@load filename R inits_pos R0s Ts Ps Cs ns xis Es Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtimes
 L = round(Int,sqrt(Ntarget/rho))
 hrun(runtimes)
+hrun(10runtimes)
+hrun(1000runtimes)
 
-Ps_avg = nanmean(Ps, 3)[:,:,1]
-ns_avg = nanmean(ns, 3)[:,:,1]
-xis_avg = nanmean(xis, 3)[:,:,1]
+Ps_avg = nanmean(Ps, 4)[:,:,:,1]
+ns_avg = nanmean(ns, 4)[:,:,:,1]
+xis_avg = nanmean(xis, 4)[:,:,:,1]
+Es_avg = nanmean(Es, 4)[:,:,:,1]
 
 indices = [];
 for r in 1:R
-    try Cs[:,:,r]
+    try Cs[:,:,:,r]
 		push!(indices, r)
     catch;
     end
 end;
 
 
-Cs_avg = Array{Vector}(undef, length(inits_pos), length(times))
-for i in 1:length(inits_pos), k in 1:length(times)
+Cs_avg = Array{Vector}(undef, length(inits_pos),length(Ts), length(times))
+for i in 1:length(inits_pos), j in each(Ts), k in 1:length(times)
 	println("i = $i, k = $k")
-	Cs_avg[i,k] = mean([Cs[i,k,r] for r in indices])
+	Cs_avg[i,j,k] = mean([Cs[i,j,k,r] for r in indices])
 end
 
-xis_avg = zeros(length(inits_pos), length(times))
-for i in each(inits_pos)
-	for t in each(times)
-		xis_avg[i,t] = corr_length(Cs_avg[i,t])
-	end
-end
 ## 
 p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10, legend=:topleft)
 for i in 1:length(inits_pos)
-	plot!(times, Ps_avg[i,:], label=inits_pos[i], c=i, rib=0)
+	for j in 1#each(Ts)
+		plot!(times, Ps_avg[i,j,:], label=inits_pos[i], c=i, rib=0)
+	end
 end
-plot!(times, x->3.2E-2sqrt(x/log(10x)),line=:dash,c=:black)
+plot!(times, x->1.5E-1sqrt(x/log(10x)),line=:dash,c=:black)
 p1
-
+##
 
 p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10, legend=false)#:bottomleft)
 for i in 1:length(inits_pos)
-	plot!(times, remove_negative(ns_avg[i,:]/L^2), label=inits_pos[i], c=i, rib=0)
+	for j in 3#each(Ts)
+		plot!(times, remove_negative(ns_avg[i,j,:]/L^2), label=inits_pos[i], c=i, rib=0)
+	end
 end
-plot!(times, x->1.2E-2log(10x)/x,line=:dash,c=:black, label=L"\log(t)/t}")
+plot!(times, x->4E-3log(10x)/x,line=:dash,c=:black, label=L"\log(t)/t}")
 # plot!(times, x->1E3/x,line=:dot,c=:black, label=L"1/t}")
 p2
+##
 
-
-rr = 0:round(Int,L/2)
-p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, legend=false)
+p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", 
+	axis=:log, legend=false)
 for i in 1:length(inits_pos)
-	plot!(rr[2:end],remove_negative(Cs_avg[i,40])[2:end], label=inits_pos[i], c=i, rib=0)
+	rr = 0:round(Int,L/2/R0s[i])
+	for j in 1#each(Ts)
+		plot!(rr[2:end],remove_negative(Cs_avg[i,j,end])[2:end], label=inits_pos[i], c=i, rib=0)
+	end
 end
 plot!(rr[2:end], r->1E0 * r^(-T/2π),line=:dash,c=:black, label=L"r^{-T/2\pi}")
 p3
 
-
-p4 = plot(xlabel=L"t", ylabel=L"ξ/L", axis=:log, legend=false)
+##
+p4 = plot(xlabel=L"t", ylabel=L"ξ/R_0", axis=:log, legend=false)
 for i in 1:length(inits_pos)
-	plot!(times, xis_avg[i,:]/L, label=inits_pos[i], c=i, rib=0)
+	for j in 3#each(Ts)
+		plot!(times, xis_avg[i,j,:]/R0s[i], label=inits_pos[i], c=i, rib=0)
+	end
 end
-plot!(times, x->3.2E-2sqrt(x/log(10x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
+plot!(times, x->3.2E-0sqrt(x/log(10x)),line=:dash,c=:black, label=L"\sqrt{t/\log(t)}")
 p4
 
-
+##
 p5 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", axis=:log, legend=:bottomleft)#:topright)
 for i in 1:length(inits_pos)
-	plot!(times, xis_avg[i,:].*sqrt.(ns_avg[i,:]), label=inits_pos[i], c=i, rib=0)
+	for j in 1#each(Ts)
+		plot!(times, xis_avg[i,j,:]/R0s[i].*sqrt.(ns_avg[i,j,:]), label=inits_pos[i], c=i, rib=0)
+	end
 end
 p5
 
-plot(p1,p2,p3,p4, layout=(2,2), size=(800,800))
+##
+p6 = plot(xlabel=L"t", ylabel=L"E", axis=:log, legend=:bottomleft)#:topright)
+for i in 1:length(inits_pos)
+	for j in 1#each(Ts)
+		plot!(times[1:end-1], (Es_avg[i,j,1:end-1] .- Es_avg[1,j,end])/L^2, label=inits_pos[i], c=i, rib=0)
+	end
+end
+p6
+
+##
+plot(p1,p2,p3,p4,p5,p6, layout=(2,3), size=(1200, 800))
 # savefig("impact_init/figures/impact_init_XY.png")
 
 

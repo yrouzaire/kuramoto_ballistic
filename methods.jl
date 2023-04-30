@@ -41,7 +41,7 @@ function System(params; float_type=Float32)
         vec_agents[n] = Agent{float_type}(Tuple(pos[:, n]), thetas[n], omegas[n], psis[n])
     end
     if init_theta == "single" 
-        @assert system.v0 == 0 "Error : v0 should be 0 if PBC not satisfied."
+        @assert v0 == 0 "Error : v0 should be 0 if PBC not satisfied."
         periodic = false
     else 
         periodic = true
@@ -467,76 +467,9 @@ function cg(system::System{T}) where {T<:AbstractFloat}
     return fine_grid
 end
 
-function cg_old(system::System{T}) where {T<:AbstractFloat}
-    Lx, Ly = system.Lx, system.Ly
-    N = system.N
-    pos, thetas = get_pos(system), get_thetas(system)
-    mesh_size = R0
-    cutoff = 5R0 # for contributions
-
-    ## Cell List construction
-    # nb_cells_x = Int(div(Lx, mesh_size))
-    # nb_cells_y = Int(div(Ly, mesh_size))
-    nb_cells_x = round(Int, Lx / mesh_size,RoundUp)
-    nb_cells_y = round(Int, Ly / mesh_size,RoundUp)
-    head = -ones(Int, nb_cells_x, nb_cells_y) # head[i,j] contains the index of the first particle in cell (i,j). -1 if empty
-    list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
-    for n in 1:N
-        cellx, celly = Int(div(pos[n][1], mesh_size)) + 1, Int(div(pos[n][2], mesh_size)) + 1 # cell to which particle n belongs
-        list[n] = head[cellx, celly]
-        head[cellx, celly] = n
-    end
-
-    LLx = round(Int, Lx / mesh_size)
-    LLy = round(Int, Ly / mesh_size)
-    fine_grid = NaN * zeros(LLx, LLy)
-    fine_grid_density = NaN * zeros(LLx, LLy)
-    for i in 1:LLx, j in 1:LLy # scan fine_grid cells
-        center_finegrid_cell = T.([(i - 0.5) * mesh_size, (j - 0.5) * mesh_size])
-
-        # find cell from coarse mesh correponding to cell i,j belonging to fine_grid
-        cellx, celly = Int(div(center_finegrid_cell[1], mesh_size)) + 1, Int(div(center_finegrid_cell[2], mesh_size)) + 1
-        a = round(Int, cutoff / mesh_size)
-        neighbouring_cells = vec([(ii, jj) for ii in -a:a, jj in -a:a])
-        neighbouring_cells = [mod1_2D(el .+ (cellx, celly), nb_cells_x, nb_cells_y) for el in neighbouring_cells]
-
-        # get indices of particles within those cells (cells belonging to the coarse mesh)
-        ind_neighbours = Int[]
-        for (i, j) in neighbouring_cells
-            next = head[i, j]
-            if next ≠ -1
-                if dist(center_finegrid_cell, pos[next], Lx, Ly) < cutoff
-                    push!(ind_neighbours, next)
-                end
-                while list[next] ≠ -1
-                    if dist(center_finegrid_cell, pos[list[next]], Lx, Ly) < cutoff
-                        push!(ind_neighbours, list[next])
-                    end
-                    next = list[next]
-                end
-            end
-        end
-
-        # compute contributions from those "neighbouring" particles
-        tmp = ComplexF32[]
-        sizehint!(tmp, length(ind_neighbours))
-        tmp_density = Float64[]
-        for m in ind_neighbours
-            r = dist(center_finegrid_cell, pos[m], Lx, Ly)
-            if r < cutoff
-                push!(tmp, exp(im * thetas[m] - r / R0))
-                # push!(tmp_density,exp(-r/R0))
-            end
-        end
-        fine_grid[i, j] = angle(mean(tmp))
-        # fine_grid_density[i,j] = sum(tmp_density)
-    end
-    return fine_grid
-    # return fine_grid,fine_grid_density
-end
 
 ## Time Evolution
-construct_cell_list(system) = construct_cell_list(get_pos(system), system.N, system.Lx, system.Ly, R0)
+construct_cell_list(system) = construct_cell_list(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
     nb_cells_x = ceil(Int,Lx/R0)
     nb_cells_y = ceil(Int,Ly/R0)
