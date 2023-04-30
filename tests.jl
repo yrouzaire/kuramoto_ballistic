@@ -9,7 +9,7 @@ plot()
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 include("parameters.jl")
 system = System(param)
-# energy(system)
+energy(system)
 	# poss = get_pos(system)
 # histogram([el[2] for el in poss], bins=50, label="x")
 # scatter(poss, markersize=1, legend=false, xlims=(0,Lx), ylims=(0,Ly), xlabel=L"x", ylabel=L"y", title="N = $(length(poss))")

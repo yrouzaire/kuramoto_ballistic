@@ -11,8 +11,8 @@ for r in 1:R
 end;
 println("There are $(length(indices))/$R files.")
 
-# ## Defects Motion (immobile particles)
-@load base_filename*"_r$(indices[1]).jld2" r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime
+## Single Defects  Motion (immobile particles)
+@load base_filename*"_r$(indices[1]).jld2" qs R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime
 runtimes = NaN*zeros(R)
 # dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R) 
 dfts_fusion = Array{DefectTracker}[] # easier analysis if ≥ 1 simulation is missing
@@ -25,8 +25,25 @@ for r in indices
     runtimes[r] = runtime
 end
 
-@save base_filename*".jld2" R r0s R0s Ts inits_pos dfts_fusion params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtimes
+@save base_filename*".jld2" R qs R0s Ts inits_pos dfts_fusion params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtimes
 println("Fusionned data saved in $(base_filename*".jld2") .")
+
+# ## Pair Defects  Motion (immobile particles)
+# @load base_filename*"_r$(indices[1]).jld2" r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime
+# runtimes = NaN*zeros(R)
+# # dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R) 
+# dfts_fusion = Array{DefectTracker}[] # easier analysis if ≥ 1 simulation is missing
+# for r in indices
+#     println("r = $r")
+#     @load base_filename*"_r$r.jld2" dfts runtime
+#     # dfts_fusion_undef[r] = dfts
+#     push!(dfts_fusion,dfts)
+
+#     runtimes[r] = runtime
+# end
+
+# @save base_filename*".jld2" R r0s R0s Ts inits_pos dfts_fusion params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtimes
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
 # ## Defects Motion (mobile particles)

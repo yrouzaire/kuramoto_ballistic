@@ -4,14 +4,12 @@ using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
 ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
-comments = "From the defects data, one will be able to infer : \n
-A. the separating distance between the two defects R(t) \n
-B. the MSD and diffusion coeff of an individual defect. "
+comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
 Ntarget = Int(1E4)
 aspect_ratio = 1
-Ts = [0.1,0.2,0.4]
-Ts = [0.1]
+Ts = [0.1,0.2,0.3,0.4]
+Ts = [0.4]
 R0 = 1
 rho = 1 
 rhoc = 4.51 / π
@@ -23,20 +21,18 @@ tmax = 1E2
 times = 0:5:tmax # linear time
 
 inits_pos = ["square","rsa","random"]
-inits_pos = ["square"]
 R0s = [2,2,1.95]
-init_theta = "pair"
-r0s = 10:10:30
-r0s = [40]
-dfts = Array{DefectTracker}(undef, length(inits_pos),length(Ts), length(r0s))
+init_theta = "single"
+qs = [+1,-1]
+dfts = Array{DefectTracker}(undef, length(inits_pos),length(qs),length(Ts))
 
-z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
+z = @elapsed for i in each(inits_pos), j in each(qs), k in each(Ts)
     R0 = R0s[i]
     init_pos = inits_pos[i]
-	r0 = r0s[j]
+	q = qs[j]
 	T = Ts[k]
 
-    println("$init_pos, $init_theta R0 = $R0, r0 = $r0, T = $T")
+    println("$init_pos, $init_theta R0 = $R0, q = $q, T = $T")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
@@ -47,15 +43,63 @@ z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
     t = 0.0
     system = System(param)
     dft = DefectTracker(system, t)
-    dft, system = track!(dft,system,times,verbose=true)
+    dft, system = track!(dft,system,times,verbose=false)
 	dfts[i,j,k] = dft
 end
 prinz(z)
-interdefect_distance(dfts[1,1].defectsP[1],dfts[1,1].defectsN[1],100,100)
+
+filename = "data/immobile_DFT_single_r$real.jld2"
+JLD2.@save filename qs R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
+
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# comments = "From the defects data, one will be able to infer : \n
+# A. the separating distance between the two defects R(t) \n
+# B. the MSD and diffusion coeff of an individual defect. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# Ts = [0.1,0.2,0.4]
+# R0 = 1
+# rho = 1 
+# rhoc = 4.51 / π
+# v0 = 0 
+# sigma = 0
+# q = 1.0
+# params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
+# tmax = 1E3
+# times = 0:5:tmax # linear time
+
+# inits_pos = ["square","rsa","random"]
+# R0s = [2,2,1.95]
+# init_theta = "pair"
+# r0s = [10,25,50]
+# dfts = Array{DefectTracker}(undef, length(inits_pos),length(r0s), length(Ts))
+
+# z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
+#     R0 = R0s[i]
+#     init_pos = inits_pos[i]
+# 	r0 = r0s[j]
+# 	T = Ts[k]
+
+#     println("$init_pos, $init_theta R0 = $R0, r0 = $r0, T = $T")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+#     t = 0.0
+#     system = System(param)
+#     dft = DefectTracker(system, t)
+#     dft, system = track!(dft,system,times,verbose=true)
+# 	dfts[i,j,k] = dft
+# end
+# prinz(z)
 
 
-filename = "data/immobile_DFT_pair_r$real.jld2"
-JLD2.@save filename r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
+# filename = "data/immobile_DFT_pair_r$real.jld2"
+# JLD2.@save filename r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
 
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
