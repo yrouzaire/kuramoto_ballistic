@@ -5,14 +5,14 @@ rho = 1
 T = 0.1
 sigma = 0.0
 v0 = 0
-R0 = 1.95
+R0 = 2
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
 init_pos = "square"
 init_theta = "pair"
-r0 = 20#round(Int,Lx/2)
+r0 = round(Int,Lx/2)
 q = 1.0
 
 # Phonons parameters, for immobile particles (v = 0) only
@@ -20,9 +20,9 @@ phonons = true
 if phonons @assert v0 == 0.0 "Phonons only make sense for immobile particles! " end
 if phonons @assert init_theta ≠ "single" "Phonons only make sense for PBC! " end
 if phonons @assert aspect_ratio == 1 "Phonons only implemented for square box ! (for now) " end
-phonon_amplitude = 2
+phonon_amplitude = 1
 phonon_k = 1*(2π/Lx) # wavenumber
-phonon_omega = .1 # "frequency" (up to a factor 2π)
+phonon_omega = 0 # "frequency" (up to a factor 2π)
 
 
 # Time parameters

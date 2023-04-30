@@ -643,11 +643,10 @@ function update_positions_phonons!(system::System{T}) where {T<:AbstractFloat}
     for n in 1:system.N
         agent = system.agents[n]
         x = agent.pos0[1] + A*cos(k*agent.pos0[1] - omega_t)
-        # agent.pos[1] += omega*A*sin(k*agent.pos[1] - omega*system.t)
-        #  += omega*A*sin(k*agent.pos[1] - omega*system.t)
-        # y = agent.pos0[2] # remains unchanged, 1D phonon for now
-        y = agent.pos[2]
-        agent.pos = (mod0(x,Lx),y )
+        x = round(x, digits=5)
+        y = agent.pos0[2] + A*cos(k*agent.pos0[2] - omega_t)
+        y = round(y, digits=5)
+        agent.pos = (mod0(x,Lx),mod0(y,Ly))
     end
 end
 function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}}) where {FT<:AbstractFloat}
@@ -871,10 +870,11 @@ function spot_defects(system::System{T}) where {T<:AbstractFloat}
         range_i = 3:Lx-2 # to prevent artifical detection of defects on the borders (2:L-1 was not enough in some L,R0 situations)
         range_j = 3:Ly-2
     end
+    
     for i in range_i
         for j in range_j
             q = get_vorticity(thetasmod, i, j, Lx, Ly)
-            x,y = (R0).*((i+0.5) ,(j+0.5)) # 
+            x,y = (R0).*(i+0.5 ,j+0.5) # 
             # NB1 : since defects live on the dual lattice, the coordinates are shifted by 0.5
             # NB2 : defects are localized in the coarse grained lattice, so we need to multiply by R0 to recover the real coordinates
             if q > +0.1
@@ -887,30 +887,6 @@ function spot_defects(system::System{T}) where {T<:AbstractFloat}
     
     return vortices_plus, vortices_minus
 end
-
-# function spot_defects_old(system::System{T}) where {T<:AbstractFloat}  
-
-#     vortices_plus = Tuple{Int,Int,T}[]
-#     vortices_minus = Tuple{Int,Int,T}[]
-
-#     thetasmod = mod.(cg(system), 2π) # Coarse-graining 
-#     Lx,Ly = size(thetasmod)
-
-#     for i in 1:Lx
-#         for j in 1:Ly
-#             q = get_vorticity(thetasmod, i, j, Lx, Ly)
-#             if q > +0.1
-#                 push!(vortices_plus, (i, j, q)) # we want to keep ±½ defects, and not rounding errors
-#             elseif q < -0.1
-#                 push!(vortices_minus, (i, j, q))
-#             end
-#         end
-#     end
-#     vortices_plus_no_duplicates = merge_duplicates(vortices_plus, Lx, Ly)
-#     vortices_minus_no_duplicates = merge_duplicates(vortices_minus, Lx, Ly)
-    
-#     return vortices_plus_no_duplicates, vortices_minus_no_duplicates
-# end
 
 
 function relax!(thetas::Matrix{FT}, trelax=0.3) where {FT<:AbstractFloat}

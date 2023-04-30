@@ -9,14 +9,14 @@ plot()
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 include("parameters.jl")
 system = System(param)
-evolve!(system,system.t + 1)
-@btime update!($system)
+evolve!(system,100)
+# @btime update!($system)
 ##
 evolve!(system, system.t + 1)
 poss = get_pos(system)
 scatter(poss, markersize=1, legend=false, xlims=(0,Lx), ylims=(0,Ly), xlabel=L"x", ylabel=L"y", title="N = $(length(poss))")
 ##
-evolve!(system, 10) 
+evolve!(system, 100) 
 plot_thetas(system, particles=true, vertical=true, defects=true)
 # ndef = number_defects(system)
 # plot_thetas(system, particles=false, vertical=true,defects=true,title="n = $ndef")

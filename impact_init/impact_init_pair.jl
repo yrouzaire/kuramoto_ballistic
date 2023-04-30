@@ -75,28 +75,33 @@ MSD_all = (MSD_P + MSD_M) / 2
 
 ## ---------------- Plots R(t) ---------------- ##
 rts_avg # inits_pos, Ts, r0s, times
-p1=plot(ylabel="R(t)", xlabel="t", legend=false,uaxis=:log)
-for i in [1] # inits_pos
-    for j in [1] # Ts
-        for l in [1] # r0s
-            plot!(times[1:end], remove_negative(rts_avg[i,j,l,1:end]), m=true,label=L"r_0 = "*string(r0s[l]),rib=0)
+styles = [:solid, :dash, :dot]
+ind_T = 3
+p1=plot(ylabel="R(t)", xlabel="t", legend=(0.4,0.5),axis=:log)
+for i in [1,2,3] # inits_pos
+    for j in [1,2,3] # r0s
+        for l in ind_T # Ts
+            plot!(times[2:end], remove_negative(rts_avg[i,j,l,2:end]), 
+            m=false,rib=0,style=styles[i],c=j)
         end
     end
 end
+plot!([NaN,NaN],line=:solid,c=:grey,label="Square (XY)")
+plot!([NaN,NaN],line=:dash,c=:grey,label="RSA")
+plot!([NaN,NaN],line=:dot,c=:grey,label="Random")
 p1
-# ylims!(0,1.1*r0s[end])
-# rts_avg[1,1,1,2:end]
+# savefig("impact_init/figures/Rt_T$(Ts[ind_T]).png")
 ##
 p2=plot(ylabel=L"R(t^*)", xlabel=L"t^*", legend=false,axis=:log)
-for i in each(R0s)
-    for j in [1]
+for i in 1#each(R0s)
+    for j in [3]
         for l in 3#each(r0s)
             plot!(times[2:end], remove_negative(rts_reverse_avg[i,j,l,2:end]), label=L"r_0 = "*string(r0s[j]),rib=0)
         end
     end
 end
 using LambertW
-plot!(times[2:end],x->exp(lambertw(2π/1*x)/2),c=:black,line=:dash,label="XY prediction")
+plot!(times[2:end],x->exp(lambertw(2π/2*x)/2),c=:black,line=:dash,label="XY prediction")
 plot!(times[2:end],x->3E-1x^0.5,c=:black,label=L"\sqrt{t^*}")
 p2
 
