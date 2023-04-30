@@ -116,40 +116,37 @@ spins in the XY model. "
 Ntarget = Int(1E4)
 aspect_ratio = 1
 T = 0.1
-R0 = 1
 rho = 1
 v0 = 0
 sigma = 0
 R0c = sqrt(4.51 / π)
 
 # Initialisation parameters
-inits_pos = ["random", "square", "tri","PDS", "RSA"]
+inits_pos = ["random", "square", "RSA"]
+R0s = [1.95,2,2]
 init_theta = "hightemp"
 r0 = 20.0
 q = 1.0
 params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q => q)
 
 # Simulation parameters
-tmax = 1E1
+tmax = 1E2
 times = logspace(1,tmax,10)
-
 
 P = zeros(length(inits_pos), length(times))
 C = Array{Vector{Float64}}(undef, length(inits_pos), length(times))
 xi = zeros(length(inits_pos), length(times))
 n = zeros(length(inits_pos), length(times))
-
+E = zeros(length(inits_pos), length(times))
 
 # Impact on the usual quantities
 z = @elapsed for i in each(inits_pos)
 	init_pos = inits_pos[i]
+	R0 = R0s[i]
 
     println("Init : $(init_pos)")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    dt = determine_dt(T, sigma, v0, N, rho)
-
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-    
     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
@@ -165,12 +162,13 @@ z = @elapsed for i in each(inits_pos)
 		C[i,tt]  = corr_tmp
 		xi[i,tt] = corr_length(corr_tmp)
 		n[i,tt]  = number_defects(system)
+		E[i,tt]  = energy(system)
 	end
 end
 prinz(z)
 
 filename = "data/impact_init_XY_r$real.jld2"
-JLD2.@save filename Ntarget v0 sigma inits_pos rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z
+JLD2.@save filename Ntarget v0 sigma inits_pos rho params_init T P C n xi E aspect_ratio times tmax comments rhoc runtime = z
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
 # comments = "From the defects data, one will be able to infer : \n

@@ -193,6 +193,7 @@ for i in each(systems)
 end
 yticks!(0:2:12)
 plot!(R0ss.^2,pi*R0ss.^2 .-pi .+2.5,c=:black,)
+
 p4
 
 ## --------------- Structure Factor --------------- ##

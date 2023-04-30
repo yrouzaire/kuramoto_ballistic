@@ -1547,6 +1547,23 @@ function corr_length(C::Vector{T}, rs=1:length(C); seuil=exp(-1))::T where {T<:A
     return ξ
 end
 
+function energy(system)
+    energy = 0.0
+    list_neighbours = get_list_neighbours(system)
+    thetas = get_thetas(system)
+    for n in 1:system.N
+        neighbours_n = list_neighbours[n]
+        thetas_neighbours = thetas[neighbours_n]
+        for theta in thetas_neighbours
+            energy -= cos(thetas[n] - theta)
+        end
+    end
+    return energy
+end
+
+
+
+
 ########################## Miscellaneous ##########################
 
 function remove_negative(input)

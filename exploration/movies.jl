@@ -36,11 +36,12 @@ plot_thetas(system,particles=true,nb_neighbours=true,defects=true,vertical=true,
 include("../parameters.jl")
 inits_pos = ["square","tri","random","RSA","PDS"]
 inits_pos = ["square","tri"]
-inits_pos = ["PDS"]
+inits_pos = ["random"]
+
 
 inits_theta = ["hightemp","pair"]
 # inits_theta = ["pair"]
-tmax = Int(4E2)
+tmax = Int(3E2)
 times = collect(0:2:tmax) # linear time
 # times = logspace(1,tmax,10) # log time
 anims = Array{Any}(undef,length(inits_pos),length(inits_theta))
