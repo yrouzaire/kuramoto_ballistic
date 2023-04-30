@@ -1,7 +1,7 @@
 using JLD2, Parameters
 include("methods.jl");
 
-base_filename = "data/impact_init_XY" # look up in main_server.jl
+base_filename = "data/immobile_DFT_pair" # look up in main_server.jl
 R = 40 # look up into bash_loog.sh
 indices = [];
 for r in 1:R
@@ -11,22 +11,22 @@ for r in 1:R
 end;
 println("There are $(length(indices))/$R files.")
 
-# # ## Defects Motion (immobile particles)
-# @load base_filename*"_r$(indices[1]).jld2" r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtime
-# runtimes = NaN*zeros(R)
-# dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R)
-# dfts_fusion = Array{DefectTracker}[]
-# for r in indices
-#     println("r = $r")
-#     @load base_filename*"_r$r.jld2" dfts runtime
-#     dfts_fusion_undef[r] = dfts
-#     push!(dfts_fusion,dfts)
+# ## Defects Motion (immobile particles)
+@load base_filename*"_r$(indices[1]).jld2" r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime
+runtimes = NaN*zeros(R)
+# dfts_fusion_undef = Vector{Array{DefectTracker}}(undef,R) 
+dfts_fusion = Array{DefectTracker}[] # easier analysis if ≥ 1 simulation is missing
+for r in indices
+    println("r = $r")
+    @load base_filename*"_r$r.jld2" dfts runtime
+    # dfts_fusion_undef[r] = dfts
+    push!(dfts_fusion,dfts)
 
-#     runtimes[r] = runtime
-# end
+    runtimes[r] = runtime
+end
 
-# @save base_filename*".jld2" R r0s R0s inits_pos inits_thetas dfts_fusion_undef dfts_fusion params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtimes
-# println("Fusionned data saved in $(base_filename*".jld2") .")
+@save base_filename*".jld2" R r0s R0s Ts inits_pos dfts_fusion params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtimes
+println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
 # ## Defects Motion (mobile particles)
@@ -47,29 +47,29 @@ println("There are $(length(indices))/$R files.")
 # println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
-## Impact Initialisation on XY
-@load base_filename * "_r$(indices[1]).jld2" inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime
-Ps = zeros(length(inits_pos),length(Ts),length(times),R)
-Cs = Array{Vector{Float64}}(undef, length(inits_pos),length(Ts),length(times),R)
-ns = zeros(length(inits_pos),length(Ts),length(times),R)
-xis = zeros(length(inits_pos),length(Ts),length(times),R)
-Es = zeros(length(inits_pos),length(Ts),length(times),R)
-runtimes = NaN*zeros(R)
+# ## Impact Initialisation on XY
+# @load base_filename * "_r$(indices[1]).jld2" inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime
+# Ps = zeros(length(inits_pos),length(Ts),length(times),R)
+# Cs = Array{Vector{Float64}}(undef, length(inits_pos),length(Ts),length(times),R)
+# ns = zeros(length(inits_pos),length(Ts),length(times),R)
+# xis = zeros(length(inits_pos),length(Ts),length(times),R)
+# Es = zeros(length(inits_pos),length(Ts),length(times),R)
+# runtimes = NaN*zeros(R)
 
-for r in indices
-    println("r = $r")
-    @load base_filename * "_r$r.jld2" runtime P C n xi E
-    Ps[:,:,:,r] = P
-    Cs[:,:,:,r] = C
-    ns[:,:,:,r] = n
-    xis[:,:,:,r] = xi
-    Es[:,:,:,r] = E
+# for r in indices
+#     println("r = $r")
+#     @load base_filename * "_r$r.jld2" runtime P C n xi E
+#     Ps[:,:,:,r] = P
+#     Cs[:,:,:,r] = C
+#     ns[:,:,:,r] = n
+#     xis[:,:,:,r] = xi
+#     Es[:,:,:,r] = E
 
-    runtimes[r] = runtime
-end
+#     runtimes[r] = runtime
+# end
 
-@save base_filename * ".jld2" R inits_pos R0s Ts Ps Cs ns xis Es Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtimes
-println("Fusionned data saved in $(base_filename*".jld2") .")
+# @save base_filename * ".jld2" R inits_pos R0s Ts Ps Cs ns xis Es Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtimes
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
 ## Nature of the phase transition

@@ -1113,6 +1113,10 @@ function annihilate_defects(dt::DefectTracker, ids_annihilated_defects, Lx, Ly)
 end
 
 function track!(dft::DefectTracker, system::System, times::AbstractVector;verbose=false)
+    # Since the DefectTracker has already been initialized, discard t=0 if it exists
+    if times[1] == 0
+        times = times[2:end]
+    end
     for token in each(times)
         evolve!(system, times[token])
         

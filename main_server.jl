@@ -3,56 +3,57 @@ include("IDrealisation.jl");
 using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
-# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
-# comments = "From the defects data, one will be able to infer : \n
-# A. the separating distance between the two defects R(t) \n
-# B. the MSD and diffusion coeff of an individual defect. "
-# # Physical Params 
-# Ntarget = Int(1E4)
-# aspect_ratio = 1
-# T = 0.1
-# R0 = 1
-# rho = 1 
-# rhoc = 4.51 / π
-# v0 = 0 
-# sigma = 0
-# q = 1.0
-# params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
-# tmax = 2E3
-# times = 0:5:tmax # linear time
+## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+comments = "From the defects data, one will be able to infer : \n
+A. the separating distance between the two defects R(t) \n
+B. the MSD and diffusion coeff of an individual defect. "
+# Physical Params 
+Ntarget = Int(1E4)
+aspect_ratio = 1
+Ts = [0.1,0.2,0.4]
+Ts = [0.1]
+R0 = 1
+rho = 1 
+rhoc = 4.51 / π
+v0 = 0 
+sigma = 0
+q = 1.0
+params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
+tmax = 1E2
+times = 0:5:tmax # linear time
 
-# R0s = [1.415,2]
-# inits_pos = ["square_lattice","random","rsa","pds"]
-# inits_thetas = ["single"]
-# r0s = 10:10:30
-# dfts = Array{DefectTracker}(undef, length(R0s), length(inits_pos),length(inits_thetas), length(r0s))
+inits_pos = ["square","rsa","random"]
+inits_pos = ["square"]
+R0s = [2,2,1.95]
+init_theta = "pair"
+r0s = 10:10:30
+r0s = [20]
+dfts = Array{DefectTracker}(undef, length(inits_pos),length(Ts), length(r0s))
 
-# z = @elapsed for  i in each(R0s), j in each(inits_pos), k in each(inits_thetas), m in each(r0s)
-#     R0 = R0s[i]
-#     init_pos = inits_pos[j]
-#     init_theta = inits_thetas[k]
-#     r0 = r0s[m]
+z = @elapsed for i in each(inits_pos), j in each(r0s), k in each(Ts)
+    R0 = R0s[i]
+    init_pos = inits_pos[i]
+	r0 = r0s[j]
+	T = Ts[k]
 
-#     println("$init_pos, $init_theta, r0 = $r0, R0 = $R0")
-#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-#     dt = determine_dt(T, sigma, v0, N, rho)
-
+    println("$init_pos, R0 = $R0, r0 = $r0, T = $T")
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     
-#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-#     t = 0.0
-#     system = System(param)
-#     dft = DefectTracker(system, t)
-#     dft, system = track!(dft,system,times)
-# 	dfts[i,j,k,m] = dft
-# end
-# prinz(z)
+    t = 0.0
+    system = System(param)
+    dft = DefectTracker(system, t)
+    dft, system = track!(dft,system,times,verbose=true)
+	dfts[i,j,k] = dft
+end
+prinz(z)
 
-# filename = "data/immobile_DFT_pair_r$real.jld2"
-# JLD2.@save filename r0s R0s inits_pos inits_thetas dfts params_init Ntarget v0 sigma T aspect_ratio times tmax comments rhoc runtime = z
+filename = "data/immobile_DFT_pair_r$real.jld2"
+JLD2.@save filename r0s R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
 
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
@@ -109,67 +110,67 @@ include("methods.jl");
 # JLD2.@save filename Ntarget v0 sigma rhos inits_pos params_init T dfts aspect_ratio times tmax comments rhoc runtime = z
 
 
-# ## ---------------- Impact of init on XY Model ---------------- ##
-comments = "Investigates the impact of initialisation for the spatial location of the 
-spins in the XY model. "
-# Physical Params 
-Ntarget = Int(1E4)
-aspect_ratio = 1
-Ts = [0.1,0.2,0.4]
-rho = 1
-v0 = 0
-sigma = 0
-R0c = sqrt(4.51 / π)
+# # ## ---------------- Impact of init on XY Model ---------------- ##
+# comments = "Investigates the impact of initialisation for the spatial location of the 
+# spins in the XY model. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# Ts = [0.1,0.2,0.4]
+# rho = 1
+# v0 = 0
+# sigma = 0
+# R0c = sqrt(4.51 / π)
 
-# Initialisation parameters
-inits_pos = ["random", "square", "RSA"]
-R0s = [1.95,2,2]
-init_theta = "hightemp"
-r0 = 20.0
-q = 1.0
-params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q => q)
+# # Initialisation parameters
+# inits_pos = ["random", "square", "RSA"]
+# R0s = [1.95,2,2]
+# init_theta = "hightemp"
+# r0 = 20.0
+# q = 1.0
+# params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => r0, :q => q)
 
-# Simulation parameters
-tmax = 1E2
-times = logspace(1,tmax,10)
+# # Simulation parameters
+# tmax = 1E2
+# times = logspace(1,tmax,10)
 
-P = zeros(length(inits_pos),length(Ts), length(times))
-C = Array{Vector{Float64}}(undef, length(inits_pos),length(Ts), length(times))
-xi = zeros(length(inits_pos),length(Ts), length(times))
-n = zeros(length(inits_pos),length(Ts), length(times))
-E = zeros(length(inits_pos),length(Ts), length(times))
+# P = zeros(length(inits_pos),length(Ts), length(times))
+# C = Array{Vector{Float64}}(undef, length(inits_pos),length(Ts), length(times))
+# xi = zeros(length(inits_pos),length(Ts), length(times))
+# n = zeros(length(inits_pos),length(Ts), length(times))
+# E = zeros(length(inits_pos),length(Ts), length(times))
 
-# Impact on the usual quantities
-z = @elapsed for i in each(inits_pos), j in each(Ts)
-	init_pos = inits_pos[i]
-	R0 = R0s[i]
-	T = Ts[j]
+# # Impact on the usual quantities
+# z = @elapsed for i in each(inits_pos), j in each(Ts)
+# 	init_pos = inits_pos[i]
+# 	R0 = R0s[i]
+# 	T = Ts[j]
 
-    println("Init : $(init_pos), $init_theta")
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+#     println("Init : $(init_pos), $init_theta")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
 
-    t = 0.0
-    system = System(param)
+#     t = 0.0
+#     system = System(param)
 
-	for tt in eachindex(times)
-		evolve!(system, times[tt]) # evolves the systems up to times[tt]
+# 	for tt in eachindex(times)
+# 		evolve!(system, times[tt]) # evolves the systems up to times[tt]
 		
-		P[i,j,tt]  = polarOP(system)[1]
-		corr_tmp = corr(system)
-		C[i,j,tt]  = corr_tmp
-		xi[i,j,tt] = corr_length(corr_tmp)
-		n[i,j,tt]  = number_defects(system)
-		E[i,j,tt]  = energy(system)
-	end
-end
-prinz(z)
+# 		P[i,j,tt]  = polarOP(system)[1]
+# 		corr_tmp = corr(system)
+# 		C[i,j,tt]  = corr_tmp
+# 		xi[i,j,tt] = corr_length(corr_tmp)
+# 		n[i,j,tt]  = number_defects(system)
+# 		E[i,j,tt]  = energy(system)
+# 	end
+# end
+# prinz(z)
 
-filename = "data/impact_init_XY_r$real.jld2"
-JLD2.@save filename inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime = z
+# filename = "data/impact_init_XY_r$real.jld2"
+# JLD2.@save filename inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime = z
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
 # comments = "From the defects data, one will be able to infer : \n

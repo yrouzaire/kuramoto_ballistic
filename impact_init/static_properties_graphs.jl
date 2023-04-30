@@ -192,10 +192,10 @@ for i in each(systems)
 	plot!(R0ss.^2,nnns_avg[:,i],label=labels[i],m=true,ms=2)
 end
 yticks!(0:2:12)
-plot!(R0ss.^2,pi*R0ss.^2 .-pi .+2.5,c=:black,)
+# plot!(R0ss.^2,pi*R0ss.^2 .-pi .+2.5,c=:black,)
 
 p4
-
+savefig("impact_init/figures/static_properties_graphs/mean_nnn_R0s.png")
 ## --------------- Structure Factor --------------- ##
 function structure_factor(system)
 	pos = get_pos(system)

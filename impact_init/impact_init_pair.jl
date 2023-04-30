@@ -9,87 +9,85 @@ plot()
 
 ## ---------------- Analysis DFT Pair Immobile Particles ---------------- ##
 filename = "data/immobile_DFT_pair.jld2"
-@load filename R r0s R0s inits_pos inits_thetas dfts_fusion_undef dfts_fusion params_init Ntarget v0 sigma T aspect_ratio times tmax comments runtimes
+@load filename R r0s R0s Ts inits_pos dfts_fusion params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtimes
 hrun(runtimes)
-times = 0:5:tmax
-rho = 1
+times = 0:2:tmax
 Reff = length(dfts_fusion)
 inits_pos 
-inits_thetas
-r0s
 R0s
+r0s
 
-
-
-## R(t) for inits_thetas = "pair"
-rts = zeros(length(R0s), length(inits_pos), length(r0s), length(times),Reff)
-rts_reverse = NaN*zeros(length(R0s), length(inits_pos), length(r0s), length(times),Reff)
-for r in each(dfts_fusion), i in each(R0s), j in each(inits_pos), l in each(r0s), m in each(times)
-    dft = dfts_fusion[r][i,j,1,l] # 1 = inits_thetas = "pair"
+## R(t)
+rts = zeros(length(inits_pos), length(Ts), length(r0s),  length(times),Reff)
+rts_reverse = NaN*zeros(length(inits_pos), length(Ts), length(r0s), length(times),Reff)
+for r in each(dfts_fusion), i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times)
+    dft = dfts_fusion[r][i,j,k] # 1 = inits_thetas = "pair"
     L = sqrt(Ntarget / aspect_ratio / rho)
     tmp = interdefect_distance(dft.defectsP[1], dft.defectsN[1], L, L)
     ll = min(length(times),length(tmp))
-    rts[i,j,l,1:ll,r] = tmp[1:ll]
-    rts_reverse[i,j,l,1:ll,r] = reverse(tmp[1:ll])
+    rts[i,j,k,1:ll,r] = tmp[1:ll]
+    rts_reverse[i,j,k,1:ll,r] = reverse(tmp[1:ll])
 end
 rts_avg = mean(rts, dims=5)[:,:,:,:,1]
 rts_reverse_avg = nanmean(rts_reverse,5)[:,:,:,:,1]
 
-# MSD(t) & G(x,t) of individual defects, for inits_thetas = "pair" and "single"
-dx_P = [[] for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)]
-dy_P = [[] for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)]
-dx_M = [[] for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)]
-dy_M = [[] for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)]
-SD_P = [[] for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)]
-SD_M = [[] for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)]
+# MSD(t) & G(x,t) of individual defects
+dfts # inits_pos, Ts, r0s
+dx_P = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times), r in each(dfts_fusion)]
+dy_P = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times), r in each(dfts_fusion)]
+SD_P = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times), r in each(dfts_fusion)]
+dx_M = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times), r in each(dfts_fusion)]
+dy_M = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times), r in each(dfts_fusion)]
+SD_M = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(times), r in each(dfts_fusion)]
 
-for r in each(dfts_fusion), i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s)
-    dft = dfts_fusion[r][i,j,k,l]
-    L = sqrt(Ntarget / aspect_ratio / rho)
+for r in each(dfts_fusion), i in each(inits_pos), k in each(Ts), l in each(r0s)
+    dft = dfts_fusion[r][i,k,l]
+    L = sqrt(Ntarget / aspect_ratio / param[:rho])
     for tt in min(length(times),length(dft.defectsP[1].pos))
         d = dft.defectsP[1].pos[tt] .- dft.defectsP[1].pos[1]
-        push!(dx_P[i,j,k,l,tt], d[1])
-        push!(dy_P[i,j,k,l,tt], d[2])
-        push!(SD_P[i,j,k,l,tt], dist2(dft.defectsP[1].pos[tt],dft.defectsP[1].pos[1],L,L))
+        push!(dx_P[i,k,l,tt], d[1])
+        push!(dy_P[i,k,l,tt], d[2])
+        push!(SD_P[i,k,l,tt], dist2(dft.defectsP[1].pos[tt],dft.defectsP[1].pos[1],L,L))
     end
 
     for tt in min(length(times),length(dft.defectsN[1].pos))
         d = dft.defectsN[1].pos[tt] .- dft.defectsN[1].pos[1]
-        push!(dx_M[i,j,k,l,tt], d[1])
-        push!(dy_M[i,j,k,l,tt], d[2])
-        push!(SD_M[i,j,k,l,tt], dist2(dft.defectsN[1].pos[tt],dft.defectsN[1].pos[1],L,L))
+        push!(dx_M[i,k,l,tt], d[1])
+        push!(dy_M[i,k,l,tt], d[2])
+        push!(SD_M[i,k,l,tt], dist2(dft.defectsN[1].pos[tt],dft.defectsN[1].pos[1],L,L))
     end
 end
 
-MSD_P = zeros(length(R0s), length(inits_pos), length(inits_thetas), length(r0s), length(times))
-for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)
-    if !isempty(SD_P[i,j,k,l,m])
-        MSD_P[i,j,k,l,m] = mean(SD_P[i,j,k,l,m])
+MSD_P = zeros(length(inits_pos), length(Ts), length(r0s), length(times))
+for j in each(inits_pos), k in each(Ts), l in each(r0s), m in each(times)
+    if !isempty(SD_P[j,k,l,m])
+        MSD_P[j,k,l,m] = mean(SD_P[j,k,l,m])
     end
 end
-MSD_M = zeros(length(R0s), length(inits_pos), length(inits_thetas), length(r0s), length(times))
-for i in each(R0s), j in each(inits_pos), k in each(inits_thetas), l in each(r0s), m in each(times)
-    if !isempty(SD_M[i,j,k,l,m])
-        MSD_M[i,j,k,l,m] = mean(SD_M[i,j,k,l,m])
+MSD_M = zeros(length(inits_pos), length(Ts), length(r0s), length(times))
+for j in each(inits_pos), k in each(Ts), l in each(r0s), m in each(times)
+    if !isempty(SD_M[j,k,l,m])
+        MSD_M[j,k,l,m] = mean(SD_M[j,k,l,m])
     end
 end
+
 MSD_all = (MSD_P + MSD_M) / 2
 
 ## ---------------- Plots R(t) ---------------- ##
-rts_avg # R0 x inits_pos x r0s x times 
-p1=plot(ylabel="R(t)", xlabel="t", legend=false,xaxis=:log)
-for i in [1] # R0s
-    for j in [1,2,3,4] # inits_pos
-        for l in [3] # r0s
-            plot!(times[2:end], remove_negative(rts_avg[i,j,l,2:end]), label=L"r_0 = "*string(r0s[l]),rib=0,m=false)
+rts_avg # inits_pos, Ts, r0s, times
+p1=plot(ylabel="R(t)", xlabel="t", legend=false,uaxis=:log)
+for i in [1] # inits_pos
+    for j in [1] # Ts
+        for l in [1] # r0s
+            plot!(times[1:end], remove_negative(rts_avg[i,j,l,1:end]), m=true,label=L"r_0 = "*string(r0s[l]),rib=0)
         end
     end
 end
 p1
-
-
+# rts_avg[1,1,1,2:end]
+##
 p2=plot(ylabel=L"R(t^*)", xlabel=L"t^*", legend=false,axis=:log)
-for i in 1#each(R0s)
+for i in each(R0s)
     for j in [1]
         for l in 3#each(r0s)
             plot!(times[2:end], remove_negative(rts_reverse_avg[i,j,l,2:end]), label=L"r_0 = "*string(r0s[j]),rib=0)
