@@ -5,6 +5,7 @@ using BenchmarkTools, Sobol, Parameters
 using Plots, ColorSchemes
 mutable struct Agent{F<:AbstractFloat}
     pos::Tuple{F,F}
+    pos0::Tuple{F,F} # position at t=0, used to implement phonons 
     theta::F
     omega::F
     psi::F
@@ -25,11 +26,16 @@ mutable struct System{F<:AbstractFloat}
     t::Number
     params::Dict
     periodic::Bool
+    phonons::Bool
+    phonon_amplitude::Number
+    phonon_k::Number
+    phonon_omega::Number
 end
 
 function System(params; float_type=Float32)
     @unpack Ntarget, aspect_ratio, rho, T, sigma, v0, R0, params_init = params
     @unpack init_pos, init_theta, r0, q = params_init
+    @unpack phonons, phonon_amplitude, phonon_k, phonon_omega = params_phonons
     Ntarget2, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     
     pos,N  = initialisation_positions(Ntarget2, Lx, Ly, init_pos)
@@ -38,16 +44,17 @@ function System(params; float_type=Float32)
     psis   = initialisation_psis(N)
     vec_agents = Vector{Agent{float_type}}(undef, N)
     for n in 1:N
-        vec_agents[n] = Agent{float_type}(Tuple(pos[:, n]), thetas[n], omegas[n], psis[n])
+        vec_agents[n] = Agent{float_type}(Tuple(pos[:, n]), Tuple(pos[:, n]), thetas[n], omegas[n], psis[n])
     end
     if init_theta == "single" 
         @assert v0 == 0 "Error : v0 should be 0 if PBC not satisfied."
         periodic = false
+        @assert phonons = false "Error : phonons cannot exist if PBC not satisfied."
     else 
         periodic = true
     end
     dt = determine_dt(T, sigma, v0, N, rho)
-    return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params, periodic)
+    return System(vec_agents, Lx, Ly, rho, Ntarget, N, T, sigma, v0, R0, dt, 0, params, periodic,phonons, phonon_amplitude, phonon_k, phonon_omega)
 end
 
 ## -----------------  Get Methods ----------------- ##
@@ -555,7 +562,7 @@ end
 
 function evolve!(system::System, tmax::Number)
     v0,dt = system.v0, system.dt
-    if v0 == 0
+    if v0 == 0 && !system.phonons
         ind_neighbours = get_list_neighbours(system)
         if system.periodic
             while system.t < tmax
@@ -567,6 +574,15 @@ function evolve!(system::System, tmax::Number)
                 system.t += dt
                 update_thetas_nonperiodic!(system, ind_neighbours)
             end
+        end
+    elseif v0 == 0 && system.phonons
+        # If phonons are present, the system is necessarily periodic 
+        # (has been checked in the constructor)
+        while system.t < tmax
+            system.t += dt
+            update_positions_phonons!(system)
+            ind_neighbours = get_list_neighbours(system)
+            update_thetas!(system, ind_neighbours)
         end
     else
         while system.t < tmax
@@ -608,8 +624,8 @@ function update_positions!(system::System{T}) where {T<:AbstractFloat}
         agent.pos = (mod0(x,Lx), mod0(y,Ly))
         #= Use of custom modulo function above is required because
             if a particle passes from +ε to -ε in the x or y direction, 
-            with ε < EPSILON(AbstractFloat), then the result is 
-            contra-intuitive. This issue has already been debated, 
+            with ε < EPSILON(AbstractFloat), then the result of the standard  
+            mod functuion is contra-intuitive. This issue has already been debated, 
             cf. https://github.com/JuliaLang/julia/issues/36310. 
             Since it appears that a simple fix does not exist, 
             I use the suggested workaround. 
@@ -618,6 +634,22 @@ function update_positions!(system::System{T}) where {T<:AbstractFloat}
     end
 end
 
+function update_positions_phonons!(system::System{T}) where {T<:AbstractFloat}
+    Lx, Ly = system.Lx, system.Ly
+    A = system.phonon_amplitude
+    k = system.phonon_k
+    omega = system.phonon_omega
+    omega_t = omega*system.t
+    for n in 1:system.N
+        agent = system.agents[n]
+        x = agent.pos0[1] + A*cos(k*agent.pos0[1] - omega_t)
+        # agent.pos[1] += omega*A*sin(k*agent.pos[1] - omega*system.t)
+        #  += omega*A*sin(k*agent.pos[1] - omega*system.t)
+        # y = agent.pos0[2] # remains unchanged, 1D phonon for now
+        y = agent.pos[2]
+        agent.pos = (mod0(x,Lx),y )
+    end
+end
 function update_thetas!(system::System{FT}, ind_neighbours::Vector{Vector{Int}}) where {FT<:AbstractFloat}
     dt, T = system.dt, system.T
     for n in 1:system.N
