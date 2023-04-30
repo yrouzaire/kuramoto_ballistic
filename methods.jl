@@ -413,6 +413,7 @@ end
 function cg(system::System{T}) where {T<:AbstractFloat}
     Lx, Ly = system.Lx, system.Ly
     N = system.N
+    R0 = system.R0
     pos, thetas = get_pos(system), get_thetas(system)
     mesh_size = R0
     cutoff = 2R0 # for contributions

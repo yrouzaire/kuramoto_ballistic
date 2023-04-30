@@ -5,12 +5,12 @@ rho = 1
 T = 0.1
 sigma = 0.0
 v0 = 0
-R0 = 2
+R0 = 1.95
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
-init_pos = "rsa"
+init_pos = "random"
 init_theta = "single"
 r0 = 20#round(Int,Lx/2)
 q = 1.0

@@ -168,7 +168,7 @@ end
 prinz(z)
 
 filename = "data/impact_init_XY_r$real.jld2"
-JLD2.@save filename Ntarget v0 sigma inits_pos rho params_init T P C n xi E aspect_ratio times tmax comments rhoc runtime = z
+JLD2.@save filename inits_pos R0s P C n xi E Ntarget v0 sigma rho params_init T aspect_ratio times tmax comments runtime = z
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
 # comments = "From the defects data, one will be able to infer : \n

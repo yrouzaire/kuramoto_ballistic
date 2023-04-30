@@ -40,7 +40,7 @@ inits_pos = ["random"]
 
 
 inits_theta = ["hightemp","pair"]
-# inits_theta = ["pair"]
+inits_theta = ["pair"]
 tmax = Int(3E2)
 times = collect(0:2:tmax) # linear time
 # times = logspace(1,tmax,10) # log time
@@ -59,7 +59,7 @@ z = @elapsed for i in each(inits_pos), j in each(inits_theta)
     try 
         anim = movies(param, times, 
                 particles=true,
-                defects=false,
+                defects=true,
                 nb_neighbours=true,
                 verbose=true)
 
