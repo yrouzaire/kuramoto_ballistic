@@ -33,7 +33,7 @@ mutable struct System{F<:AbstractFloat}
 end
 
 function System(params; float_type=Float32)
-    @unpack Ntarget, aspect_ratio, rho, T, sigma, v0, R0, params_init = params
+    @unpack Ntarget, aspect_ratio, rho, T, sigma, v0, R0, params_init, params_phonons = params
     @unpack init_pos, init_theta, r0, q = params_init
     @unpack phonons, phonon_amplitude, phonon_k, phonon_omega = params_phonons
     Ntarget2, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
@@ -49,7 +49,7 @@ function System(params; float_type=Float32)
     if init_theta == "single" 
         @assert v0 == 0 "Error : v0 should be 0 if PBC not satisfied."
         periodic = false
-        @assert phonons = false "Error : phonons cannot exist if PBC not satisfied."
+        @assert phonons == false "Error : phonons cannot exist if PBC not satisfied."
     else 
         periodic = true
     end

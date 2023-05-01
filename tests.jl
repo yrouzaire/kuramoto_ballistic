@@ -9,7 +9,9 @@ plot()
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 include("parameters.jl")
 system = System(param)
-evolve!(system,100)
+plot_thetas(system, particles=true, vertical=true, defects=true)
+
+# evolve!(system,100)
 # @btime update!($system)
 ##
 evolve!(system, system.t + 1)

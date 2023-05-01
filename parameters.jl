@@ -11,7 +11,7 @@ N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
 init_pos = "square"
-init_theta = "pair"
+init_theta = "2Dwave"
 r0 = round(Int,Lx/2)
 q = 1.0
 
