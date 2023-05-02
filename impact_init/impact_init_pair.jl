@@ -43,14 +43,14 @@ SD_M = [[] for i in each(inits_pos), j in each(Ts), k in each(r0s), l in each(ti
 for r in each(dfts_fusion), i in each(inits_pos), k in each(Ts), l in each(r0s)
     dft = dfts_fusion[r][i,k,l]
     L = sqrt(Ntarget / aspect_ratio / param[:rho])
-    for tt in min(length(times),length(dft.defectsP[1].pos))
+    for tt in 1:min(length(times),length(dft.defectsP[1].pos))
         d = dft.defectsP[1].pos[tt] .- dft.defectsP[1].pos[1]
         push!(dx_P[i,k,l,tt], d[1])
         push!(dy_P[i,k,l,tt], d[2])
         push!(SD_P[i,k,l,tt], dist2(dft.defectsP[1].pos[tt],dft.defectsP[1].pos[1],L,L))
     end
 
-    for tt in min(length(times),length(dft.defectsN[1].pos))
+    for tt in 1:min(length(times),length(dft.defectsN[1].pos))
         d = dft.defectsN[1].pos[tt] .- dft.defectsN[1].pos[1]
         push!(dx_M[i,k,l,tt], d[1])
         push!(dy_M[i,k,l,tt], d[2])
@@ -77,9 +77,9 @@ MSD_all = (MSD_P + MSD_M) / 2
 rts_avg # inits_pos, Ts, r0s, times
 styles = [:solid, :dash, :dot]
 ind_T = 3
-p1=plot(ylabel="R(t)", xlabel="t", legend=(0.4,0.5),axis=:log)
+p1=plot(ylabel="R(t)", xlabel="t",uaxis=:log,legend=false)#(0.4,0.45))
 for i in [1,2,3] # inits_pos
-    for j in [1,2,3] # r0s
+    for j in [2,3] # r0s
         for l in ind_T # Ts
             plot!(times[2:end], remove_negative(rts_avg[i,j,l,2:end]), 
             m=false,rib=0,style=styles[i],c=j)
@@ -110,20 +110,25 @@ plot(p1,p2,layout=(1,2),size=(800,400))
 
 
 ## ---------------- Histogram Displacements ---------------- ##
-tt = length(times) ; histogram(vcat(dx_P[1,1,tt],dy_P[1,1,tt],dx_M[1,1,tt],dy_M[1,1,tt]), bins=50)
+tt = 4#length(times)
+histogram(vcat(dx_P[1,1,tt],dy_P[1,1,tt],dx_M[1,1,tt],dy_M[1,1,tt]), bins=50)
 
 ## ---------------- Plot MSD(t) ---------------- ##
-p=plot(xlabel="t", ylabel="MSD", legend=false, axis=:log)
-for i in [2] # rhos
-    for j in [1,2,3] # inits_pos
-        for k in 1 # inits_thetas
-            for l in 2 # r0s
-                plot!(times[2:end], remove_negative(MSD_P[i,j,k,l,2:end]),rib=0)
-            end
+p=plot(xlabel="t", ylabel="MSD", legend=:topleft, axis=:log)
+for i in [1,2,3] # inits_pos
+    for j in 3 # r0s
+        for k in 3 # Ts
+            plot!(times[2:end], remove_negative(MSD_P[i,j,k,2:end]),rib=0,c=i)
+            plot!(times[2:end], remove_negative(MSD_M[i,j,k,2:end]),rib=0,line=:dash,c=i)
         end
     end
 end
-plot!(times[2:end],x->3E-1x^1,c=:black,line=:dash,label="MSD ∼ t")
+plot!([NaN,NaN],c=1,rib = 0,label="Square")
+plot!([NaN,NaN],c=2,rib = 0,label="RSA")
+plot!([NaN,NaN],c=3,rib = 0,label="Random")
+plot!([NaN,NaN],c=:grey,line=:solid,label="+1")
+plot!([NaN,NaN],c=:grey,line=:dash,label="-1")
+plot!(times[2:end],x->3E-1x^1,c=:black,line=:solid,label="MSD ∼ t")
 p
 # savefig("figures/two_defects/MSD.png")
 
