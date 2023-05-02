@@ -11,12 +11,12 @@ N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
 
 # Initialisation parameters
 init_pos = "square"
-init_theta = "2Dwave"
+init_theta = "hightemp"
 r0 = round(Int,Lx/2)
 q = 1.0
 
 # Phonons parameters, for immobile particles (v = 0) only
-phonons = true
+phonons = false
 if phonons @assert v0 == 0.0 "Phonons only make sense for immobile particles! " end
 if phonons @assert init_theta ≠ "single" "Phonons only make sense for PBC! " end
 if phonons @assert aspect_ratio == 1 "Phonons only implemented for square box ! (for now) " end

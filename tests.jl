@@ -8,11 +8,26 @@ plot()
 
 ## ----------------- Initialisation and Visualisation Tests ----------------- ##
 include("parameters.jl")
+params_init[:init_theta] = "single"
+param[:params_init] = params_init
+param[:R0] = 1.1
 system = System(param)
-plot_thetas(system, particles=true, vertical=true, defects=true)
+plot_thetas(system, particles=false, vertical=false, defects=false)
+evolve!(system,100)
+plot_thetas(system, particles=false, vertical=false, defects=true)
+title!("n = $(number_defects(system))")
 
-# evolve!(system,100)
 # @btime update!($system)
+##
+include("parameters.jl")
+params_init[:init_theta] = "single"
+param[:params_init] = params_init
+param[:R0] = 1
+system = System(param)
+plot_thetas(system, particles=false, vertical=false, defects=false)
+times = 0:1:10
+dft = DefectTracker(system, 0)
+dft, system = track!(dft,system,times,verbose=true)
 ##
 evolve!(system, system.t + 1)
 poss = get_pos(system)

@@ -3,7 +3,7 @@ include("IDrealisation.jl");
 using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
-## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+## ---------------- Impact on MSD of R0 for square lattice  ---------------- ##
 comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
 Ntarget = Int(1E4)
@@ -15,41 +15,91 @@ rho = 1
 rhoc = 4.51 / π
 v0 = 0 
 sigma = 0
+init_theta = "single"
 q = 1.0
-params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
+phonons = false ; phonon_amplitude = 1 ; phonon_k = 1  ; phonon_omega = 0 
+params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
+
 tmax = 1E2
 times = 0:5:tmax # linear time
 
-inits_pos = ["square","rsa","random","pds"]
-R0s = [2,2,1.95]
-init_theta = "single"
-qs = [+1,-1]
-dfts = Array{DefectTracker}(undef, length(inits_pos),length(qs),length(Ts))
+inits_pos = ["square"]
+R0s = [1.01,sqrt(2),2,sqrt(5)]
+R0s = [1.1]
+dfts = Array{DefectTracker}(undef, length(inits_pos),length(R0s),length(Ts))
 
-z = @elapsed for i in each(inits_pos), j in each(qs), k in each(Ts)
-    R0 = R0s[i]
+z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts)
     init_pos = inits_pos[i]
-	q = qs[j]
+    R0 = R0s[j]
 	T = Ts[k]
 
-    println("$init_pos, $init_theta R0 = $R0, q = $q, T = $T")
+    println("$init_pos, $init_theta R0 = $R0, T = $T")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
 
     t = 0.0
     system = System(param)
     dft = DefectTracker(system, t)
-    dft, system = track!(dft,system,times,verbose=false)
+    dft, system = track!(dft,system,times,verbose=true)
 	dfts[i,j,k] = dft
 end
 prinz(z)
 
-filename = "data/immobile_DFT_single_r$real.jld2"
-JLD2.@save filename qs R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
+# filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
+# JLD2.@save filename R0s Ts inits_pos dfts params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
+
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# Ts = [0.1,0.2,0.3,0.4]
+# Ts = [0.4]
+# R0 = 1
+# rho = 1 
+# rhoc = 4.51 / π
+# v0 = 0 
+# sigma = 0
+# q = 1.0
+# params_init = Dict(:init_pos => NaN, :init_theta => NaN, :r0 => NaN, :q => q)
+# tmax = 1E2
+# times = 0:5:tmax # linear time
+
+# inits_pos = ["square","rsa","random","pds"]
+# R0s = [2,2,1.95]
+# init_theta = "single"
+# qs = [+1,-1]
+# dfts = Array{DefectTracker}(undef, length(inits_pos),length(qs),length(Ts))
+
+# z = @elapsed for i in each(inits_pos), j in each(qs), k in each(Ts)
+#     R0 = R0s[i]
+#     init_pos = inits_pos[i]
+# 	q = qs[j]
+# 	T = Ts[k]
+
+#     println("$init_pos, $init_theta R0 = $R0, q = $q, T = $T")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+
+#     t = 0.0
+#     system = System(param)
+#     dft = DefectTracker(system, t)
+#     dft, system = track!(dft,system,times,verbose=false)
+# 	dfts[i,j,k] = dft
+# end
+# prinz(z)
+
+# filename = "data/immobile_DFT_single_r$real.jld2"
+# JLD2.@save filename qs R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
 
 # ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
 # comments = "From the defects data, one will be able to infer : \n

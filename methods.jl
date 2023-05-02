@@ -353,8 +353,7 @@ function plot_thetas(system; particles=false, vertical=false,
     thetas_cg = cg(system)
     p_cg = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0))
     if defects 
-        defects_p, defects_m = spot_defects(system)
-        highlight_defects!(p_cg, system.Lx, system.Ly, defects_p, defects_m)
+        highlight_defects!(p_cg, system)
     end
 
     if vertical 
@@ -392,20 +391,20 @@ function plot_thetas(system; particles=false, vertical=false,
     #     thetas_cg = cg(system)
     #     final_plot = heatmap(mod.(thetas_cg, 2pi)', clims=(0, 2pi), c=cols, size=size, aspect_ratio=Ly / Lx, xlims=(0, Lx/system.rho/system.R0), ylims=(0, Ly/system.rho/system.R0), title=title)
     #     if defects 
-    #         defects_p, defects_m =  spot_defects(system)
-    #         highlight_defects!(final_plot, system.Lx, system.Ly, defects_p, defects_m)
+    #         highlight_defects!(final_plot, system)
     #     end
     # end
     return final_plot
 end
 
-function highlight_defects!(p, Lx, Ly, defects_p, defects_m, symbP=:circle, symbM=:utriangle)
+function highlight_defects!(p, system, symbP=:circle, symbM=:utriangle)
+    defects_p, defects_m = spot_defects(system)
     for defect in defects_p
         # scatter!((defect[2],Ly-defect[1]), m=(1.5, 6., symbP, :transparent, stroke(1.2, :grey85)))
-        scatter!((defect[1:2]), m=(1.5, 6., symbP, :transparent, stroke(1.2, :grey85)))
+        scatter!((defect[1:2] ./ system.R0), m=(1.5, 6., symbP, :transparent, stroke(1.2, :grey85)))
     end
     for defect in defects_m
-        scatter!((defect[1:2]), m=(1.5, 6., symbM, :transparent, stroke(1.2, :grey85)))
+        scatter!((defect[1:2] ./ system.R0), m=(1.5, 6., symbM, :transparent, stroke(1.2, :grey85)))
     end
     # xlims!((1, Lx))
     # ylims!((1, Ly))
