@@ -13,7 +13,7 @@ param[:params_init] = params_init
 param[:R0] = 1.1
 system = System(param)
 plot_thetas(system, particles=false, vertical=false, defects=false)
-evolve!(system,100)
+evolve!(system,10)
 plot_thetas(system, particles=false, vertical=false, defects=true)
 title!("n = $(number_defects(system))")
 

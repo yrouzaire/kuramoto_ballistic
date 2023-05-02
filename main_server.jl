@@ -25,8 +25,7 @@ tmax = 1E2
 times = 0:5:tmax # linear time
 
 inits_pos = ["square"]
-R0s = [1.01,sqrt(2),2,sqrt(5)]
-R0s = [1.1]
+R0s = [1.1,sqrt(2),2,sqrt(5)] # 1.1 instead of 1, because I have some problems with PBC for Ro = 1 and for regular square lattice, 1 or 1.1 doesn't change anything
 dfts = Array{DefectTracker}(undef, length(inits_pos),length(R0s),length(Ts))
 
 z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts)
@@ -50,8 +49,8 @@ z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts)
 end
 prinz(z)
 
-# filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
-# JLD2.@save filename R0s Ts inits_pos dfts params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
+filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
+JLD2.@save filename R0s Ts inits_pos dfts params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
 
 # ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
 # comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
