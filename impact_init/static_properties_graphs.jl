@@ -2,7 +2,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian, LambertW, Graphs, Compose, GraphPlot
 include("../methods.jl")
 using Plots, ColorSchemes, LaTeXStrings
-gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
 cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 
@@ -90,7 +90,7 @@ end
 # p1
 # savefig("impact_init/figures/static_properties_graphs/degree_distribution.png")
 ## --------------- Visualisation nnn and components --------------- ##
-msss = 1
+msss = 3
 p2_subs = Array{Any}(undef, 3, length(lattice_types))
 # gplot
 for i in each(graphs)
@@ -103,7 +103,7 @@ for i in each(systems)
 	scatter!([el[1] for el in pos], [el[2] for el in pos], 
 	marker_z=length.(get_list_neighbours(systems[i])), 
 	markerstrokewidth=0, markersize=msss,size=(500,400),
-	c=cgrad([:black, :blue, :green, :orange, :red]))
+	c=cgrad([:black, :blue, :green, :orange, :red]),title=labels[i])
 	p2_subs[2,i] = tmp
 end
 # components
@@ -116,16 +116,16 @@ for i in each(systems)
 	c=cgrad([:black, :blue, :green, :orange, :red]))
 	p2_subs[3,i] = tmp
 end
-# p2 = plot(p2_subs[2,1], p2_subs[2,2], p2_subs[2,3], p2_subs[2,4],
+p2 = plot(p2_subs[2,1], p2_subs[2,2], p2_subs[2,3], p2_subs[2,4])
 # p2_subs[3,1], p2_subs[3,2], p2_subs[3,3], p2_subs[3,4], 
 # layout=(2,length(lattice_types)), size=(2000,800))
 
-p2_subs[2,4]
 
 # p2 = plot(p2_subs[2,:]..., layout=(1,length(lattice_types)), size=(2000,400))
 # title!("Number of neighbours")
 # savefig("impact_init/figures/static_properties_graphs/vizu_nnn_cc.png")
-
+p2 = plot(p2_subs[2,1], p2_subs[2,2], p2_subs[2,3], p2_subs[2,4],layout=(2,2), size=(1000,800))
+savefig(p2,"impact_init/figures/static_properties_graphs/vizu_nnn.png")
 
 ## --------------- Influence R0 on Connected Components --------------- ##
 include("../parameters.jl")

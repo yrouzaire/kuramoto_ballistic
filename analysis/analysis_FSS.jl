@@ -1,7 +1,6 @@
 cd("D:/Documents/Research/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
 include("../methods.jl");
-const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
 pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 plot();
@@ -50,11 +49,11 @@ finalts = [findfirst(x->x>0.95finalPs[i], Ps_avg[1,i,2:end]) for i in 1:length(N
 plot!(Ntargets, times[finalts],m=true,axis=:log,c=1)
 # σ = 0.1
 finalPs = Ps_avg[2,:,30]
-finalts = [findfirst(x->x>0.95finalPs[i], Ps_avg[1,i,2:end]) for i in 1:length(Ntargets)]
+finalts = [findfirst(x->x>0.95finalPs[i], Ps_avg[2,i,2:end]) for i in 1:length(Ntargets)]
 plot!(Ntargets, times[finalts],m=true,axis=:log,c=2)
 # fits
-plot!(Ntargets, 2E-2Ntargets.*log.(Ntargets),c=:black,axis=:log, label="N log(N)")
-plot!(Ntargets, 1E-1Ntargets,c=:black,axis=:log, label="N", line=:dash)
+plot!(Ntargets, 2.5E-2Ntargets.*log.(Ntargets),c=:black,axis=:log, label=L"N\,\log(N)")
+plot!(Ntargets, 1.5E-1Ntargets,c=:black,axis=:log, label=L"N", line=:dash,lw=0.7)
 # savefig("figures/FSS_relaxation_time/relaxation_time.png")
 
 ## ------------- Check if Steady State reached ------------- 
@@ -80,13 +79,13 @@ plot(p,p2,layout=(1,2),size=(800,400))
 
 ## ------------- Impact of N on final quantities ------------- 
 ## P 
-times_to_plot = [10,15,20,25,26,27,28,29,30]
+times_to_plot = [10,15,20,23,25,26,28,29,30]
 p1=plot(xaxis=:log, legend=false, xlabel="1/N", ylabel="P",size=(400,400))
 for t in times_to_plot
 	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
 end
 plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
-plot!(1 ./Ntargets, 8.2E-1 * (Ntargets).^-0.012, c=:black,line=:dot, label=L"1/\sqrt{N}")
+plot!(1 ./Ntargets, 8.6E-1 * (Ntargets).^-0.015, c=:black,line=:dot, label=L"1/\sqrt{N}")
 # plot!(1 ./Ntargets, 8E-0 ./ log.(Ntargets), c=:black,line=:dot, label=L"1/\sqrt{N}")
 p1
 
@@ -96,10 +95,11 @@ for t in times_to_plot
 	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
 end
 plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
-plot!(1 ./Ntargets, 8.2E-1 * (Ntargets).^-0.012, c=:black,line=:dot, label=L"N^{-0.012}")
+plot!(1 ./Ntargets, 8.6E-1 *  (Ntargets).^-0.015, c=:black,line=:dot, label=L"N^{-0.015}")
 p2
+
 plot(p1,p2,layout=(1,2),size=(1000,400))
-# savefig("figures/FSS_relaxation_time/FSS_.svg")
+# savefig("figures/FSS_relaxation_time/FSS.svg")
 ## ------------- Regular plots at fixed N ------------- 
 ## Plot n vs t
 p=plot(axis=:log, legend=false, xlabel="t", ylabel="n(t)/L²")

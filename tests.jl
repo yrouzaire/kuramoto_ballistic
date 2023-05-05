@@ -10,10 +10,10 @@ plot()
 include("parameters.jl")
 params_init[:init_theta] = "single"
 param[:params_init] = params_init
-param[:R0] = 1.1
+param[:R0] = 2
 system = System(param)
 plot_thetas(system, particles=false, vertical=false, defects=false)
-evolve!(system,10)
+evolve!(system,1)
 plot_thetas(system, particles=false, vertical=false, defects=true)
 title!("n = $(number_defects(system))")
 

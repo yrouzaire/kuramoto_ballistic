@@ -14,7 +14,7 @@ println("There are $(length(indices))/$R files.")
 
 
 ## Impact R0 on MSD (Square Lattice)
-@load base_filename*"_r$(indices[1]).jld2" R0s Ts inits_pos dfts params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtime
+@load base_filename*"_r$(indices[1]).jld2" R0s Ts inits_pos dfts R_per_core params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtime
 runtimes = NaN*zeros(R)
 dfts_fusion = Array{DefectTracker}[] 
 for r in indices
@@ -25,7 +25,7 @@ for r in indices
     runtimes[r] = runtime
 end
 
-@save base_filename*".jld2" R R0s Ts inits_pos dfts_fusion params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtimes
+@save base_filename*".jld2" R R0s Ts inits_pos dfts_fusion R_per_core params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtimes
 println("Fusionned data saved in $(base_filename*".jld2") .")
 
 # ## Single Defects  Motion (immobile particles)

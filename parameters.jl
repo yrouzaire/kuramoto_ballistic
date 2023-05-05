@@ -1,5 +1,5 @@
 # Physical parameters 
-Ntarget = Int(1E4)
+Ntarget = Int(1E3)
 aspect_ratio = 1
 rho = 1
 T = 0.1

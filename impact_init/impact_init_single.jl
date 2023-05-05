@@ -16,7 +16,7 @@ Reff = length(dfts_fusion)
 inits_pos 
 R0s
 qs
-
+Ntarget 
 dfts_fusion[1]
 # MSD(t) & G(x,t) of individual defects
 dx_P = [[] for i in each(inits_pos), j in each(qs), k in each(Ts), l in each(times), r in each(dfts_fusion)]

@@ -90,7 +90,7 @@ plot!([NaN,NaN],line=:solid,c=:grey,label="Square (XY)")
 plot!([NaN,NaN],line=:dash,c=:grey,label="RSA")
 plot!([NaN,NaN],line=:dot,c=:grey,label="Random")
 p1
-# savefig("impact_init/figures/Rt_T$(Ts[ind_T]).png")
+savefig("impact_init/figures/Rt_T$(Ts[ind_T]).png")
 ##
 p2=plot(ylabel=L"R(t^*)", xlabel=L"t^*", legend=false,axis=:log)
 for i in 1#each(R0s)

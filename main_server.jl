@@ -6,7 +6,7 @@ include("methods.jl");
 ## ---------------- Impact on MSD of R0 for square lattice  ---------------- ##
 comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
-Ntarget = Int(1E4)
+Ntarget = Int(1E3)
 aspect_ratio = 1
 Ts = [0.1,0.2,0.3,0.4]
 Ts = [0.4]
@@ -17,18 +17,21 @@ v0 = 0
 sigma = 0
 init_theta = "single"
 q = 1.0
+r0 = 10
 phonons = false ; phonon_amplitude = 1 ; phonon_k = 1  ; phonon_omega = 0 
 params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
 params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
 
-tmax = 1E2
+R_per_core = 30
+
+tmax = 5E2
 times = 0:5:tmax # linear time
 
 inits_pos = ["square"]
 R0s = [1.1,sqrt(2),2,sqrt(5)] # 1.1 instead of 1, because I have some problems with PBC for Ro = 1 and for regular square lattice, 1 or 1.1 doesn't change anything
-dfts = Array{DefectTracker}(undef, length(inits_pos),length(R0s),length(Ts))
+dfts = Array{DefectTracker}(undef, length(inits_pos),length(R0s),length(Ts),R_per_core)
 
-z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts)
+z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts), r in 1:R_per_core
     init_pos = inits_pos[i]
     R0 = R0s[j]
 	T = Ts[k]
@@ -45,12 +48,12 @@ z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts)
     system = System(param)
     dft = DefectTracker(system, t)
     dft, system = track!(dft,system,times,verbose=true)
-	dfts[i,j,k] = dft
+	dfts[i,j,k,r] = dft
 end
 prinz(z)
 
-filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
-JLD2.@save filename R0s Ts inits_pos dfts params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
+# filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
+# JLD2.@save filename R0s Ts inits_pos dfts R_per_core params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
 
 # ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
 # comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
