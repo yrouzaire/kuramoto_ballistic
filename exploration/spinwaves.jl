@@ -8,6 +8,120 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     plot()
 &
 
+## ------------------------------ Cluster data analysis ------------------------------ ##
+filename = "data/proba_spinwaves.jld2"
+@load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
+hrun(runtimes) 
+Rtot
+tmax
+
+proba_spinwave = all_nb_detected_spinwave/Rtot
+
+
+all_nb_detected_spinwave
+all_times_detected_spinwave
+all_Ps_detected_spinwave
+all_thetas_detected_spinwave
+all_pos_detected_spinwave
+
+##
+p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
+for j in 3#each(sigmas)
+    plot!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
+end
+p
+
+## Plot spinwave
+ind_v0 = 3
+ind_sig = 3
+reall = rand(1:Int(all_nb_detected_spinwave[ind_v0,ind_sig]))
+scatter(all_pos_detected_spinwave[ind_v0,ind_sig][reall],
+    marker_z=mod.(all_thetas_detected_spinwave[ind_v0,ind_sig][reall],2π),
+    c=cols,markersize=2,aspect_ratio=1,legend=false,
+    title = "v,σ=$(v0s[ind_v0]),$(sigmas[ind_sig])  P=$(all_Ps_detected_spinwave[ind_v0,ind_sig][reall])")
+
+
+
+
+## --------------- Development P-Criteria && n == 0 to detect spin waves --------------- ##
+include("../parameters.jl")
+# Fixed important params 
+Ntarget = Int(1E4)
+aspect_ratio = 1
+rho = 1
+T = 0.1
+N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+init_pos = "random"
+init_theta = "hightemp"
+
+# Scanned params
+p_thresholds = [0.3,0.5]
+sigmas = [0]
+v0s = collect(0.5:0.5:5) 
+v0s = [5]
+
+R_per_core = 1 
+tmax = 1E2 # max time
+times = [tmax]
+
+m = 0 
+M = length(v0s)*length(sigmas)*R_per_core
+nb_detected_spinwave = zeros(length(v0s),length(sigmas), length(p_thresholds))
+plot_detected_spinwave = [Any[] for i in each(v0s), j in each(sigmas), k in each(p_thresholds)]
+
+z = @elapsed for i in each(v0s)
+    for j in each(sigmas)
+        v0 = v0s[i]
+        sigma = sigmas[j]
+
+        params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+        params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+        param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+
+        for r in 1:R_per_core
+            global m += 1
+            println("v0 = $v0, σ = $sigma, r = $r : Simu #$m/$M")
+            system = System(param)
+
+            for tt in eachindex(times)
+                evolve!(system, times[tt])
+                P = round(polarOP(system)[1],digits=2)
+                n = number_defects(system)
+                for k in each(p_thresholds)
+                    if P < p_thresholds[k] && n == 0
+                        println("v0 = $v0, σ = $sigma, P = $P < $(p_thresholds[k])")
+                        p=plot_thetas(system,particles=true,nb_neighbours=true,defects=true,vertical=true,size=(512,512))
+                        title!("v0 = $v0, σ = $sigma, P = $P, t = $(times[tt])")
+                        push!(plot_detected_spinwave[i,j,k],p)
+                        nb_detected_spinwave[i,j,k] += 1
+                    end
+                end
+            end
+        end
+    end
+end
+prinz(z) 
+# prinz(1000/40*10*3*z) 
+
+# filename = "data/looking_for_spinwaves/proba_N$(Ntarget)_rho$(rho)_v$(v0s[1])_$(init_pos)_σ$(sigmas[1]).jld2"
+# @save filename proba_spinwave nb_detected_spinwave plot_detected_spinwave sigmas v0s R tmax times p_threshold 
+
+##
+styless = [:solid,:dash,:dot]
+p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
+for j in each(sigmas), k in each(p_thresholds)
+    plot!(p,v0s,proba_spinwave[:,j,k],label="σ = $(sigmas[j]), p* = $(p_thresholds[k])",
+    line=styless[k],c=j)
+end
+p
+
+## Visualisation of the spinwave 
+plot_detected_spinwave[1,1,1][1]
+
+
+## --------------------- Old work ---------------------
 ## Generation of many realisations for a given parameter set
 Ns = Int.(1E4)
     rhos = [1]
@@ -74,7 +188,7 @@ z = @elapsed for a in eachindex(Ns)
 end
 prinz(z)
 
-# jldsave("data/looking_for_spinwaves/SPINWAVE_N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
+# jldsave("data/looking_for_spinwaves/proba_N$(Ns[1])_rho$(rhos[1])_v$(v0s)_$(inits[1])_σ$(sigmas).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
 jldsave("data/looking_for_spinwaves/N$(Ns[1])_rho$(rhos[1])_v$(v0s[1])_$(inits[1])_σ$(sigmas[1]).jld2";R,P,n,pos_saved,thetas_saved,psis_saved,omegas_saved,Ns,rhos,sigmas,Ts,v0s,inits,tmax)
 
 ro = 1
