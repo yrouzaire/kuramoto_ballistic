@@ -1,7 +1,7 @@
 using JLD2, Parameters
 include("methods.jl");
 
-base_filename = "data/immobile_DFT_single_impactR0" # look up in main_server.jl
+base_filename = "data/mobility_defects_sigma_v0" # look up in main_server.jl
 R = 40 # look up into bash_loog.sh
 indices = [];
 for r in 1:R
@@ -11,22 +11,75 @@ for r in 1:R
 end;
 println("There are $(length(indices))/$R files.")
 
-
-
-## Impact R0 on MSD (Square Lattice)
-@load base_filename*"_r$(indices[1]).jld2" R0s Ts inits_pos dfts R_per_core params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtime
+## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
+@load base_filename*"_r$(indices[1]).jld2" sigmas v0s Ts xy_pos xy_neg rr times_collision R_per_core params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtime
 runtimes = NaN*zeros(R)
-dfts_fusion = Array{DefectTracker}[] 
-for r in indices
-    println("r = $r")
-    @load base_filename*"_r$r.jld2" dfts runtime
-    push!(dfts_fusion,dfts)
+Rtot = R_per_core*length(indices)
+all_xy_pos = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),Rtot)
+all_xy_neg = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),Rtot)
+all_rr = Array{Vector{Number}}(undef,length(v0s),length(sigmas),length(Ts),Rtot)
+all_times_collision = zeros(length(v0s),length(sigmas),length(Ts),Rtot)
 
+r_ind = 0
+for r in indices
+    global r_ind += 1
+    println("r = $r")
+    @load base_filename*"_r$r.jld2" xy_pos xy_neg rr times_collision runtime
+    all_xy_pos[:,:,:,R_per_core*(r_ind-1)+1:R_per_core*r_ind] = xy_pos
+    all_xy_neg[:,:,:,R_per_core*(r_ind-1)+1:R_per_core*r_ind] = xy_neg
+    all_rr[:,:,:,R_per_core*(r_ind-1)+1:R_per_core*r_ind] = rr
+    all_times_collision[:,:,:,R_per_core*(r_ind-1)+1:R_per_core*r_ind] = times_collision
     runtimes[r] = runtime
 end
 
-@save base_filename*".jld2" R R0s Ts inits_pos dfts_fusion R_per_core params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtimes
+@save base_filename*".jld2" sigmas v0s Ts all_xy_pos all_xy_neg all_rr all_times_collision R_per_core Rtot params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtimes
 println("Fusionned data saved in $(base_filename*".jld2") .")
+
+# ## Proba Spinwaves impact v0 and σ
+# @load base_filename*"_r$(indices[1]).jld2" nb_detected_spinwave systems_detected_spinwave times_detected_spinwave thetas_detected_spinwave pos_detected_spinwave Ps_detected_spinwave R_per_core sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtime
+# runtimes = NaN*zeros(R)
+# all_nb_detected_spinwave = zeros(length(v0s),length(sigmas))
+# all_times_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
+# all_Ps_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
+# all_thetas_detected_spinwave = [Vector{Float16}[] for i in each(v0s), j in each(sigmas)]
+# all_pos_detected_spinwave = [Vector{Tuple{Number,Number}}[] for i in each(v0s), j in each(sigmas)]
+# all_systems_detected_spinwave = [System[] for i in each(v0s), j in each(sigmas)]
+# for r in indices
+#     println("r = $r")
+#     @load base_filename*"_r$r.jld2" nb_detected_spinwave runtime times_detected_spinwave thetas_detected_spinwave pos_detected_spinwave Ps_detected_spinwave systems_detected_spinwave
+#     global all_nb_detected_spinwave += nb_detected_spinwave
+#     for i in each(v0s), j in each(sigmas)
+#         n = length(times_detected_spinwave[i,j])
+#         for nn in 1:n
+#             push!(all_times_detected_spinwave[i,j], times_detected_spinwave[i,j][nn])
+#             push!(all_Ps_detected_spinwave[i,j], Ps_detected_spinwave[i,j][nn])
+#             push!(all_thetas_detected_spinwave[i,j], thetas_detected_spinwave[i,j][nn])
+#             push!(all_pos_detected_spinwave[i,j], pos_detected_spinwave[i,j][nn])
+#             push!(all_systems_detected_spinwave[i,j], systems_detected_spinwave[i,j][nn])
+#         end
+#     end
+#     runtimes[r] = runtime
+# end
+# Rtot = R_per_core*length(indices)
+
+# @save base_filename*".jld2" R_per_core Rtot R all_systems_detected_spinwave all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
+# println("Fusionned data saved in $(base_filename*".jld2") .")
+
+
+# ## Impact R0 on MSD (Square Lattice)
+# @load base_filename*"_r$(indices[1]).jld2" R0s Ts inits_pos dfts R_per_core params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtime
+# runtimes = NaN*zeros(R)
+# dfts_fusion = Array{DefectTracker}[] 
+# for r in indices
+#     println("r = $r")
+#     @load base_filename*"_r$r.jld2" dfts runtime
+#     push!(dfts_fusion,dfts)
+
+#     runtimes[r] = runtime
+# end
+
+# @save base_filename*".jld2" R R0s Ts inits_pos dfts_fusion R_per_core params_init Ntarget v0 q sigma aspect_ratio times tmax comments rhoc runtimes
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 # ## Single Defects  Motion (immobile particles)
 # @load base_filename*"_r$(indices[1]).jld2" qs R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime

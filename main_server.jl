@@ -3,40 +3,141 @@ include("IDrealisation.jl");
 using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
-## ---------------- Impact on MSD of R0 for square lattice  ---------------- ##
+# ## ---------------- Proba Spinwaves ---------------- ##
+# # Fixed important params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# rho = 1
+# T = 0.1
+# R0 = 1
+# N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+# init_pos = "random"
+# init_theta = "hightemp"
+
+# # Useless params
+# r0 = round(Int,Lx/2)
+# q = 1.0
+# phonons = false
+# if phonons @assert v0 == 0.0 "Phonons only make sense for immobile particles! " end
+# if phonons @assert init_theta ≠ "single" "Phonons only make sense for PBC! " end
+# if phonons @assert aspect_ratio == 1 "Phonons only implemented for square box ! (for now) " end
+# phonon_amplitude = 1
+# phonon_k = 1*(2π/Lx) # wavenumber
+# phonon_omega = 0 # "frequency" (up to a factor 2π)
+
+# # Scanned params
+# p_threshold = 0.5
+# sigmas = [0,0.1,0.2]
+# v0s = collect(0.5:0.5:5) 
+# # v0s = [5]
+
+# R_per_core = 25
+# tmax = 1E3 # max time
+# times = tmax/50:tmax/50:tmax
+
+# m = 0 
+# M = length(v0s)*length(sigmas)*R_per_core
+# nb_detected_spinwave = zeros(Int,length(v0s),length(sigmas))
+# times_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
+# Ps_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
+# thetas_detected_spinwave = [Vector{Float16}[] for i in each(v0s), j in each(sigmas)]
+# pos_detected_spinwave = [Vector{Tuple{Number,Number}}[] for i in each(v0s), j in each(sigmas)]
+# systems_detected_spinwave = [System[] for i in each(v0s), j in each(sigmas)]
+
+
+# z = @elapsed for i in each(v0s)
+#     for j in each(sigmas)
+#         v0 = v0s[i]
+#         sigma = sigmas[j]
+
+#         params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#         params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+#         param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+
+#         for r in 1:R_per_core
+#             global m += 1
+#             println("v0 = $v0, σ = $sigma, r = $r : Simu #$m/$M")
+#             system = System(param)
+
+#             for tt in eachindex(times)
+#                 evolve!(system, times[tt])
+#                 n = number_defects(system)
+#                 if n == 0
+#                     P = round(polarOP(system)[1],digits=2)
+#                     if P < p_threshold 
+#                         println("v0 = $v0, σ = $sigma, P = $P < $(p_threshold)")
+#                         nb_detected_spinwave[i,j] += 1
+#                         push!(times_detected_spinwave[i,j],times[tt])
+#                         push!(Ps_detected_spinwave[i,j],P)
+#                         push!(thetas_detected_spinwave[i,j],get_thetas(system))
+#                         push!(pos_detected_spinwave[i,j],get_pos(system))
+#                         push!(systems_detected_spinwave[i,j],system)
+#                         # p=plot_thetas(system)
+#                         # display(p)
+#                     end
+#                     println("n=0, simulation stopped at t = $(times[tt])")
+#                     break # en dehors du if parce que si n == 0 de toute facon continuer la simu n'a aucun sens 
+#                 end
+#             end
+#         end
+#     end
+# end
+# prinz(z)
+
+# # systems_detected_spinwave
+# # nb_detected_spinwave
+# # pos_detected_spinwave
+# # thetas_detected_spinwave
+# # Ps_detected_spinwave
+# # times_detected_spinwave
+
+# filename = "data/proba_spinwaves_r$real.jld2"
+# JLD2.@save filename nb_detected_spinwave times_detected_spinwave systems_detected_spinwave Ps_detected_spinwave thetas_detected_spinwave pos_detected_spinwave R_per_core sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtime = z
+
+
+## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
 comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
 Ntarget = Int(1E3)
 aspect_ratio = 1
-Ts = [0.1,0.2,0.3,0.4]
-Ts = [0.4]
 R0 = 1
 rho = 1 
 rhoc = 4.51 / π
-v0 = 0 
-sigma = 0
-init_theta = "single"
+init_theta = "pair"
+init_pos = "random"
 q = 1.0
-r0 = 10
+r0 = round(Int,sqrt(Ntarget)/rho/2)
 phonons = false ; phonon_amplitude = 1 ; phonon_k = 1  ; phonon_omega = 0 
 params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
 params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
 
-R_per_core = 30
+R_per_core = 2
 
 tmax = 5E2
 times = 0:5:tmax # linear time
 
-inits_pos = ["square"]
-R0s = [1.1,sqrt(2),2,sqrt(5)] # 1.1 instead of 1, because I have some problems with PBC for Ro = 1 and for regular square lattice, 1 or 1.1 doesn't change anything
-dfts = Array{DefectTracker}(undef, length(inits_pos),length(R0s),length(Ts),R_per_core)
+sigmas = [0,0.05,0.1]
+sigmas = [0.1]
 
-z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts), r in 1:R_per_core
-    init_pos = inits_pos[i]
-    R0 = R0s[j]
+Ts = [0.1,0.2,0.3,0.4]
+Ts = [0.1]
+
+v0s = collect(0.5:0.25:3)
+v0s = [5]
+
+xy_pos = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
+xy_neg = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
+rr = Array{Vector{Number}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
+times_collision = times[end]*ones(length(v0s),length(sigmas),length(Ts),R_per_core)
+
+z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_core
+    v0 = v0s[i]
+    sigma = sigmas[j]
 	T = Ts[k]
 
-    println("$init_pos, $init_theta R0 = $R0, T = $T")
+    println("v0 = $v0, σ = $sigma, T = $T")
     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
     
     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
@@ -46,15 +147,115 @@ z = @elapsed for i in each(inits_pos), j in each(R0s), k in each(Ts), r in 1:R_p
 
     t = 0.0
     system = System(param)
-    dft = DefectTracker(system, t)
-    dft, system = track!(dft,system,times,verbose=true)
-	dfts[i,j,k,r] = dft
+    defects_pos, defects_neg =  spot_defects(system)
+    xy_pos_tmp = [defects_pos[1][1:2]]
+    xy_neg_tmp = [defects_neg[1][1:2]]
+    r_tmp = [dist(defects_pos[1][1:2],defects_neg[1][1:2],Lx,Ly)]
+
+    for tt in each(times)
+        evolve!(system, times[tt])
+
+        defects_pos, defects_neg =  spot_defects(system)
+        @assert length(defects_pos) == length(defects_neg)
+        if length(defects_pos) == 1
+            push!(xy_pos_tmp,defects_pos[1][1:2])
+            push!(xy_neg_tmp,defects_neg[1][1:2])
+            push!(r_tmp,dist(defects_pos[1][1:2],defects_neg[1][1:2],Lx,Ly))
+        elseif length(defects_pos) > 1 
+            #= If there are more than one defect, 
+            consider the closest defect as the most probable. =#
+            distance_pos_tmp = Inf 
+            index_closest_pos_tmp = -1
+            for i in each(defects_pos)
+                d = dist(defects_pos[i][1:2], xy_pos_tmp[end], Lx, Ly)
+                if d < distance_pos_tmp
+                    distance_pos_tmp = d
+                    index_closest_pos_tmp = i
+                end
+            end
+            distance_neg_tmp = Inf 
+            index_closest_neg_tmp = -1
+            for i in each(defects_neg)
+                d = dist(defects_neg[i][1:2], xy_neg_tmp[end], Lx, Ly)
+                if d < distance_neg_tmp
+                    distance_neg_tmp = d
+                    index_closest_neg_tmp = i
+                end
+            end
+            push!(xy_pos_tmp,defects_pos[index_closest_pos_tmp][1:2])
+            push!(xy_neg_tmp,defects_neg[index_closest_neg_tmp][1:2])
+            push!(r_tmp,dist(defects_pos[index_closest_pos_tmp][1:2],defects_neg[index_closest_neg_tmp][1:2],Lx,Ly))
+        elseif length(defects_pos) == 0 
+            println("No defects ! Simulation stopped at t = $(times[tt]).")
+            times_collision[i,j,k,r] = times[tt]
+            break
+        end
+    end
+    xy_pos[i,j,k,r] = xy_pos_tmp
+    xy_neg[i,j,k,r] = xy_neg_tmp
+    rr[i,j,k,r] = r_tmp
 end
-prinz(z)
+prinz(z) 
 
-# filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
-# JLD2.@save filename R0s Ts inits_pos dfts R_per_core params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
 
+filename = "data/mobility_defects_sigma_v0_r$real.jld2"
+JLD2.@save filename sigmas v0s Ts xy_pos xy_neg rr times_collision R_per_core params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtime = z
+
+# ## ---------------- MSD Tracking defects  ---------------- ##
+# comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# R0 = 1
+# rho = 1 
+# rhoc = 4.51 / π
+# init_theta = "pair"
+# init_pos = "random"
+# q = 1.0
+# r0 = round(Int,sqrt(Ntarget)/rho/2)
+# phonons = false ; phonon_amplitude = 1 ; phonon_k = 1  ; phonon_omega = 0 
+# params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+# params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
+
+# R_per_core = 1
+
+# tmax = 5E2
+# times = 0:5:tmax # linear time
+
+# sigmas = [0,0.1]
+
+# Ts = [0.1,0.2,0.3,0.4]
+# Ts = [0.1]
+
+# v0s = [0.5,0.75,1,1.5,2,3]
+# v0s = [5]
+
+# dfts = Array{DefectTracker}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
+
+# z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_core
+#     v0 = v0s[i]
+#     sigma = sigmas[j]
+# 	T = Ts[k]
+
+#     println("v0 = $v0, σ = $sigma, T = $T")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+
+#     t = 0.0
+#     system = System(param)
+#     dft = DefectTracker(system, t)
+#     dft, system = track!(dft,system,times,verbose=true)
+# 	dfts[i,j,k,r] = dft
+# end
+# prinz(z)
+
+# # filename = "data/immobile_DFT_single_impactR0_r$real.jld2"
+# # JLD2.@save filename R0s Ts inits_pos dfts R_per_core params_init Ntarget v0 q init_theta sigma aspect_ratio times tmax comments rhoc runtime = z
+# &
 # ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
 # comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # # Physical Params 
