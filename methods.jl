@@ -422,7 +422,7 @@ function cg(system::System{T}) where {T<:AbstractFloat}
     R0 = system.R0
     pos, thetas = get_pos(system), get_thetas(system)
     mesh_size = R0
-    cutoff = 2R0 # for contributions
+    cutoff = 4R0 # for contributions
 
     list, head = construct_cell_list(system) 
     
@@ -973,34 +973,35 @@ mutable struct DefectTracker
         new(defectsP, defectsN, t)
     end
 end
-number_defectsP(dt::DefectTracker) = length(dt.defectsP)
-number_defectsN(dt::DefectTracker) = length(dt.defectsN)
-number_defects(dt::DefectTracker) = length(dt.defectsN) + length(dt.defectsN)
-number_active_defectsP(dt::DefectTracker) = count(isnothing, [d.annihilation_time for d in dt.defectsP])
-number_active_defectsN(dt::DefectTracker) = count(isnothing, [d.annihilation_time for d in dt.defectsN])
-number_active_defects(dt::DefectTracker) = number_active_defectsN(dt) + number_active_defectsP(dt)
+number_defectsP(dft::DefectTracker) = length(dft.defectsP)
+number_defectsN(dft::DefectTracker) = length(dft.defectsN)
+number_defects(dft::DefectTracker) = length(dft.defectsN) + length(dft.defectsN)
+number_active_defectsP(dft::DefectTracker) = count(isnothing, [d.annihilation_time for d in dft.defectsP])
+number_active_defectsN(dft::DefectTracker) = count(isnothing, [d.annihilation_time for d in dft.defectsN])
+number_active_defects(dft::DefectTracker) = number_active_defectsN(dft) + number_active_defectsP(dft)
 
-function ID_active_defects(dt::DefectTracker)
+
+function ID_active_defects(dft::DefectTracker)
     activeP = Int[]
-    for i in 1:number_defectsP(dt)
-        if dt.defectsP[i].annihilation_time == nothing
+    for i in 1:number_defectsP(dft)
+        if dft.defectsP[i].annihilation_time == nothing
             push!(activeP, i)
         end
     end
     activeN = Int[]
-    for i in 1:number_defectsN(dt)
-        if dt.defectsN[i].annihilation_time == nothing
+    for i in 1:number_defectsN(dft)
+        if dft.defectsN[i].annihilation_time == nothing
             push!(activeN, i)
         end
     end
     return activeP, activeN
 end
 
-function add_defect!(dt::DefectTracker; charge, loc)
+function add_defect!(dft::DefectTracker; charge, loc)
     if charge > 0
-        push!(dt.defectsP, Defect(id=1 + number_defectsP(dt), charge=charge, loc=loc, t=dt.current_time))
+        push!(dft.defectsP, Defect(id=1 + number_defectsP(dft), charge=charge, loc=loc, t=dft.current_time))
     else
-        push!(dt.defectsN, Defect(id=1 + number_defectsN(dt), charge=charge, loc=loc, t=dt.current_time))
+        push!(dft.defectsN, Defect(id=1 + number_defectsN(dft), charge=charge, loc=loc, t=dft.current_time))
     end
 end
 
@@ -1071,33 +1072,33 @@ function find_closest_before_annihilation(dt, Lx, Ly, old_loc_defect)
     end
 end
 
-function delete_defect(dft::DefectTracker, id::Int, charge::String)
-    if charge == "+"
-        popat!(dft.defectsP, id)
-    else
-        popat!(dft.defectsN, id)
-    end
-    decrease_annihilation_ids!(dft, id, charge)
-    return dft
-end
+# function delete_defect(dft::DefectTracker, id::Int, charge::String)
+#     if charge == "+"
+#         popat!(dft.defectsP, id)
+#     else
+#         popat!(dft.defectsN, id)
+#     end
+#     decrease_annihilation_ids!(dft, id, charge)
+#     return dft
+# end
 
-function decrease_annihilation_ids!(dft::DefectTracker, id::Int, charge::String)
-    # the id and the charge are those of the defect that was deleted
-    if charge == "+"
-        for def in dft.defectsN
-            if def.id_annihilator > id
-                def.id_annihilator -= 1
-            end
-        end
-    else
-        for def in dft.defectsP
-            if def.id_annihilator > id
-                def.id_annihilator -= 1
-            end
-        end
-    end
-    return dft
-end
+# function decrease_annihilation_ids!(dft::DefectTracker, id::Int, charge::String)
+#     # the id and the charge are those of the defect that was deleted
+#     if charge == "+"
+#         for def in dft.defectsN
+#             if def.id_annihilator > id
+#                 def.id_annihilator -= 1
+#             end
+#         end
+#     else
+#         for def in dft.defectsP
+#             if def.id_annihilator > id
+#                 def.id_annihilator -= 1
+#             end
+#         end
+#     end
+#     return dft
+# end
 
 
 function annihilate_defects(dt::DefectTracker, ids_annihilated_defects, Lx, Ly)
@@ -1122,7 +1123,7 @@ function annihilate_defects(dt::DefectTracker, ids_annihilated_defects, Lx, Ly)
     return dt
 end
 
-function track!(dft::DefectTracker, system::System, times::AbstractVector;verbose=false)
+function track!(dft::DefectTracker, system::System, times::AbstractVector;verbose=false, stop_no_defects=true)
     # Since the DefectTracker has already been initialized, discard t=0 if it exists
     if times[1] == 0
         times = times[2:end]
@@ -1130,19 +1131,27 @@ function track!(dft::DefectTracker, system::System, times::AbstractVector;verbos
     for token in each(times)
         evolve!(system, times[token])
         
-        if number_active_defects(dft) == 0
-            println("Simulation stopped, there is no defects left.")
-            break
-        end
-        if verbose 
-            println("t = ", round(system.t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
-        end
         try
             update_DefectTracker!(dft, system)
         catch e
             println(e)
             println("Previous DefectTracker saved instead and immediate return.")
             return dft, system
+        end
+        if stop_no_defects && number_active_defects(dft) == 0
+            println("Simulation stopped, there is no defects left.")
+            break
+        end
+        if verbose 
+            println("t = ", round(system.t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
+        end
+        if number_active_defectsN(dft) ≠ number_active_defectsP(dft)
+            p = plot_thetas(system,size=(512,512),
+            particles = true, 
+            nb_neighbours = false, 
+            defects = true)
+            title!()
+            display(p)
         end
     end
     return dft, system # times[end] is the last time of the simulation
