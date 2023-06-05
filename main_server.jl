@@ -100,7 +100,7 @@ include("methods.jl");
 ## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
 comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # Physical Params 
-Ntarget = Int(1E3)
+Ntarget = Int(4E3)
 aspect_ratio = 1
 R0 = 1
 rho = 1 
@@ -108,24 +108,24 @@ rhoc = 4.51 / π
 init_theta = "pair"
 init_pos = "random"
 q = 1.0
-r0 = round(Int,sqrt(Ntarget)/rho/2)
+r0 = 28
 phonons = false ; phonon_amplitude = 1 ; phonon_k = 1  ; phonon_omega = 0 
 params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
 params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
 
-R_per_core = 2
+R_per_core = 10
 
-tmax = 5E2
-times = 0:5:tmax # linear time
+tmax = 2000
+times = collect(0:5:tmax) # linear time
 
 sigmas = [0,0.05,0.1]
-sigmas = [0.1]
+# sigmas = [0.1]
 
 Ts = [0.1,0.2,0.3,0.4]
 Ts = [0.1]
 
 v0s = collect(0.5:0.25:3)
-v0s = [5]
+# v0s = [5]
 
 xy_pos = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
 xy_neg = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
@@ -147,12 +147,14 @@ z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_
 
     t = 0.0
     system = System(param)
+
+    # t = 0
     defects_pos, defects_neg =  spot_defects(system)
     xy_pos_tmp = [defects_pos[1][1:2]]
     xy_neg_tmp = [defects_neg[1][1:2]]
     r_tmp = [dist(defects_pos[1][1:2],defects_neg[1][1:2],Lx,Ly)]
 
-    for tt in each(times)
+    for tt in 2:length(times)
         evolve!(system, times[tt])
 
         defects_pos, defects_neg =  spot_defects(system)
