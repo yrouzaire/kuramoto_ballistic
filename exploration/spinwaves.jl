@@ -3,7 +3,7 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
-    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
@@ -24,15 +24,27 @@ all_Ps_detected_spinwave
 all_thetas_detected_spinwave
 all_pos_detected_spinwave
 
-##
+## Probas 
 p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
-for j in 3#each(sigmas)
+for j in each(sigmas)
     plot!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
 end
 p
+# savefig("figures/proba_spinwave.png")
+
+
+## Detection times
+p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
+for j in each(sigmas)
+    histogram!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
+end
+p
+histogram(all_times_detected_spinwave[4,3], bins=20)
+# savefig("figures/proba_spinwave.png")
 
 ## Plot spinwave
-ind_v0 = 3
+gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+ind_v0 = 4
 ind_sig = 3
 reall = rand(1:Int(all_nb_detected_spinwave[ind_v0,ind_sig]))
 scatter(all_pos_detected_spinwave[ind_v0,ind_sig][reall],

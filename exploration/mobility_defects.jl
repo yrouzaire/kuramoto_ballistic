@@ -7,13 +7,13 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
-20*20*10000*128/8/1E9
 
 ## ------------------------------ Cluster data analysis ------------------------------ ##
 filename = "data/mobility_defects_sigma_v0.jld2"
 @load filename sigmas v0s Ts all_xy_pos all_xy_neg all_rr all_times_collision R_per_core Rtot params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtimes
 hrun(runtimes) 
-hrun(runtimes*2*10/4/3*5) 
+
+sigmas
 Rtot
 tmax
 times
@@ -62,56 +62,80 @@ all_rr_reverse_avg = nanmean(all_rr_reverse,5)[:,:,:,:,1]
 all_rr_avg = nanmean(all_rr_,5)[:,:,:,:,1]
 
 ## Ys +
-p=plot(xlabel=L"\sqrt{t}",ylabel="std(y+)")
+p=plot(xlabel=L"t",ylabel="Var(y+)")
 for i in each(v0s)
     for j in 1#each(sigmas)
         for k in each(Ts)
-            plot!(sqrt.(times),[std(ys_pos[i,j,k,t,:]) for t in 1:length(times)])
+            plot!(times,[var(ys_pos[i,j,k,t,:]) for t in 1:length(times)])
         end
     end
 end
-# xlims!(-1,maximum(filter(isnan,vec(ys_pos))))
+xlims!(-10,400)
 p
 
 ## Ys -
-p=plot(xlabel=L"\sqrt{t}",ylabel="std(y-)")
+p=plot(xlabel=L"t",ylabel="Var(y-)")
 for i in each(v0s)
     for j in 1#each(sigmas)
         for k in each(Ts)
-            plot!(sqrt.(times),[std(ys_neg[i,j,k,t,:]) for t in 1:length(times)])
+            plot!(times,[var(ys_neg[i,j,k,t,:]) for t in 1:length(times)])
         end
     end
 end
+xlims!(-10,400)
 p
 
 ## Ys +/-
-p=plot(xlabel=L"\sqrt{t}",ylabel="std(y-)")
+p=plot(xlabel=L"t",ylabel="Var(y±)")
 for i in each(v0s)
     for j in 1#each(sigmas)
         for k in each(Ts)
-            plot!(sqrt.(times),[std(vcat(ys_pos[i,j,k,t,:],ys_neg[i,j,k,t,:])) for t in 1:length(times)])
+            plot!((times),[var(vcat(ys_pos[i,j,k,t,:],ys_neg[i,j,k,t,:])) for t in 1:length(times)])
         end
     end
 end
+xlims!(-10,400)
 p
 
-## Fit the slope of variance in 
-first_index = 7 # robust to any change
-slopes = NaN*zeros(length(v0s), length(sigmas), length(Ts))
+# ## Fit the slope of variance in 
+# first_index = 4 # robust to any change
+# slopes = NaN*zeros(length(v0s), length(sigmas), length(Ts))
 
+# for i in each(v0s)
+#     for j in each(sigmas)
+#         for k in each(Ts)
+#             data = smooth([var(vcat(ys_pos[i,j,k,t,:],ys_neg[i,j,k,t,:])) for t in 1:length(times)],0)
+#             last_index = findfirst(isnan,data)
+#             if isnothing(last_index) last_index = length(data) end
+#             slopes[i,j,k] = (data[last_index-1] - data[first_index])/((times[last_index-1]) - (times[first_index]))
+#         end
+#     end
+# end
+
+# plot(v0s, slopes[:,1,1],m=true)
+# plot!(v0s, 0.02v0s .+ 0.13,c=:black)
+
+## Fit the slope of variance in 
+xx = rand(10,10)
+var(xx[1,:])
+ind0 = 50
+mobilities = NaN*zeros(length(v0s), length(sigmas), length(Ts), length(times)-ind0) # Var(y±) = mobility*v0*t
 for i in each(v0s)
     for j in each(sigmas)
         for k in each(Ts)
-            data = smooth([var(vcat(ys_pos[i,j,k,t,:],ys_neg[i,j,k,t,:])) for t in 1:length(times)],0)
-            last_index = findfirst(isnan,data)
-            if isnothing(last_index) last_index = length(data) end
-            slopes[i,j,k] = (data[last_index-1] - data[first_index])/((times[last_index-1]) - (times[first_index]))
+            for tt in 1+ind0:length(times)
+                var_plus = var(filter(!isnan,ys_pos[i,j,k,tt,:]))
+                var_minus = var(filter(!isnan,ys_neg[i,j,k,tt,:]))
+                mobilities[i,j,k,tt-ind0] = 0.5*(var_minus + var_plus)/(times[tt])
+            end
         end
     end
 end
-
-plot(v0s, slopes[:,1,1],m=true)
-plot!(v0s, 0.08v0s .+ 0.03,c=:black)
+mobilities
+mobilities_avg = nanmean(mobilities,(4))[:,:,:,1]
+##
+plot(v0s,mobilities_avg[1:end,1,2],m=true)
+plot!(v0s, 0.05v0s .+ 0.,c=:black)
 
 ## times_collision
 for i in 1:length(v0s)
@@ -121,10 +145,10 @@ for i in 1:length(v0s)
 end
 
 ## R(t) 
-p=plot(xlabel=L"t", ylabel=L"R(t)", uaxis=:log,ylims=(0,30))
+p=plot(xlabel=L"t", ylabel=L"R(t)", uaxis=:log,ylims=(0,33))
 for i in each(v0s)
     for j in each(sigmas)
-        for k in each(Ts)
+        for k in 1#each(Ts)
             plot!(times[3:end],all_rr_avg[i,j,k,3:end])
         end
     end
@@ -137,20 +161,35 @@ mean_annihilation_time = mean(all_times_collision[end,1,1,:])
 plot!(0:1:mean_annihilation_time,x->28*sqrt((-x+mean_annihilation_time)/mean_annihilation_time),c=:black)
 
 ## R(t*) 
+ind_T = 2
 using LambertW
-p=plot(xlabel=L"t^*", ylabel=L"R(t^*)", axis=:log)
-for i in each(v0s)
+p=plot(xlabel=L"t^*", ylabel=L"R(t^*)", xaxis=:log)
+for i in 2:length(v0s)
     for j in 1#each(sigmas)
-        for k in each(Ts)
-            # plot!(times[2:end],all_rr_reverse_avg[i,j,k,2:end])
-            plot!((v0s[i])*times[2:end],all_rr_reverse_avg[i,j,k,2:end])
-            # plot!(v0s[i]*times[2:end],(0.05+v0s[i])^-0.5*all_rr_reverse_avg[i,j,k,2:end])
+        for k in ind_T
+            plot!(times[2:end],all_rr_reverse_avg[i,j,k,2:end])
         end
     end
 end
-mu = 1
-D = 2
-plot!(times[2:end],x->exp(0.5*lambertw(2π*x/mu)),c=:black)
-plot!(times[2:end],x->D*sqrt(x),c=:black, line=:dash)
-p
+xlims!(0.9,1E3)
+xticks!([1,10,100,1000],[L"10^0",L"10^1",L"10^2",L"10^3"])
 
+pcollapse=plot(xlabel=L"\sqrt{v_0}t^*", ylabel=L"R(t^*)/\sqrt{v_0}", xaxis=:log, legend=:topleft)
+for i in 2:length(v0s)
+    for j in 1#each(sigmas)
+        for k in ind_T
+            plot!(sqrt(v0s[i])*times[2:end],1/sqrt(v0s[i])*all_rr_reverse_avg[i,j,k,2:end], 
+            # plot!(sqrt(0.45*Ts[ind_T]+0.5v0s[i])*times[2:end],1/sqrt(v0s[i])*all_rr_reverse_avg[i,j,k,2:end], 
+            label=L"v_0 = "*"$(v0s[i])", rib=0)
+        end
+    end
+end
+mu = 1/2
+plot!(times[2:700],x->exp(0.5*lambertw(2π*x/mu)),c=:black)
+xlims!(0.9,1E3)
+ylims!(0,40)
+xticks!([1,10,100,1000],[L"10^0",L"10^1",L"10^2",L"10^3"])
+pcollapse
+
+plot(p,pcollapse,layout=(1,2),size=(800,400))
+# savefig("figures/mobility_defects_v0_T$(Ts[ind_T]).pdf")

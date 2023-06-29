@@ -52,7 +52,7 @@ z = @elapsed anim = movies(param, times,
         verbose=true)
 
 prinz(z) 
-filepath = "films/divers/test.mp4"
+filepath = "films/divers/test2.mp4"
 mp4(anim, filepath, fps=30)
 
 
