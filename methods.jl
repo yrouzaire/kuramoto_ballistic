@@ -1146,12 +1146,13 @@ function track!(dft::DefectTracker, system::System, times::AbstractVector;verbos
             println("t = ", round(system.t, digits=1), " & n(t) = ", number_active_defectsP(dft), " + ", number_active_defectsN(dft))
         end
         if number_active_defectsN(dft) ≠ number_active_defectsP(dft)
-            p = plot_thetas(system,size=(512,512),
-            particles = true, 
-            nb_neighbours = false, 
-            defects = true)
-            title!()
-            display(p)
+            # p = plot_thetas(system,size=(512,512),
+            # particles = true, 
+            # nb_neighbours = false, 
+            # defects = true)
+            # title!()
+            # display(p)
+            println("There is a problem, the number of (+) and (-) defects is not the same.")
         end
     end
     return dft, system # times[end] is the last time of the simulation

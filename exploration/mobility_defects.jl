@@ -145,7 +145,7 @@ for i in 1:length(v0s)
 end
 
 ## R(t) 
-p=plot(xlabel=L"t", ylabel=L"R(t)", uaxis=:log,ylims=(0,33))
+p=plot(xlabel=L"t", ylabel=L"R(t)", uaxis=:log)#,ylims=(0,33))
 for i in each(v0s)
     for j in each(sigmas)
         for k in 1#each(Ts)
@@ -156,9 +156,9 @@ end
 p
 
 # Add the theoretical prediction for the fastest curve
-mean_annihilation_time = mean(all_times_collision[end,1,1,:])
-# plot!(0:1:mean_annihilation_time-10,x->3.8exp(0.5*(1+lambertw((mean_annihilation_time-x)*2/exp(1)))),c=:black)
-plot!(0:1:mean_annihilation_time,x->28*sqrt((-x+mean_annihilation_time)/mean_annihilation_time),c=:black)
+# mean_annihilation_time = mean(all_times_collision[end,1,1,:])
+# # plot!(0:1:mean_annihilation_time-10,x->3.8exp(0.5*(1+lambertw((mean_annihilation_time-x)*2/exp(1)))),c=:black)
+# plot!(0:1:mean_annihilation_time,x->28*sqrt((-x+mean_annihilation_time)/mean_annihilation_time),c=:black)
 
 ## R(t*) 
 ind_T = 2

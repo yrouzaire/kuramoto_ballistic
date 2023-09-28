@@ -3,15 +3,19 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
-    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
-
+    
+pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+plot()
+a = 1
 ## ------------------------------ Cluster data analysis ------------------------------ ##
-filename = "data/proba_spinwaves.jld2"
+filename = "data/proba_spinwaves_N1E3.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 hrun(runtimes) 
+Ntarget 
 Rtot
 tmax
 
