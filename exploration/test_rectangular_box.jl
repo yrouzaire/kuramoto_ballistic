@@ -21,12 +21,12 @@ N = Int(1E4)
 ## Il semblerait que je ne retrouve pas le QLRO du XY, essayons quelques simu
 t = 0.0
 params_init = ["hightemp"]
-pos,thetas,psis,omegas = initialisation(N,Lx,Ly,σ,params_init)
+pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
     scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=(512,512),xlims=(0,Lx),ylims=(0,Ly),aspect_ratio=1/aspect_ratio)
 
 while t < 200
     t += dt
-    pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
+    pos,thetas = update(pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt)
 end
     plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
 
@@ -34,18 +34,18 @@ end
 ## Simple update
 t = 0.0
 params_init = ["pair",50]
-pos,thetas,psis,omegas = initialisation(N,Lx,Ly,σ,params_init)
+pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
     scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=(512,512),xlims=(0,Lx),ylims=(0,Ly),aspect_ratio=1/aspect_ratio)
     # plot(corr_fast(pos,thetas,N,L,0.5))
 for i in 1:100
-    pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
+    pos,thetas = update(pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt)
 end
 scatter(pos[1,:],pos[2,:],marker_z = mod.(thetas,2pi),color=cols,clims=(0,2pi),ms=275/Lx,size=(512,512),xlims=(0,Lx),ylims=(0,Ly),aspect_ratio=1/aspect_ratio)
 plot(pos,thetas,N,Lx,Ly,particles=false,defects=true)
 
 ## Defect Tracker
 dft = DefectTracker(pos,thetas,N,Lx,Ly,t)
-update_and_track!(dft,pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt,t,1:5)
+update_and_track!(dft,pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt,t,1:5)
 dft.defectsN[1].pos
 MSD(dft,Lx,Ly)
 
@@ -64,11 +64,11 @@ N = Int(1E4)
 params_init = ["1Dwave","horizontal",2]
 params_init = ["2Dwave",2,2]
 
-pos,thetas,psis,omegas = initialisation(N,Lx,Ly,σ,params_init)
+pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
     plot(pos,thetas,N,Lx,Ly,particles=true,vertical=true)
 
 for i in 1:100
-    pos,thetas = update(pos,thetas,psis,omegas,T,v0,N,Lx,Ly,dt)
+    pos,thetas = update(pos,thetas,omegas,psis,T,v0,N,Lx,Ly,dt)
 end
     plot(pos,thetas,N,Lx,Ly,particles=false,vertical=true)
 thetas += Float32.(0.5randn(N))

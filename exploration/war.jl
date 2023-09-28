@@ -401,7 +401,7 @@ v0_alpha_film = @animate for i in eachindex(times)
     # heatmap(v0s,alphas,Pavg[1,:,1,:,1,i,1],c=cgrad([:red,:orange, :green]),size=(500,400),xlabel=L"v_0",ylabel="α",colorbar_title="P",title="t=$(times[i])")
     heatmap(v0s,alphas,Pavg[3,:,1,:,1,i,1],clims=(0,1),c=cgrad([:red,:orange, :green]),size=(500,400),xlabel=L"v_0",ylabel="α",colorbar_title="P",title="t=$(times[i])")
 end
-mp4(v0_alp^/ha_film,"films/phase_diagram_v0_alpha_T0.mp4",fps=20)
+mp4(v0_alpha_film,"films/phase_diagram_v0_alpha_T0.mp4",fps=20)
 
 heatmap(times,alphas,Pavg[1,:,1,1,1,:,1])
 heatmap(times,alphas,P[1,:,1,1,1,:,5])
@@ -635,7 +635,6 @@ z = @elapsed for n in eachindex(Ns)
 
         P[n,r] = polarOP(thetas)[1]
         Crt[n,r] = corr(pos,thetas,params,dr)
-        end
     end # realisations
 end # scan parameters
 prinz(z)

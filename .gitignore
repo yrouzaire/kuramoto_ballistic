@@ -5,6 +5,8 @@ figures/*
 archives/data/*
 archives/films/*
 archives/figures
+archives/kuramoto_ballistic - Array/
+archives/kuramoto_ballistic - Struct/
 
 *.mp4
 *.jld

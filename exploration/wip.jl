@@ -2,10 +2,46 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     using JLD2,StatsBase,Distributions,LinearAlgebra,Parameters,Random
     using Plots,ColorSchemes,LaTeXStrings
     include("../methods.jl")
-    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
+
+## Timing one realisation at v0 = 0
+N = Int(1E4)
+    # rho = 1.3*(4.51/pi)
+    rho = 2
+    v0 = 0
+    σ  = 0.05
+    aspect_ratio = 1 # Lx/Ly
+    Lx  = round(Int,sqrt(N/rho*aspect_ratio))
+    Ly  = round(Int,sqrt(N/rho/aspect_ratio))
+    T  = 0.1 # to be compared to Tc ~ 1 when \sigma = 0
+    tmax = 1000 ; dt = determine_dt(T,σ,v0,N,rho)
+    global R0 = 1
+
+t = 0.0
+    params_init = ["hightemp",Lx/2]
+    pos,thetas,omegas,psis = initialisation(N,Lx,Ly,σ,params_init)
+    plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+
+ind_neighbours0 = get_list_neighbours(pos,N,Lx,Ly)
+z = @elapsed while t < tmax
+    t += dt
+    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours0,T,v0,N,Lx,Ly,dt)
+end
+    prinz(z)
+    plot(pos,thetas,N,Lx,Ly,particles=true,defects=false,title="t = $(round(Int,t))")
+
+
+z = @elapsed while t < tmax
+    t += dt
+    ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
+    pos,thetas = update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
+end
+prinz(z)
+plot(pos,thetas,N,Lx,Ly,particles=false,defects=false,title="t = $(round(Int,t))")
+
 
 ## Test specific function for evolution at v0 = 0
 N = Int(1E4)
@@ -28,7 +64,7 @@ pos,vel_angles,thetas,omegas = initialisation(N,Lx,Ly,σ,params_init)
 
 ind_neighbours = get_list_neighbours(pos,N,Lx,Ly)
 @btime get_list_neighbours(pos,N,Lx,Ly)
-@btime update(pos,thetas,psis,omegas,ind_neighbours,T,v0,N,Lx,Ly,dt)
+@btime update(pos,thetas,omegas,psis,ind_neighbours,T,v0,N,Lx,Ly,dt)
 @btime update(pos,thetas,omegas,ind_neighbours,T,N,Lx,Ly,dt)
 @btime get_neighbouring_cells(1,2,10,10)
 cellx = celly = 1
