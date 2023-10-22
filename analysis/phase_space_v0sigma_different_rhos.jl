@@ -1,4 +1,4 @@
-cd("D:/Documents/Research/projects/kuramoto_ballistic")
+cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic/figures_paper")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
 include("../../methods.jl");
 const global R0 = 1
