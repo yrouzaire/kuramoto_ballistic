@@ -1,4 +1,4 @@
-cd("D:/Documents/Research/projects/kuramoto_ballistic")
+# cd("D:/Documents/Research/projects/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
 include("../methods.jl");
 using Plots, ColorSchemes, LaTeXStrings
