@@ -50,12 +50,6 @@ nc = 4.51
 p = plot(uaxis=:log, legend=false, xlabel=L"ρ", ylabel=L"v_c")
 plot!((rhos), (critical_velocity_avg) .- (v0s[1]), m=true)
 # R0 = 1
-# plot!(rhos, x -> 3E-2 / π / R0 / x^2 * (nc^2 - π * R0^2 * x^2), c=:black, l=:solid)
-# plot!(rhos, x -> 0.08(rhoc - x) / x, c=:black, l=:solid)
-# plot!(rhos, x -> 0.15(rhoc - x)^2 / x^2, c=:black, l=:dash)
-# plot!(rhos, x -> 5E-2/x^2, c=:black, l=:dot)
-plot!(rhos, x->1E-1/x^2)
-scatter!([1,1.1,1.2], [0.06,0.025,0.018], m=true, ms=3, c=:black,label="From crit. σ simu")
-# 0.23^2
-# 0.16^2
-# 0.135^2
+# plot!(rhos, x -> 1E-1 * (rhoc / x - 1), c=:black, l=:dash)
+scatter!([1,1.1,1.2], [0.0529,0.0256,0.018225], m=true, ms=3, c=:black,label="From crit. σ simu")
+# 0.23^2 = 0.0529, 0.16^2 = 0.0256, 0.135^2 = 0.018225

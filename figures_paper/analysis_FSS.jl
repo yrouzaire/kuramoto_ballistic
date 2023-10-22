@@ -1,4 +1,4 @@
-cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic/figures_paper")
+cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
 include("../methods.jl");
 using Plots, ColorSchemes, LaTeXStrings
@@ -80,28 +80,34 @@ plot(p,p2,layout=(1,2),size=(800,400))
 ## ------------- Impact of N on final quantities ------------- 
 ## P 
 times_to_plot = [10,15,20,23,25,26,28,29,30]
-p1=plot(xaxis=:log, legend=false, xlabel="1/N", ylabel="P",size=(400,400))
-for t in times_to_plot
-	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
-end
-plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
-plot!(1 ./Ntargets, 8.6E-1 * (Ntargets).^-0.015, c=:black,line=:dot, label=L"1/\sqrt{N}")
-# plot!(1 ./Ntargets, 8E-0 ./ log.(Ntargets), c=:black,line=:dot, label=L"1/\sqrt{N}")
-p1
+# p1=plot(xaxis=:log, legend=false, xlabel="1/N", ylabel="P",size=(400,400))
+# for t in times_to_plot
+# 	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
+# end
+# plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
+# plot!(1 ./Ntargets, 8.6E-1 * (Ntargets).^-0.015, c=:black,line=:dot, label=L"1/\sqrt{N}")
+# # plot!(1 ./Ntargets, 8E-0 ./ log.(Ntargets), c=:black,line=:dot, label=L"1/\sqrt{N}")
+# p1
 
 
-p2=plot(axis=:log, legend=:outerright, xlabel="1/N", ylabel="P",size=(600,400))
+p2=plot(axis=:log, legend=:outerright,size=(600,400))
 for t in times_to_plot
 	plot!(1 ./Ntargets, Ps_avg[2,:,t], rib=0,label="t = $(round(Int,times[t]))",m=true)
 end
 plot!(1 ./Ntargets, 6 * (Ntargets).^-0.5, c=:black,line=:dash, label=L"1/\sqrt{N}")
 plot!(1 ./Ntargets, 8.6E-1 *  (Ntargets).^-0.015, c=:black,line=:dot, label=L"N^{-0.015}")
 p2
+ylims!(0.028,1.2)
+yticks!([0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], 
+		["0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7", "", "", "1"])
+annotate!((0.06, 0.89), text(L"P", 15, :center, :bottom, :black))
+annotate!((0.9, 0.03), text(L"1/N", 15, :center, :bottom, :black))
 
-plot(p1,p2,layout=(1,2),size=(1000,400))
+# plot(p1,p2,layout=(1,2),size=(1000,400))
 # savefig("figures/FSS_relaxation_time/FSS.svg")
 ## ------------- Regular plots at fixed N ------------- 
 ## Plot n vs t
+ind_N = length(Ntargets)
 p=plot(axis=:log, legend=false, xlabel="t", ylabel="n(t)/L²")
 for i in 1:length(v0sigs)
 	plot!(times[2:end], remove_negative(ns_avg[i,end,2:end])/(Ntargets[ind_N]), label="v0 = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])")
@@ -111,10 +117,10 @@ plot!(t->7E3(1/t)/(Ntargets[ind_N]), c=:black, line=:dash)
 p
 
 ## Plot ξ vs t
-ind_N = 4
-p=plot(uaxis=:log, legend=false, xlabel="t", ylabel="ξ(t)", title="N = $(Ntargets[ind_N])")
+ind_N = length(Ntargets)
+p=plot(xaxis=:log, legend=false, xlabel="t", ylabel="ξ(t)", title="N = $(Ntargets[ind_N])")
 for i in 1:length(v0sigs)
-	plot!(times[2:end], xis_avg[i,ind_N,2:end]/sqrt(Ntargets[ind_N]), label="v0 = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])")
+	plot!(times[2:end], xis_avg[i,ind_N,2:end]*sqrt(Ntargets[ind_N]), label="v0 = $(v0sigs[i][1]) , σ = $(v0sigs[i][2])")
 end
 # plot!(t->4sqrt(t/log(10t))/sqrt(Ntargets[ind_N]), c=:black )
 # plot!(t->1E-2sqrt(t), c=:black, line=:dash)

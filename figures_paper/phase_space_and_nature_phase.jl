@@ -9,10 +9,9 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
 
-filename = "data/"
+filename = "data/phase_space_rho_sig_v0_N1E3_tmax2500.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
-histogram(runtimes / 3600 / 24, bins=20)
-
+hrun(runtimes)
 Ps_avg = nanmean(Ps, 8) # N rho T v0 sigma t init R
 Ps_std = nanstd(Ps, 8) # N rho T v0 sigma t init R
 ns_avg = nanmean(ns, 8) # N rho T v0 sigma t init R
@@ -38,11 +37,22 @@ rhos
 
 ## Correlation function at final time for different v0
 ind_sig = 1
-p = plot(xlabel="r", ylabel="C(r,∞)", legend=:outerright, size=(550, 400), yaxis=:log, title="σ = $(sigmas[ind_sig])", ylims=(1E-2, 1.2))
+ind_rho = 2
+p = plot(xlabel="r", ylabel="C(r,∞)", legend=:outerright, size=(550, 400), axis=:log, title="σ = $(sigmas[ind_sig])", ylims=(1E-2, 1.2))
 for i in 1:length(v0s)
-    plot!(0.5:0.5:50, remove_negative(Cs_avg[2:end, 1, 1, 1, i, ind_sig, 1, end, 1]), label="v = $(v0s[i])", rib=0)
+    L = sqrt(Ns[1]/(rhos[ind_rho]))
+    rr = 0.5:0.5:round(Int, L / 2, RoundUp)
+    data = remove_negative(Cs_avg[1, ind_rho, 1, i, ind_sig, 1, end, 1])
+    if length(data) < length(rr)
+        rr = rr[1:end-1]
+    end
+    if length(data) > length(rr)
+        data = data[1:end-1]
+    end
+    plot!(rr, data, label="v = $(v0s[i])", rib=0)
 end
-savefig("figures\\transition_SR-LR_sigma$(sigmas[ind_sig]).png")
+plot!(0.5:0.5:round(Int, L / 2, RoundUp),x->x^-0.25-0.15, c=:black, l=:dash)
+# savefig("figures\\transition_SR-LR_sigma$(sigmas[ind_sig]).png")
 p
 
 
