@@ -1,6 +1,6 @@
-cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic/figures_paper")
+cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
-include("../../methods.jl");
+include("../methods.jl");
 const global R0 = 1
 using Plots, ColorSchemes, LaTeXStrings
 pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
@@ -17,14 +17,18 @@ ns_avg = nanmean(ns, 8) # N rho T v0 sigma init t R
 
 p1 = heatmap(v0s[2:end], sigmas, Ps_avg[1, 1, 1, 2:end, :, 1, end, 1]',
     xaxis=:log, c=cgrad([:red, :orange, :green]), clims=(0, 1),
-    size=(520, 400), xlabel=L"v_0", ylabel="σ", title="ρ = $(rhos[1])",
-    colorbartitle="P", colorbar=:right, colorbar_titlefont=font(12))
+    size=(400, 400), xlabel=L"v_0", ylabel="σ",
+    colorbartitle="P", colorbar=false, colorbar_titlefont=font(12), colorbar_titlefontrotation=90)
+xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
+
 
 p2 = heatmap(v0s[2:end], sigmas, Ps_avg[1, end, 1, 2:end, :, 1, end, 1]',
     xaxis=:log, c=cgrad([:red, :orange, :green]), clims=(0, 1),
-    size=(520, 400), xlabel=L"v_0", ylabel="σ", title="ρ = $(rhos[end])",
+    size=(470, 400), xlabel=L"v_0", yticks=false,
     colorbartitle="P", colorbar=:right, colorbar_titlefont=font(12))
+xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 
+plot(p1, p2, layout=(1, 2), size=(900, 400))
 
 ## Find critical velocity at final time for which the order parameter P is == seuil
 seuils = [0.5]

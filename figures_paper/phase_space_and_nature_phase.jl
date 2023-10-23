@@ -63,7 +63,7 @@ for i in 1:length(v0s)
     plot!(times_log, xis_avg[i, ind_sig, :], label="v = $(v0s[i])", rib=0)
 end
 plot!(x -> sqrt(x), c=:black)
-savefig("figures\\xit_SR-LR_sigma$(sigmas[ind_sig]).png")
+# savefig("figures\\xit_SR-LR_sigma$(sigmas[ind_sig]).png")
 p
 
 ## Correlation functions over time
