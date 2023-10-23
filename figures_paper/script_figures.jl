@@ -61,9 +61,7 @@ end
 p_critical_sigmas
 annotate!((0.08, 0.9), text(L"\sigma_c", 15, :center, :bottom, :black))
 annotate!((0.89, 0.03), text(L"\sqrt{v_0}", 15, :center, :bottom, :black))
-
-plot(p_critical_sigmas, layout=(1, 3), size=(400, 400))
-savefig("figures_paper/critical_sigmas.svg")
+savefig(p_critical_sigmas,"figures_paper/critical_sigmas.svg")
 
 ## ---------------- 1/N scaling of P ---------------- ##
 ## ---------------- 1/N scaling of P ---------------- ##
