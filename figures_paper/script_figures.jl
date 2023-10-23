@@ -36,7 +36,23 @@ p_phase_space_rho19 = heatmap(v0s[2:end], sigmas, Ps_avg[1, end, 1, 2:end, :, 1,
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 
 plot(p_phase_space_rho1, p_phase_space_rho19, layout=(1, 2), size=(870, 400))
-savefig("figures_paper/phase_spaces.svg")
+# savefig("figures_paper/phase_spaces.svg")
+
+p_phase_space_n_rho1 = heatmap(v0s[2:end], sigmas, log10.(ns_avg[1, 1, 1, 2:end, :, 1, end, 1]' .+1),
+    xaxis=:log, c=reverse(cgrad([:red, :orange, :green])),
+    size=(400, 400), xlabel=L"v_0", ylabel="σ", clims=(0, 1.5),
+    colorbartitle="n", colorbar=false, colorbar_titlefont=font(12), colorbar_titlefontrotation=90)
+xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
+
+
+p_phase_space_n_rho19 = heatmap(v0s[2:end], sigmas, log10.(ns_avg[1, end, 1, 2:end, :, 1, end, 1]' .+1),
+    xaxis=:log, c=reverse(cgrad([:red, :orange, :green])),
+    size=(470, 400), xlabel=L"v_0", yticks=false, clims=(0, 1.5),
+    colorbartitle=L"\log_{10}(n+1)", colorbar=:right, colorbar_titlefont=font(12))
+xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
+
+plot(p_phase_space_n_rho1, p_phase_space_n_rho19, layout=(1, 2), size=(870, 400))
+# savefig("figures_paper/phase_spaces_N.svg")
 
 ## ----------------  Critical Sigmas ---------------- ##
 ## ----------------  Critical Sigmas ---------------- ##
@@ -61,7 +77,7 @@ end
 p_critical_sigmas
 annotate!((0.08, 0.9), text(L"\sigma_c", 15, :center, :bottom, :black))
 annotate!((0.89, 0.03), text(L"\sqrt{v_0}", 15, :center, :bottom, :black))
-savefig(p_critical_sigmas,"figures_paper/critical_sigmas.svg")
+# savefig(p_critical_sigmas,"figures_paper/critical_sigmas.svg")
 
 ## ---------------- 1/N scaling of P ---------------- ##
 ## ---------------- 1/N scaling of P ---------------- ##
@@ -70,17 +86,17 @@ savefig(p_critical_sigmas,"figures_paper/critical_sigmas.svg")
 
 filename = "data/FSS_green.jld2"
 @load filename Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
-hrun(runtimes)
-Ps_avg
+# hrun(runtimes)
+Ps_avg = nanmean(Ps, 4)[:,:,:,1]
 v0sigs
 
 times_to_plot = [10, 15, 20, 23, 25, 26, 28, 29, 30]
-p2 = plot(axis=:log, legend=:topright, size=(400, 400))
+p2 = plot(axis=:log, legend=:top, legend_column=2, size=(400, 400))
 for t in times_to_plot
     plot!(1 ./ Ntargets, Ps_avg[2, :, t], rib=0, m=true)# label="t = $(round(Int,times[t]))")
 end
-plot!(1 ./ Ntargets, 6 * (Ntargets) .^ -0.5, c=:black, line=:dash, label=L"1/\sqrt{N}")
 plot!(1 ./ Ntargets, 8.6E-1 * (Ntargets) .^ -0.015, c=:black, line=:dot, label=L"N^{-0.015}")
+plot!(1 ./ Ntargets, 6 * (Ntargets) .^ -0.5, c=:black, line=:dash, label=L"1/\sqrt{N}")
 ylims!(0.028, 1.25)
 yticks!([0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     ["0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7", "", "", "1"])
@@ -90,3 +106,8 @@ annotate!((0.9, 0.03), text(L"1/N", 15, :center, :bottom, :black))
 xticks!([3E-5, 4E-5, 5E-5, 6E-5, 7E-5, 8E-5, 9E-5, 1E-4, 2E-4, 3E-4, 4E-4, 5E-4, 6E-4, 7E-4, 8E-4, 9E-4, 1E-3, 2E-3, 3E-3, 4E-3, 5E-3, 6E-3, 7E-3, 8E-3, 9E-3, 1E-2], 
     ["", "", "", "", "", "", "", L"10^{-4}", "", "", "", "", "", "", "", "", L"10^{-3}", "", "", "", "", "", "", "", "", L"10^{-2}"])
 p2
+
+# savefig(p2, "figures_paper/FSS_1N.svg")
+
+## ---------------- 1/N scaling of P ---------------- ##
+
