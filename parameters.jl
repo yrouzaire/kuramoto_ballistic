@@ -2,9 +2,9 @@
 Ntarget = Int(1E4)
 aspect_ratio = 1
 rho = 1
-T = 0.9
-sigma = 0.
-v0 = 5
+T = 0.1
+sigma = 0.3
+v0 = 0.55
 R0 = 1
 
 N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
