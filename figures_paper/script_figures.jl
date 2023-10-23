@@ -122,6 +122,7 @@ p2
 ## ---------------- Through the transition ---------------- ##
 ## ---------------- Through the transition ---------------- ##
 ## ---------------- Through the transition ---------------- ##
+
 filename = "data/phase_space_rho_sig_v0_N1E3_tmax2500.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
 v0ss = v0s
@@ -129,6 +130,11 @@ Ps_avg_rho1_sigma01 = nanmean(Ps, 8)[1,1,1,:,3,1,end,1] # for rho = 1, and sigma
 
 filename = "data/nature_phase_transition_horizontal.jld2"
 @load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
+v0sigs_horizontal = v0sigs
+Ps_avg_horizontal = nanmean(Ps, 3)[:, :, 1]
+ns_avg_horizontal = nanmean(ns, 3)[:, :, 1]
+xis_avg_horizontal = nanmean(xis, 3)[:, :, 1]
+
 indices = [];
 for r in 1:R
     try
@@ -144,16 +150,14 @@ for i in 1:length(v0sigs_horizontal), k in 1:length(times)
     Cs_avg_horizontal[i, k] = mean([Cs[i, k, r] for r in indices])
 end
 
-cols_P = cgrad([:green, :orange, :red]);
+cols_P = cgrad([:red, :orange, :green])
 
 ##
 p1 = plot(xlabel=L"t", ylabel=L"P", xscale=:log10, yscale=:log10,
     legend=false, yticks=([1E-2, 1E-1, 1], [L"10^{-2}", L"10^{-1}", L"10^{0}"]),
     xticks=([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"]))
 for i in each(v0sigs_horizontal)
-    v0 = v0sigs_horizontal[i][1]
-    ind = findfirst(x -> x > v0, v0ss)
-    couleur = cols_P[Ps_avg_rho1_sigma01[ind]]
+    couleur = cols_P[Ps_avg_horizontal[i,end]]
     plot!(times, Ps_avg_horizontal[i, :], c=couleur, rib=0, m=:circle,
         ms=3, line=true, label="σ = $(round(v0sigs_horizontal[i][1],digits=2))")
 end
@@ -167,9 +171,7 @@ p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10, legend=fal
     yticks=([1E-5, 1E-4, 1E-3, 1E-2], [L"10^{-5}", L"10^{-4}", L"10^{-3}", L"10^{-2}"]),
     xticks=([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"]))
 for i in each(v0sigs_horizontal)
-    v0 = v0sigs_horizontal[i][1]
-    ind = findfirst(x -> x > v0, v0ss)
-    couleur = cols_P[Ps_avg_rho1_sigma01[ind]]
+        couleur = cols_P[Ps_avg_horizontal[i,end]]
     plot!(times, remove_negative(ns_avg_horizontal[i, :] / L^2), label=v0sigs_horizontal[i], c=couleur, rib=0, m=:circle, ms=3, line=true)
 end
 
@@ -181,9 +183,7 @@ p2
 rr = 0:round(Int, L / 2)
 p3 = plot(xlabel=L"r", ylabel=L"C(r,t_∞)", axis=:log, ylims=(1E-1, 1.1), legend=false)
 for i in 1:1:length(v0sigs_horizontal)
-    v0 = v0sigs_horizontal[i][1]
-    ind = findfirst(x -> x > v0, v0ss)
-    couleur = cols_P[Ps_avg_rho1_sigma01[ind]]
+        couleur = cols_P[Ps_avg_horizontal[i,end]]
     plot!(rr[2:end], remove_negative(Cs_avg_horizontal[i, end])[2:end], label=L"v_0 = " * string(v0sigs_horizontal[i][1]), c=couleur, rib=0, m=:circle, ms=3)
 end
 plot!(rr[2:end], r -> r^(-T / 2π), line=:dot, c=:black, label=L"r^{-T/2\pi}")
@@ -193,16 +193,28 @@ yticks!([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], [L"10^{-1}", "", "", "
 xticks!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50], [L"10^{0}", "", "", "", "", "", "", "", "", L"10^{1}", "", "", "", ""])
 p3
 
+# ##
+# p4 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", xaxis=:log, legend=false)#:topright)
+# for i in each(v0sigs_horizontal)
+#         couleur = cols_P[Ps_avg_horizontal[i,end]]
+#     plot!(times[2:end], remove_negative(xis_avg_horizontal[i, 2:end] .* sqrt.(ns_avg_horizontal[i, 2:end])), label=v0sigs_horizontal[i], c=couleur, rib=0, m=:circle, ms=3)
+# end
+# xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
+# p4
+
 ##
-p4 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", xaxis=:log, legend=false)#:topright)
-for i in length(v0sigs_horizontal):-1:1
-    v0 = v0sigs_horizontal[i][1]
-    ind = findfirst(x -> x > v0, v0ss)
-    couleur = cols_P[Ps_avg_rho1_sigma01[ind]]
-    plot!(times[2:end], remove_negative(xis_avg_horizontal[i, 2:end] .* sqrt.(ns_avg_horizontal[i, 2:end])), label=v0sigs_horizontal[i], c=couleur, rib=0, m=:circle, ms=3)
+p5 = plot(xlabel=L"t", ylabel=L"ξ", axis=:log,legend=false)
+for i in each(v0sigs_horizontal)
+    couleur = cols_P[Ps_avg_horizontal[i, end]]
+    plot!(times, remove_negative(xis_avg_horizontal[i, :]), c=couleur, rib=0, m=:circle,
+        ms=3, line=true)
 end
-xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
-p4
+p5
+plot!(times[5:end-5], x -> 2E0*sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
+# annotate!((0.1, -0.1), text("(a)", 12, :black))
+# xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
+# yticks!([1E-2, 1E-1, 1], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
+##
 
-
-plot(p1, p2, p3, p4, layout=(2, 2), size=(800, 800))
+plot(p1, p2, p3, p5, layout=(2, 2), size=(800, 800))
+# savefig("figures_paper/through_transition.svg")
