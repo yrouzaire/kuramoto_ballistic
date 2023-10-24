@@ -220,6 +220,82 @@ plot(p1, p2, p3, p5, layout=(2, 2), size=(800, 800))
 # savefig("figures_paper/through_transition.svg")
 
 
+## ---------------- R(t) defects  ---------------- ##
+## ---------------- R(t) defects  ---------------- ##
+## ---------------- R(t) defects  ---------------- ##
+## ---------------- R(t) defects  ---------------- ##
+
+filename = "data/mobility_defects_sigma_v0.jld2"
+@load filename sigmas v0s Ts all_xy_pos all_xy_neg all_rr all_times_collision R_per_core Rtot params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtimes
+L = round(Int, sqrt(Ntarget))
+all_rr_reverse = NaN * zeros(length(v0s), length(sigmas), length(Ts), length(times), Rtot)
+all_rr_ = NaN * zeros(length(v0s), length(sigmas), length(Ts), length(times), Rtot)
+for i in each(v0s)
+    for j in each(sigmas)
+        for k in each(Ts)
+            for r in 1:Rtot
+                data = all_rr[i, j, k, r]
+                ll = length(data)
+                all_rr_reverse[i, j, k, 1:ll, r] = reverse(data)
+                all_rr_[i, j, k, 1:ll, r] = (data)
+                all_rr_[i, j, k, 1+ll:end, r] .= 0
+            end
+        end
+    end
+end
+all_rr_reverse_avg = nanmean(all_rr_reverse, 5)[:, :, :, :, 1]
+all_rr_avg = nanmean(all_rr_, 5)[:, :, :, :, 1]
+
+## R(t) 
+p = plot(xlabel=L"t", ylabel=L"R(t)", uaxis=:log)#,ylims=(0,33))
+for i in each(v0s)
+    for j in each(sigmas)
+        for k in 1#each(Ts)
+            plot!(times[3:end], all_rr_avg[i, j, k, 3:end])
+        end
+    end
+end
+p
+
+# Add the theoretical prediction for the fastest curve
+# mean_annihilation_time = mean(all_times_collision[end,1,1,:])
+# # plot!(0:1:mean_annihilation_time-10,x->3.8exp(0.5*(1+lambertw((mean_annihilation_time-x)*2/exp(1)))),c=:black)
+# plot!(0:1:mean_annihilation_time,x->28*sqrt((-x+mean_annihilation_time)/mean_annihilation_time),c=:black)
+
+## R(t*) 
+ind_T = 2
+using LambertW
+p = plot(xlabel=L"t^*", ylabel=L"R(t^*)", xaxis=:log)
+for i in 2:length(v0s)
+    for j in 1#each(sigmas)
+        for k in ind_T
+            plot!(times[2:end], all_rr_reverse_avg[i, j, k, 2:end])
+        end
+    end
+end
+xlims!(0.9, 1E3)
+xticks!([1, 10, 100, 1000], [L"10^0", L"10^1", L"10^2", L"10^3"])
+
+pcollapse = plot(xlabel=L"\sqrt{v_0}t^*", ylabel=L"R(t^*)/\sqrt{v_0}", xaxis=:log, legend=:topleft)
+for i in 2:length(v0s)
+    for j in 1#each(sigmas)
+        for k in ind_T
+            plot!(sqrt(v0s[i]) * times[2:end], 1 / sqrt(v0s[i]) * all_rr_reverse_avg[i, j, k, 2:end],
+                # plot!(sqrt(0.45*Ts[ind_T]+0.5v0s[i])*times[2:end],1/sqrt(v0s[i])*all_rr_reverse_avg[i,j,k,2:end], 
+                label=L"v_0 = " * "$(v0s[i])", rib=0)
+        end
+    end
+end
+mu = 1 / 2
+plot!(times[2:700], x -> exp(0.5 * lambertw(2π * x / mu)), c=:black)
+xlims!(0.9, 1E3)
+ylims!(0, 40)
+xticks!([1, 10, 100, 1000], [L"10^0", L"10^1", L"10^2", L"10^3"])
+pcollapse
+
+plot(p, pcollapse, layout=(1, 2), size=(800, 400))
+# savefig("figures/mobility_defects_v0_T$(Ts[ind_T]).pdf")
+
 ## ---------------- Plots spinwaves ---------------- ##
 ## ---------------- Plots spinwaves ---------------- ##
 ## ---------------- Plots spinwaves ---------------- ##
@@ -247,4 +323,6 @@ scatter(all_pos_detected_spinwave[ind_v0, ind_sig][rr],
     marker_z=mod.(all_thetas_detected_spinwave[ind_v0, ind_sig][rr], 2π),
     c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
 # savefig("figures_paper/spinwave_r$(rr)_v0$(v0s[ind_v0])_sig$(sigmas[ind_sig]).svg")
+
+
 
