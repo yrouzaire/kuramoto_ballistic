@@ -73,7 +73,7 @@ end
 ## Plot all spinwaves for given parameters
 v0s
 sigmas
-ind_v0 = 4
+ind_v0 = 2
 ind_sig = 3
 
 reall = rand(1:length(all_times_detected_spinwave[ind_v0,ind_sig]))

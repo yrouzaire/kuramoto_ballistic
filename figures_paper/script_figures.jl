@@ -235,4 +235,16 @@ all_Ps_detected_spinwave
 all_thetas_detected_spinwave
 all_pos_detected_spinwave
 
+ind_v0, ind_sig, rr = 4, 3, 8
+scatter(all_pos_detected_spinwave[ind_v0, ind_sig][rr],
+    marker_z=mod.(all_thetas_detected_spinwave[ind_v0, ind_sig][rr], 2π),
+    c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
+# savefig("figures_paper/spinwave_r$(rr)_v0$(v0s[ind_v0])_sig$(sigmas[ind_sig]).svg")
+
+
+ind_v0, ind_sig, rr = 2,3,2
+scatter(all_pos_detected_spinwave[ind_v0, ind_sig][rr],
+    marker_z=mod.(all_thetas_detected_spinwave[ind_v0, ind_sig][rr], 2π),
+    c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
+# savefig("figures_paper/spinwave_r$(rr)_v0$(v0s[ind_v0])_sig$(sigmas[ind_sig]).svg")
 
