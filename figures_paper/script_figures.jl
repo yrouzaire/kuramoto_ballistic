@@ -247,54 +247,86 @@ all_rr_reverse_avg = nanmean(all_rr_reverse, 5)[:, :, :, :, 1]
 all_rr_avg = nanmean(all_rr_, 5)[:, :, :, :, 1]
 
 ## R(t) 
-p = plot(xlabel=L"t", ylabel=L"R(t)", uaxis=:log)#,ylims=(0,33))
+ind_T = 2
+
+phistogram = plot(size=(250, 250))
+histogram!(log10.(all_times_collision[end, 1, ind_T, :]), bins=8, c=10, lw=0.4, label=L"v_0 = 5")
+histogram!(log10.(all_times_collision[5, 1, ind_T, :]), bins=15, c=5, lw=0.4, label=L"v_0 = 2.5")
+histogram!(log10.(all_times_collision[1, 1, ind_T, :]), bins=30, c=1, lw=0.4, label=L"v_0 = 0.5")
+xticks!(1:3, [L"10^{1}", L"10^{2}", L"10^{3}"])
+ylims!(0, 93)
+xlims!(1, 4)
+annotate!((0.5, 0.86), text("Distribution of " * L"\tau", 12, :center, :bottom, :black))
+annotate!((0.93, 0.02), text(L"\tau", 13, :center, :bottom, :black))
+
+
+p = plot(xaxis=:log, legend=:bottomleft, legend_title=L"v_0")
 for i in each(v0s)
     for j in each(sigmas)
-        for k in 1#each(Ts)
-            plot!(times[3:end], all_rr_avg[i, j, k, 3:end])
+        for k in ind_T#each(Ts)
+            plot!(times[2:end], remove_negative(all_rr_avg[i, j, k, 2:end]), label=string(v0s[i]), rib=0)
+            # plot!(times[2:end], all_rr_avg[i, j, k, 2:end])
         end
     end
 end
 p
+xticks!([1, 10, 100, 1000, 1E4], [L"10^0", L"10^1", L"10^2", L"10^3", L"10^4"])
+ylims!(-0., 37)
+xlims!(1, 1.6E4)
+annotate!((0.12, 0.885), text(L"R(t)", 15, :center, :bottom, :black))
+annotate!((0.93, 0.02), text(L"t", 15, :center, :bottom, :black))
+using LambertW
+mean_annihilation_time = mean(all_times_collision[1, 1, ind_T, :])
+normalisation = exp(0.5 * (1 + lambertw((mean_annihilation_time - 1) * 2 / exp(1))))
+# plot!(0:1:mean_annihilation_time, x -> 31.8/normalisation*exp(0.5 * (1 + lambertw((mean_annihilation_time - x) * 2 / exp(1)))), c=:black, line=:dash)
+# plot!(0:1:mean_annihilation_time,x->31.8*sqrt((-x+mean_annihilation_time)/mean_annihilation_time),c=:black)
+p
 
-# Add the theoretical prediction for the fastest curve
-# mean_annihilation_time = mean(all_times_collision[end,1,1,:])
-# # plot!(0:1:mean_annihilation_time-10,x->3.8exp(0.5*(1+lambertw((mean_annihilation_time-x)*2/exp(1)))),c=:black)
-# plot!(0:1:mean_annihilation_time,x->28*sqrt((-x+mean_annihilation_time)/mean_annihilation_time),c=:black)
+# savefig(p, "figures_paper/Rt.svg")
+# savefig(phistogram, "figures_paper/Rt_inset.svg")
 
 ## R(t*) 
-ind_T = 2
-using LambertW
-p = plot(xlabel=L"t^*", ylabel=L"R(t^*)", xaxis=:log)
+p = plot(xaxis=:log, background_color=:transparent)
 for i in 2:length(v0s)
     for j in 1#each(sigmas)
         for k in ind_T
-            plot!(times[2:end], all_rr_reverse_avg[i, j, k, 2:end])
+            data = all_rr_reverse_avg[i, j, k, :]
+            ll = round(Int, length(data) * 0.1)
+            plot!(times[2:ll], data[2:ll])
         end
     end
 end
-xlims!(0.9, 1E3)
-xticks!([1, 10, 100, 1000], [L"10^0", L"10^1", L"10^2", L"10^3"])
+p
+xlims!(0.5, 600)
+xticks!([1, 10, 100], [L"10^0", L"10^1", L"10^2"])
+annotate!((0.15, 0.885), text(L"R(t\!^*)", 15, :center, :bottom, :black))
+annotate!((0.96, 0.02), text(L"t\!^*", 15, :center, :bottom, :black))
+##
 
-pcollapse = plot(xlabel=L"\sqrt{v_0}t^*", ylabel=L"R(t^*)/\sqrt{v_0}", xaxis=:log, legend=:topleft)
+# pcollapse = plot(xlabel=L"\sqrt{v_0}t^*", ylabel=L"R(t^*)/\sqrt{v_0}", xaxis=:log, legend=false, size=(250, 250))
+pcollapse = plot(xaxis=:log, legend=false, size=(250, 250))
 for i in 2:length(v0s)
     for j in 1#each(sigmas)
         for k in ind_T
-            plot!(sqrt(v0s[i]) * times[2:end], 1 / sqrt(v0s[i]) * all_rr_reverse_avg[i, j, k, 2:end],
-                # plot!(sqrt(0.45*Ts[ind_T]+0.5v0s[i])*times[2:end],1/sqrt(v0s[i])*all_rr_reverse_avg[i,j,k,2:end], 
-                label=L"v_0 = " * "$(v0s[i])", rib=0)
+            
+            data = all_rr_reverse_avg[i, j, k, :]
+            ll = round(Int, length(data) * 0.1)
+            plot!(sqrt(v0s[i]) * times[2:ll], 1 / sqrt(v0s[i]) * data[2:ll],
+                label=L"v_0 = " * "$(v0s[i])", rib=0, c=i)
         end
     end
 end
 mu = 1 / 2
 plot!(times[2:700], x -> exp(0.5 * lambertw(2π * x / mu)), c=:black)
 xlims!(0.9, 1E3)
-ylims!(0, 40)
+ylims!(0, 30)
 xticks!([1, 10, 100, 1000], [L"10^0", L"10^1", L"10^2", L"10^3"])
+annotate!((0.32, 0.85), text(L"R(t\!^*)/\sqrt{v_0}", 12, :center, :bottom, :black))
+annotate!((0.83, 0.04), text(L"\sqrt{v_0}t\!^*", 12, :center, :bottom, :black))
 pcollapse
-
-plot(p, pcollapse, layout=(1, 2), size=(800, 400))
-# savefig("figures/mobility_defects_v0_T$(Ts[ind_T]).pdf")
+##
+# savefig(p, "figures_paper/Rtstar.svg")
+# savefig(pcollapse, "figures_paper/Rtstar_inset.svg")
 
 ## ---------------- Plots spinwaves ---------------- ##
 ## ---------------- Plots spinwaves ---------------- ##
