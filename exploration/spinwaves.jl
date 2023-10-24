@@ -13,6 +13,7 @@ plot()
 a = 1
 ## ------------------------------ Cluster data analysis ------------------------------ ##
 filename = "data/proba_spinwaves_N1E3.jld2"
+filename = "data/proba_spinwaves.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 hrun(runtimes) 
 Ntarget 
@@ -46,19 +47,61 @@ p
 histogram(all_times_detected_spinwave[4,3], bins=20)
 # savefig("figures/proba_spinwave.png")
 
-## Plot spinwave
+## Plot all spinwaves
 gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+
+for ind_v0 in each(v0s), ind_sig in each(sigmas)
+    if length(all_times_detected_spinwave[ind_v0,ind_sig]) > 0
+        reall = rand(1:length(all_times_detected_spinwave[ind_v0,ind_sig]))
+        pp = Vector(undef,reall)
+        for r in 1:reall
+            pp[r] = scatter(all_pos_detected_spinwave[ind_v0, ind_sig][r],
+                marker_z=mod.(all_thetas_detected_spinwave[ind_v0, ind_sig][r], 2π),
+                c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
+        end
+        # scatter(all_pos_detected_spinwave[ind_v0,ind_sig][reall],
+        #     marker_z=mod.(all_thetas_detected_spinwave[ind_v0,ind_sig][reall],2π),
+        #     c=cols,markersize=2,aspect_ratio=1,legend=false,
+        #     title = "v,σ=$(v0s[ind_v0]),$(sigmas[ind_sig])  P=$(all_Ps_detected_spinwave[ind_v0,ind_sig][reall])")
+
+        nb_cols = 3
+        p=plot(pp..., layout=(round(Int, length(pp) / nb_cols, RoundUp), nb_cols), size=(400 * nb_cols, 400 * reall / nb_cols))
+        display(p)
+    end
+end
+
+## Plot all spinwaves for given parameters
+v0s
+sigmas
 ind_v0 = 4
 ind_sig = 3
-reall = rand(1:Int(all_nb_detected_spinwave[ind_v0,ind_sig]))
-scatter(all_pos_detected_spinwave[ind_v0,ind_sig][reall],
-    marker_z=mod.(all_thetas_detected_spinwave[ind_v0,ind_sig][reall],2π),
-    c=cols,markersize=2,aspect_ratio=1,legend=false,
-    title = "v,σ=$(v0s[ind_v0]),$(sigmas[ind_sig])  P=$(all_Ps_detected_spinwave[ind_v0,ind_sig][reall])")
+
+reall = rand(1:length(all_times_detected_spinwave[ind_v0,ind_sig]))
+pp = Vector(undef,reall)
+for r in 1:reall
+    pp[r] = scatter(all_pos_detected_spinwave[ind_v0, ind_sig][r],
+        marker_z=mod.(all_thetas_detected_spinwave[ind_v0, ind_sig][r], 2π),
+        c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
+end
+# scatter(all_pos_detected_spinwave[ind_v0,ind_sig][reall],
+#     marker_z=mod.(all_thetas_detected_spinwave[ind_v0,ind_sig][reall],2π),
+#     c=cols,markersize=2,aspect_ratio=1,legend=false,
+#     title = "v,σ=$(v0s[ind_v0]),$(sigmas[ind_sig])  P=$(all_Ps_detected_spinwave[ind_v0,ind_sig][reall])")
+
+nb_cols = 3
+p=plot(pp..., layout=(round(Int, length(pp) / nb_cols, RoundUp), nb_cols), size=(400 * nb_cols, 400 * reall / nb_cols))
+display(p)
 
 
 
 
+
+
+
+
+## --------------- Development P-Criteria && n == 0 to detect spin waves --------------- ##
+## --------------- Development P-Criteria && n == 0 to detect spin waves --------------- ##
+## --------------- Development P-Criteria && n == 0 to detect spin waves --------------- ##
 ## --------------- Development P-Criteria && n == 0 to detect spin waves --------------- ##
 include("../parameters.jl")
 # Fixed important params 

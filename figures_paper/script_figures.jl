@@ -218,3 +218,21 @@ plot!(times[5:end-5], x -> 2E0*sqrt(x / log(8x)), line=:dash, c=:black, label=L"
 
 plot(p1, p2, p3, p5, layout=(2, 2), size=(800, 800))
 # savefig("figures_paper/through_transition.svg")
+
+
+## ---------------- Plots spinwaves ---------------- ##
+## ---------------- Plots spinwaves ---------------- ##
+## ---------------- Plots spinwaves ---------------- ##
+## ---------------- Plots spinwaves ---------------- ##
+
+filename = "data/proba_spinwaves.jld2"
+@load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
+
+proba_spinwave = all_nb_detected_spinwave / Rtot
+all_nb_detected_spinwave
+all_times_detected_spinwave
+all_Ps_detected_spinwave
+all_thetas_detected_spinwave
+all_pos_detected_spinwave
+
+
