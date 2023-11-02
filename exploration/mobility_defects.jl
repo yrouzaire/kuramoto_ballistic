@@ -193,3 +193,38 @@ pcollapse
 
 plot(p,pcollapse,layout=(1,2),size=(800,400))
 # savefig("figures/mobility_defects_v0_T$(Ts[ind_T]).pdf")
+
+
+
+## ------------------------------ Annihilation times ------------------------------ 
+## ------------------------------ Annihilation times ------------------------------ 
+## ------------------------------ Annihilation times ------------------------------ 
+## ------------------------------ Annihilation times ------------------------------ 
+
+filename = "data/mobility_defects_sigma_v0.jld2"
+@load filename sigmas v0s Ts all_xy_pos all_xy_neg all_rr all_times_collision R_per_core Rtot params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtimes
+
+Ts
+avg_times_collision = mean(all_times_collision, dims=4)[:, :, :, 1]
+std_times_collision = std(all_times_collision, dims=4)[:, :, :, 1]
+
+##
+plot(yaxis=:log)
+plot!(v0s, std_times_collision[:, 1, ind_T] ./ avg_times_collision[:, 1, ind_T], m=true)
+# plot!(v0s, avg_times_collision[:, 1, ind_T], rib=std_times_collision[:, 1, ind_T], m=true)
+
+##
+
+inds = [1, 5, length(v0s)]
+phistogram2 = plot(size=(400, 400), uaxis=:log10, legend=false, legend_title=L"v_0")
+for ind in inds
+    data = all_times_collision[ind, 1, ind_T, :]
+    avg = mean(data)
+    histogram!(data / avg, bins=30, lw=0.2, label=L"0.5", normalize=true)
+end
+# ylims!(0, 93)
+# xticks!(1:3, [L"10^{1}", L"10^{2}", L"10^{3}"])
+# xlims!(1, 4)
+annotate!((0.5, 0.9), text("Distribution of " * L"\tau", 11, :center, :bottom, :black))
+annotate!((0.93, 0.02), text(L"\tau", 13, :center, :bottom, :black))
+

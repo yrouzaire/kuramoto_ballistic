@@ -3,16 +3,16 @@ cd("D:/Documents/Research/projects/kuramoto_ballistic")
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
-    gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
+    pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
     cols = cgrad([:black,:blue,:green,:orange,:red,:black]);
     plot()
 &
     
 pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
 plot()
-a = 1
+
 ## ------------------------------ Cluster data analysis ------------------------------ ##
-filename = "data/proba_spinwaves_N1E3.jld2"
+filename = "data/proba_spinwaves_scan_phase_space2.jld2"
 filename = "data/proba_spinwaves.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 hrun(runtimes) 
@@ -20,6 +20,14 @@ Ntarget
 Rtot
 tmax
 
+##
+data = []
+for element in vec(all_times_detected_spinwave)
+    push!(data, element...)
+end
+histogram(data, bins=30)
+
+##
 proba_spinwave = all_nb_detected_spinwave/Rtot
 
 
@@ -29,8 +37,12 @@ all_Ps_detected_spinwave
 all_thetas_detected_spinwave
 all_pos_detected_spinwave
 
-## Probas 
-p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
+## ---------------- Probas ---------------- ##
+## ---------------- Probas ---------------- ##
+## ---------------- Probas ---------------- ##
+## ---------------- Probas ---------------- ##
+
+p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)", size=(500,400))
 for j in each(sigmas)
     plot!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
 end
@@ -38,7 +50,29 @@ p
 # savefig("figures/proba_spinwave.png")
 
 
-## Detection times
+## ---------------- Heatmap Probas ---------------- ##
+## ---------------- Heatmap Probas ---------------- ##
+## ---------------- Heatmap Probas ---------------- ##
+## ---------------- Heatmap Probas ---------------- ##
+sigmas
+v0s
+colss = cgrad([:black, :red, :orange, :green])
+colss = cgrad([:black, :red, :orange, :gold])
+plot(xlabel=L"v_0", ylabel=L"\sigma", xaxis=:log, size=(550,400))
+heatmap!(v0s, sigmas, proba_spinwave', c=colss, colorbartitle=L"\mathbb{P}" * "(spinwave)")
+plot!(v0s[1:end], x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=2)
+ylims!(-0.001,0.4)
+xlims!(minimum(v0s), maximum(v0s))
+# critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
+
+
+
+
+## ---------------- Detection times ---------------- ##
+## ---------------- Detection times ---------------- ##
+## ---------------- Detection times ---------------- ##
+## ---------------- Detection times ---------------- ##
+
 p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
 for j in each(sigmas)
     histogram!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
@@ -47,7 +81,12 @@ p
 histogram(all_times_detected_spinwave[4,3], bins=20)
 # savefig("figures/proba_spinwave.png")
 
-## Plot all spinwaves
+
+## ---------------- Plot all spinwaves ---------------- ##
+## ---------------- Plot all spinwaves ---------------- ##
+## ---------------- Plot all spinwaves ---------------- ##
+## ---------------- Plot all spinwaves ---------------- ##
+
 gr(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10.colors[1:10],grid=false,markerstrokewidth=0,linewidth=1.3,size=(400,400),thickness_scaling = 1.5) ; plot()
 
 for ind_v0 in each(v0s), ind_sig in each(sigmas)
@@ -70,7 +109,11 @@ for ind_v0 in each(v0s), ind_sig in each(sigmas)
     end
 end
 
-## Plot all spinwaves for given parameters
+## ---------------- Plot all spinwaves for given parameters ---------------- ##
+## ---------------- Plot all spinwaves for given parameters ---------------- ##
+## ---------------- Plot all spinwaves for given parameters ---------------- ##
+## ---------------- Plot all spinwaves for given parameters ---------------- ##
+
 v0s
 sigmas
 ind_v0 = 2
@@ -91,8 +134,6 @@ end
 nb_cols = 3
 p=plot(pp..., layout=(round(Int, length(pp) / nb_cols, RoundUp), nb_cols), size=(400 * nb_cols, 400 * reall / nb_cols))
 display(p)
-
-
 
 
 
@@ -289,20 +330,3 @@ omegas = Float32.(2*randn(N))
 for i in 1:500 pos,thetas = update(pos,thetas,omegas,psis,0.1,0.01,N,L,0.05) end
     plot(pos,thetas,N,L,particles=false)
 savefig("figures/spinwaveR$(rea)_perturb1.png")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&

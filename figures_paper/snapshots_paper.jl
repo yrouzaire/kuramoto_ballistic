@@ -101,3 +101,5 @@ plot_thetas(system, particles=false, vertical=false, defects=true)
 savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_time$(tmax).svg")
 
 gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+
+

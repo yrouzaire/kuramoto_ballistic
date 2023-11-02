@@ -26,6 +26,7 @@ Ps_avg = nanmean(Ps, 8) # N rho T v0 sigma init t R
 Ps_std = nanstd(Ps, 8) # N rho T v0 sigma init t R
 ns_avg = nanmean(ns, 8) # N rho T v0 sigma init t R
 
+
 p_phase_space_rho1 = heatmap(v0s[2:end], sigmas, Ps_avg[1, 1, 1, 2:end, :, 1, end, 1]',
     xaxis=:log, c=cgrad([:red, :orange, :green]), clims=(0, 1),
     size=(400, 400), xlabel=L"v_0", ylabel="σ",
@@ -137,14 +138,14 @@ for i in each(v0sigs_horizontal)
         ms=3, line=true, label="σ = $(round(v0sigs_horizontal[i][1],digits=2))")
 end
 plot!(times[5:end-8], x ->7E-2sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
-annotate!((0.2, 0.05), text("(a)", 12))
+annotate!((0.2, 0.05), text("(d)", 12))
 yticks!([0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], ["0.02", "0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7", "", "", "1"])
 xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
 annotate!((0.07,0.92), text(L"P", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
 p1
 
-##
+#
 L = sqrt(Ntarget / rho)
 p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10, legend=false,
     yticks=([1E-5, 1E-4, 1E-3, 1E-2], [L"10^{-5}", L"10^{-4}", L"10^{-3}", L"10^{-2}"]),
@@ -157,10 +158,10 @@ ylims!(1E-5, 1E-1)
 annotate!((0.15, 0.93), text(L"n/L^2", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
 plot!(times[5:end-8], x -> 1E-2log(8x) / x, line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
-annotate!((0.07, 0.05), text("(b)", 12))
+annotate!((0.07, 0.05), text("(a)", 12))
 p2
 
-##
+#
 rr = 0:round(Int, L / 2)
 p3 = plot(axis=:log, ylims=(1E-1, 1.3), legend=false)
 for i in 1:1:length(v0sigs_horizontal)
@@ -177,26 +178,33 @@ annotate!((0.94, 0.1), text(L"r", 15, :top, :black))
 p3
 
 # ##
-# p4 = plot(xlabel=L"t", ylabel=L"ξ\,\sqrt{n}", xaxis=:log, legend=false)#:topright)
-# for i in each(v0sigs_horizontal)
-#         couleur = cols_P[Ps_avg_horizontal[i,end]]
-#     plot!(times[2:end], remove_negative(xis_avg_horizontal[i, 2:end] .* sqrt.(ns_avg_horizontal[i, 2:end])), label=v0sigs_horizontal[i], c=couleur, rib=0, m=:circle, ms=3)
-# end
-# xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
-# p4
+p4 = plot(xaxis=:log, legend=false, size=(220,200))#:topright)
+for i in each(v0sigs_horizontal)
+        couleur = cols_P[Ps_avg_horizontal[i,end]]
+    data = remove_negative(xis_avg_horizontal[i, 2:end-4] .* sqrt.(ns_avg_horizontal[i, 2:end-4])) / L
+    plot!(times[2:end-4], data, c=couleur, m=:circle, ms=2, lw=0.8)
+end
+ylims!(0.35,0.65)
+yticks!([0.4, 0.5, 0.6])
+annotate!((0.3, 0.89), text(L"ξ\,\sqrt{n}/L", 12, :center))
+annotate!((0.93, 0.08), text(L"t", 12, :center))
+xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", "", L"10^{2}", "", L"10^{4}"])
+p4
+# savefig(p4, "figures_paper/inset_xi.svg")
 
 ##
 p5 = plot(axis=:log,legend=false)
 for i in each(v0sigs_horizontal)
     couleur = cols_P[Ps_avg_horizontal[i, end]]
-    plot!(times, remove_negative(xis_avg_horizontal[i, :]), c=couleur, rib=0, m=:circle,
+    plot!(times, remove_negative(xis_avg_horizontal[i, :])/L, c=couleur, rib=0, m=:circle,
         ms=3, line=true)
 end
 p5
-plot!(times[5:end-8], x -> 5 * sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
-annotate!((0.07, 0.93), text(L"\xi", 15, :center, :black))
+yticks!([ 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7], ["0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7"])
+plot!(times[5:end-11], x -> 4.5 / L * sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
+annotate!((0.09, 1.06), text(L"\xi/L", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
-annotate!((0.07, 0.05), text("(d)", 12))
+annotate!((0.07, 0.15), text("(b)", 12))
 
 ## ---------------- 1/N scaling of P ---------------- ##
 ## ---------------- 1/N scaling of P ---------------- ##
@@ -224,16 +232,18 @@ annotate!((0.9, 0.03), text(L"1/N", 15, :center, :bottom, :black))
 # xticks!([1E-5, 1E-4, 1E-3, 1E-2], [L"10^{-5}", L"10^{-4}", L"10^{-3}", L"10^{-2}"])
 xticks!([3E-5, 4E-5, 5E-5, 6E-5, 7E-5, 8E-5, 9E-5, 1E-4, 2E-4, 3E-4, 4E-4, 5E-4, 6E-4, 7E-4, 8E-4, 9E-4, 1E-3, 2E-3, 3E-3, 4E-3, 5E-3, 6E-3, 7E-3, 8E-3, 9E-3, 1E-2],
     ["", "", "", "", "", "", "", L"10^{-4}", "", "", "", "", "", "", "", "", L"10^{-3}", "", "", "", "", "", "", "", "", L"10^{-2}"])
-annotate!((0.19, 0.05), text("(e)", 12))
+annotate!((0.19, 0.05), text("(d)", 12))
 pFSS
 # savefig(pFSS, "figures_paper/FSS_1N.svg")
 
 ##
 
-plot(p1, p2, p3, p5, layout=(2, 2), size=(800, 800))
-# savefig("figures_paper/through_transition.svg")
-plot(p1, p2, p3, p5,pFSS, layout=(1,5), size=(2000, 400))
-# savefig("figures_paper/through_transition_horizontal.svg")
+plot(p2, p5, p3, pFSS, layout=(2, 2), size=(800, 800))
+# savefig("figures_paper/figure_through_transition.svg")
+
+plot(p2, p5, p3,p1, pFSS, layout=(1,5), size=(2000, 400))
+# savefig("figures_paper/figure_through_transition_horizontal.svg")
+# savefig("figures_paper/figure_through_transition_horizontal.pdf")
 
 
 ## ---------------- R(t) defects  ---------------- ##
@@ -243,6 +253,10 @@ plot(p1, p2, p3, p5,pFSS, layout=(1,5), size=(2000, 400))
 
 filename = "data/mobility_defects_sigma_v0.jld2"
 @load filename sigmas v0s Ts all_xy_pos all_xy_neg all_rr all_times_collision R_per_core Rtot params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtimes
+sigmas
+Rtot
+rho
+
 L = round(Int, sqrt(Ntarget))
 all_rr_reverse = NaN * zeros(length(v0s), length(sigmas), length(Ts), length(times), Rtot)
 all_rr_ = NaN * zeros(length(v0s), length(sigmas), length(Ts), length(times), Rtot)
@@ -265,17 +279,17 @@ all_rr_avg = nanmean(all_rr_, 5)[:, :, :, :, 1]
 ## R(t) 
 ind_T = 2
 
-phistogram = plot(size=(250, 250))
-histogram!(log10.(all_times_collision[end, 1, ind_T, :]), bins=8, c=10, lw=0.4, label=L"v_0 = 5")
-histogram!(log10.(all_times_collision[5, 1, ind_T, :]), bins=15, c=5, lw=0.4, label=L"v_0 = 2.5")
-histogram!(log10.(all_times_collision[1, 1, ind_T, :]), bins=30, c=1, lw=0.4, label=L"v_0 = 0.5")
-xticks!(1:3, [L"10^{1}", L"10^{2}", L"10^{3}"])
+phistogram = plot(size=(230, 350), legend=(0.43, 0.4), legend_title=L"v_0")
+histogram!(log10.(all_times_collision[1, 1, ind_T, :]), bins=30, c=1, lw=0.2, label=L"0.5")
+histogram!(log10.(all_times_collision[5, 1, ind_T, :]), bins=15, c=5, lw=0.2, label=L"2.5")
+histogram!(log10.(all_times_collision[end, 1, ind_T, :]), bins=8, c=10, lw=0.2, label=L"5")
 ylims!(0, 93)
+xticks!(1:3, [L"10^{1}", L"10^{2}", L"10^{3}"])
 xlims!(1, 4)
-annotate!((0.5, 0.86), text("Distribution of " * L"\tau", 12, :center, :bottom, :black))
+annotate!((0.5, 0.9), text("Distribution of " * L"\tau", 11, :center, :bottom, :black))
 annotate!((0.93, 0.02), text(L"\tau", 13, :center, :bottom, :black))
 
-
+##
 p = plot(xaxis=:log, legend=:bottomleft, legend_title=L"v_0")
 for i in each(v0s)
     for j in each(sigmas)

@@ -8,14 +8,20 @@ cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
 
+## ------------------- for Kuramoto ------------------- ##
+## ------------------- for Kuramoto ------------------- ##
+## ------------------- for Kuramoto ------------------- ##
+## ------------------- for Kuramoto ------------------- ##
+
+
 ## Load FSS data
-filename = "data/FSS_green.jld2"
+filename = "data/FSS_green.jld2" 
 @load filename Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
 hrun(runtimes) 
 Ps_avg = nanmean(Ps, 4)[:,:,:,1]
 ns_avg = nanmean(ns, 4)[:,:,:,1]
 xis_avg = nanmean(xis, 4)[:,:,:,1]
-
+Ntargets
 
 indices = [];
 for r in 1:R
@@ -121,5 +127,23 @@ end
 p
 
 
-## Find the time at which the correlation function is constant
+## ------------------- for XY ------------------- ##
+## ------------------- for XY ------------------- ##
+## ------------------- for XY ------------------- ##
+## ------------------- for XY ------------------- ##
 
+filename = "data/FSS_XY_Squ_Tri.jld2"
+@load filename Ns Ls lattices Ps_avg times params comments runtimes
+
+times
+Ns
+Ps_avg2 = nanmean(Ps_avg, 4)[:,:,:,1]
+p = plot(legend=false, axis=:log)
+couleur = 1
+for tt in length(times)
+    plot!(1 ./ Ns, Ps_avg2[1, :, tt], rib=0, c=couleur, label="t = $(round(Int,times[tt]))", m=true)
+    plot!(1 ./ Ns, Ps_avg2[2, :, tt], rib=0, c=couleur, line=:dash, m=true)
+    couleur += 1
+end
+plot!(1 ./ Ns, 8.4E-1 * (Ns) .^ -0.0025, c=:black, line=:dot)
+p
