@@ -1,5 +1,5 @@
-cd("D:/Documents/Research/projects/kuramoto_ballistic")
-    using JLD2,StatsBase,Distributions,LinearAlgebra,Parameters,Random,BenchmarkTools,Hungarian
+# cd("D:/Documents/Research/projects/kuramoto_ballistic")
+    using JLD2,StatsBase,Distributions,LinearAlgebra,Parameters,Random,BenchmarkTools,Hungarian, JLD2
     include("../methods.jl")
     global const R0 = 1
     using Plots,ColorSchemes,LaTeXStrings
@@ -12,10 +12,11 @@ pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10
 plot()
 
 ## ------------------------------ Cluster data analysis ------------------------------ ##
-filename = "data/proba_spinwaves_scan_phase_space2.jld2"
+filename = "data/proba_spinwaves_scan_phase_space.jld2"
 filename = "data/proba_spinwaves.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
-hrun(runtimes) 
+proba_spinwave = all_nb_detected_spinwave / Rtot
+hrun(runtimes)
 Ntarget 
 Rtot
 tmax
@@ -56,15 +57,18 @@ p
 ## ---------------- Heatmap Probas ---------------- ##
 sigmas
 v0s
-colss = cgrad([:black, :red, :orange, :green])
 colss = cgrad([:black, :red, :orange, :gold])
-plot(xlabel=L"v_0", ylabel=L"\sigma", xaxis=:log, size=(550,400))
-heatmap!(v0s, sigmas, proba_spinwave', c=colss, colorbartitle=L"\mathbb{P}" * "(spinwave)")
-plot!(v0s[1:end], x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=2)
+plot(xaxis=:log, size=(470,400))
+heatmap!(v0s, sigmas, 100*proba_spinwave', c=colss, colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
+plot!(v0s, x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=0.8)
 ylims!(-0.001,0.4)
 xlims!(minimum(v0s), maximum(v0s))
+xticks!([1E-2, 1E-1, 1E-0], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
+# xticks!([1E-2, 2E-2, 3E-2, 4E-2, 5E-2, 6E-2, 7E-2, 8E-2, 9E-2, 1E-1, 2E-1, 3E-1, 4E-1, 5E-1, 6E-1, 7E-1, 8E-1, 9E-1, 1E-0, 2, 3], 
+#     [L"10^{-2}", "", "", "", "", "", "", "", "", L"10^{-1}", "", "", "", "", "", "", "", "", L"10^{0}", "", ""])
 # critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
-
+annotate!((0.05, 0.98), text(L"\sigma", 17, :left, :top, :white))
+annotate!((0.96, 0.03), text(L"v_0", 17, :right, :bottom, :white))
 
 
 
@@ -113,11 +117,12 @@ end
 ## ---------------- Plot all spinwaves for given parameters ---------------- ##
 ## ---------------- Plot all spinwaves for given parameters ---------------- ##
 ## ---------------- Plot all spinwaves for given parameters ---------------- ##
+gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 
 v0s
 sigmas
-ind_v0 = 2
-ind_sig = 3
+ind_v0 = 20
+ind_sig = 6 
 
 reall = rand(1:length(all_times_detected_spinwave[ind_v0,ind_sig]))
 pp = Vector(undef,reall)
