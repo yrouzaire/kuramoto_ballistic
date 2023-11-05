@@ -43,17 +43,18 @@ filename = "data/critical_velocity.jld2"
 @load filename critical_velocity_fusion times v0s rhos tmax R #runtimes
 # histogram(runtimes / 3600, bins=20)
 critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
+critical_velocity_std = nanstd(critical_velocity_fusion, 2)[:, 1]
 
 rhoc = 4.51 / π
 nc = 4.51
 p = plot(uaxis=:log, legend=false, xlabel=L"ρ", ylabel=L"v_c")
-plot!((rhos), (critical_velocity_avg) .- (v0s[1]), m=true)
+plot!((rhos), (critical_velocity_avg) .- (v0s[1]), m=true, rib=critical_velocity_std)
 # R0 = 1
 # plot!(rhos, x -> 3E-2 / π / R0 / x^2 * (nc^2 - π * R0^2 * x^2), c=:black, l=:solid)
 # plot!(rhos, x -> 0.08(rhoc - x) / x, c=:black, l=:solid)
 # plot!(rhos, x -> 0.15(rhoc - x)^2 / x^2, c=:black, l=:dash)
 # plot!(rhos, x -> 5E-2/x^2, c=:black, l=:dot)
-plot!(rhos, x->1E-1/x^0.5)
+# plot!(rhos, x->1E-1/x^2)
 scatter!([1,1.1,1.2], [0.06,0.025,0.018], m=true, ms=3, c=:black,label="From crit. σ simu")
 # 0.23^2
 # 0.16^2

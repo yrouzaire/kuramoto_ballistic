@@ -726,7 +726,7 @@ JLD2.@save filename nb_detected_spinwave times_detected_spinwave systems_detecte
 
 
 
-## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
+    ## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
 # Physical Params 
 # Ntarget = Int(1E3)
 # aspect_ratio = 1

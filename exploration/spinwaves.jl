@@ -12,7 +12,7 @@ pyplot(box=true,fontfamily="sans-serif",label=nothing,palette=ColorSchemes.tab10
 plot()
 
 ## ------------------------------ Cluster data analysis ------------------------------ ##
-filename = "data/proba_spinwaves_scan_phase_space.jld2"
+filename = "data/proba_spinwaves_scan_phase_space2.jld2"
 filename = "data/proba_spinwaves.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 proba_spinwave = all_nb_detected_spinwave / Rtot
