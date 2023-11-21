@@ -13,7 +13,7 @@ plot()
 
 ## ------------------------------ Cluster data analysis ------------------------------ ##
 filename = "data/proba_spinwaves_scan_phase_space2.jld2"
-filename = "data/proba_spinwaves.jld2"
+# filename = "data/proba_spinwaves.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 proba_spinwave = all_nb_detected_spinwave / Rtot
 hrun(runtimes)
@@ -21,14 +21,14 @@ Ntarget
 Rtot
 tmax
 
-##
+#
 data = []
 for element in vec(all_times_detected_spinwave)
     push!(data, element...)
 end
 histogram(data, bins=30)
 
-##
+#
 proba_spinwave = all_nb_detected_spinwave/Rtot
 
 
@@ -59,17 +59,17 @@ sigmas
 v0s
 colss = cgrad([:black, :red, :orange, :gold])
 plot(xaxis=:log, size=(470,400))
-heatmap!(v0s, sigmas, 100*proba_spinwave', c=colss, colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
+heatmap!(v0s, sigmas, 100*proba_spinwave', c=colss,colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
 plot!(v0s, x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=0.8)
 ylims!(-0.001,0.4)
-xlims!(minimum(v0s), maximum(v0s))
+xlims!(minimum(v0s), 1.18maximum(v0s))
 xticks!([1E-2, 1E-1, 1E-0], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
 # xticks!([1E-2, 2E-2, 3E-2, 4E-2, 5E-2, 6E-2, 7E-2, 8E-2, 9E-2, 1E-1, 2E-1, 3E-1, 4E-1, 5E-1, 6E-1, 7E-1, 8E-1, 9E-1, 1E-0, 2, 3], 
 #     [L"10^{-2}", "", "", "", "", "", "", "", "", L"10^{-1}", "", "", "", "", "", "", "", "", L"10^{0}", "", ""])
 # critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
 annotate!((0.05, 0.98), text(L"\sigma", 17, :left, :top, :white))
 annotate!((0.96, 0.03), text(L"v_0", 17, :right, :bottom, :white))
-
+savefig(pwd()*"/figures_paper/proba_spinwave.svg")
 
 
 ## ---------------- Detection times ---------------- ##
