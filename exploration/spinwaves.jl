@@ -13,23 +13,25 @@ plot()
 
 ## ------------------------------ Cluster data analysis ------------------------------ ##
 filename = "data/proba_spinwaves_scan_phase_space2.jld2"
+filename = "data/proba_spinwaves_scan_phase_space_N4000_complement.jld2"
+@load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
+all_nb_detected_spinwave_complement = all_nb_detected_spinwave
+Rtot_complement = Rtot
+
+filename = "data/proba_spinwaves_scan_phase_space_N4000.jld2"
 # filename = "data/proba_spinwaves.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 proba_spinwave = all_nb_detected_spinwave / Rtot
 hrun(runtimes)
+
 Ntarget 
 Rtot
 tmax
+sigmas
+v0s
 
 #
-data = []
-for element in vec(all_times_detected_spinwave)
-    push!(data, element...)
-end
-histogram(data, bins=30)
-
-#
-proba_spinwave = all_nb_detected_spinwave/Rtot
+proba_spinwave = all_nb_detected_spinwave / Rtot + all_nb_detected_spinwave_complement / Rtot_complement
 
 
 all_nb_detected_spinwave
@@ -39,16 +41,12 @@ all_thetas_detected_spinwave
 all_pos_detected_spinwave
 
 ## ---------------- Probas ---------------- ##
-## ---------------- Probas ---------------- ##
-## ---------------- Probas ---------------- ##
-## ---------------- Probas ---------------- ##
-
-p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)", size=(500,400))
-for j in each(sigmas)
-    plot!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
-end
-p
-# savefig("figures/proba_spinwave.png")
+# p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)", size=(500,400))
+# for j in each(sigmas)
+#     plot!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
+# end
+# p
+# # savefig("figures/proba_spinwave.png")
 
 
 ## ---------------- Heatmap Probas ---------------- ##
@@ -59,7 +57,7 @@ sigmas
 v0s
 colss = cgrad([:black, :red, :orange, :gold])
 plot(xaxis=:log, size=(470,400))
-heatmap!(v0s, sigmas, 100*proba_spinwave', c=colss,colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
+heatmap!(v0s, sigmas, 100*proba_spinwave',clims=(0,10), c=colss,colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
 plot!(v0s, x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=0.8)
 ylims!(-0.001,0.4)
 xlims!(minimum(v0s), 1.18maximum(v0s))
@@ -69,7 +67,7 @@ xticks!([1E-2, 1E-1, 1E-0], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
 # critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
 annotate!((0.05, 0.98), text(L"\sigma", 17, :left, :top, :white))
 annotate!((0.96, 0.03), text(L"v_0", 17, :right, :bottom, :white))
-savefig(pwd()*"/figures_paper/proba_spinwave.svg")
+# savefig(pwd()*"/figures_paper/proba_spinwave.svg")
 
 
 ## ---------------- Detection times ---------------- ##
@@ -77,12 +75,24 @@ savefig(pwd()*"/figures_paper/proba_spinwave.svg")
 ## ---------------- Detection times ---------------- ##
 ## ---------------- Detection times ---------------- ##
 
-p=plot(xlabel=L"v_0",ylabel=L"\mathbb{P}"*"(spinwave)")
+mean_time_detected_spinwave = NaN*zeros(length(v0s),length(sigmas))
+for i in each(v0s), j in each(sigmas)
+    is_empty = isempty(all_times_detected_spinwave[i,j])
+    if !is_empty mean_time_detected_spinwave[i,j] = mean(all_times_detected_spinwave[i,j]) end
+end
+p = plot(xlabel=L"v_0", ylabel=L"\langle t \rangle" * "(spinwave)", size=(500, 400))
 for j in each(sigmas)
-    histogram!(p,v0s,proba_spinwave[:,j],label="σ = $(sigmas[j])",c=j,rib=0,m=:circle)
+    plot!(p, v0s, mean_time_detected_spinwave[:, j], label="σ = $(sigmas[j])", c=j, rib=0, m=:circle)
 end
 p
-histogram(all_times_detected_spinwave[4,3], bins=20)
+
+
+p = plot(xlabel=L"v_0", ylabel=L"\langle t \rangle" * "(spinwave)", size=(500, 400), yaxis=:log)
+plot!(p, v0s, nanmean(mean_time_detected_spinwave, 2)[:, 1], rib=0, m=:circle)
+plot!(v0s, x->8.5E2exp(-x/1.25), c=:black, lw=0.8)
+p
+
+
 # savefig("figures/proba_spinwave.png")
 
 

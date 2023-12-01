@@ -107,6 +107,8 @@ Ps_avg_horizontal = nanmean(Ps, 3)[:, :, 1]
 ns_avg_horizontal = nanmean(ns, 3)[:, :, 1]
 xis_avg_horizontal = nanmean(xis, 3)[:, :, 1]
 
+# hrun(runtimes)
+
 indices = [];
 for r in 1:R
     try
@@ -131,42 +133,45 @@ end
 cols_P = cgrad([:red, :orange, :green])
 
 ##
-p1 = plot(axis=:log,legend=false)
-for i in each(v0sigs_horizontal)
-    couleur = cols_P[Ps_avg_horizontal[i,end]]
-    plot!(times, Ps_avg_horizontal[i, :], c=couleur, rib=0, m=:circle,
-        ms=3, line=true, label="σ = $(round(v0sigs_horizontal[i][1],digits=2))")
-end
-plot!(times[5:end-8], x ->7E-2sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
-annotate!((0.2, 0.05), text("(d)", 12))
-yticks!([0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], ["0.02", "0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7", "", "", "1"])
-xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
-annotate!((0.07,0.92), text(L"P", 15, :center, :black))
-annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
-p1
+# p1 = plot(axis=:log,legend=false)
+# for i in each(v0sigs_horizontal)
+#     couleur = cols_P[Ps_avg_horizontal[i,end]]
+#     plot!(times, Ps_avg_horizontal[i, :], c=couleur, rib=0, m=:circle,
+#         ms=3, line=true, label="σ = $(round(v0sigs_horizontal[i][1],digits=2))")
+# end
+# plot!(times[5:end-8], x ->7E-2sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
+# annotate!((0.2, 0.05), text("(d)", 12))
+# yticks!([0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], ["0.02", "0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7", "", "", "1"])
+# xticks!([1, 10, 100, 1000, 1E4, 1E5], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}", L"10^{5}"])
+# annotate!((0.07,0.92), text(L"P", 15, :center, :black))
+# annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
+# xlims!(0.9, 1E5)
+# p1
 
-#
+##
 L = sqrt(Ntarget / rho)
-p2 = plot(xlabel=L"t", ylabel=L"n/L^2", xscale=:log10, yscale=:log10, legend=false,
+p2 = plot(xscale=:log10, yscale=:log10, legend=true,
     yticks=([1E-5, 1E-4, 1E-3, 1E-2], [L"10^{-5}", L"10^{-4}", L"10^{-3}", L"10^{-2}"]),
     xticks=([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"]))
 for i in each(v0sigs_horizontal)
         couleur = cols_P[Ps_avg_horizontal[i,end]]
-    plot!(times, remove_negative(ns_avg_horizontal[i, :] / L^2), label=v0sigs_horizontal[i], c=couleur, rib=0, m=:circle, ms=3, line=true)
+    v00 = sqrt(v0sigs_horizontal[i][1])
+    plot!(times, remove_negative(ns_avg_horizontal[i, :] / L^2)*v00, c=couleur, rib=0, m=:circle, ms=3, line=true)
+    # plot!(times, remove_negative(ns_avg_horizontal[i, :] / L^2), c=couleur, rib=0, m=:circle, ms=3, line=true)
 end
 ylims!(1E-5, 1E-1)
 annotate!((0.15, 0.93), text(L"n/L^2", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
-plot!(times[5:end-8], x -> 1E-2log(8x) / x, line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
+plot!(times[5:end-8], x -> 1E-2log(10x) / x, line=:dash, c=:black, label=L"\log(t)/t")
 annotate!((0.07, 0.05), text("(a)", 12))
 p2
 
-#
+##
 rr = 0:round(Int, L / 2)
-p3 = plot(axis=:log, ylims=(1E-1, 1.3), legend=false)
+p3 = plot(axis=:log, ylims=(1E-1, 1.3), legend=true)
 for i in 1:1:length(v0sigs_horizontal)
         couleur = cols_P[Ps_avg_horizontal[i,end]]
-    plot!(rr[2:end], remove_negative(Cs_avg_horizontal[i, end])[2:end], label=L"v_0 = " * string(v0sigs_horizontal[i][1]), c=couleur, rib=0, m=:circle, ms=3)
+    plot!(rr[2:end], remove_negative(Cs_avg_horizontal[i, end])[2:end], c=couleur, rib=0, m=:circle, ms=3)
 end
 # plot!(rr[2:end], r -> r^(-T / 2π), line=:dot, c=:black, label=L"r^{-T/2\pi}")
 plot!(rr[2:end], r -> 0.96r^(-0.25), line=:dash, c=:black, label=L"r^{-1/4}")
@@ -177,16 +182,16 @@ annotate!((0.1, 0.945), text(L"C(r)", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"r", 15, :top, :black))
 p3
 
-# ##
-p4 = plot(xaxis=:log, legend=false, size=(220,200))#:topright)
+## #
+p4 = plot(xaxis=:log, legend=false, size=(290,180))#:topright)
 for i in each(v0sigs_horizontal)
         couleur = cols_P[Ps_avg_horizontal[i,end]]
     data = remove_negative(xis_avg_horizontal[i, 2:end-4] .* sqrt.(ns_avg_horizontal[i, 2:end-4])) / L
     plot!(times[2:end-4], data, c=couleur, m=:circle, ms=2, lw=0.8)
 end
-ylims!(0.35,0.65)
+ylims!(0.38,0.62)
 yticks!([0.4, 0.5, 0.6])
-annotate!((0.3, 0.89), text(L"ξ\,\sqrt{n}/L", 12, :center))
+annotate!((0.2, 0.89), text(L"ξ\,\sqrt{n}/L", 12, :center))
 annotate!((0.93, 0.08), text(L"t", 12, :center))
 xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", "", L"10^{2}", "", L"10^{4}"])
 p4
@@ -196,15 +201,17 @@ p4
 p5 = plot(axis=:log,legend=false)
 for i in each(v0sigs_horizontal)
     couleur = cols_P[Ps_avg_horizontal[i, end]]
-    plot!(times, remove_negative(xis_avg_horizontal[i, :])/L, c=couleur, rib=0, m=:circle,
-        ms=3, line=true)
+    v00 = sqrt(v0sigs_horizontal[i][1])
+    plot!(times, remove_negative(xis_avg_horizontal[i, :]) / L / v00, c=couleur, rib=0, m=:circle, ms=3, line=true)
+    # plot!(times, remove_negative(xis_avg_horizontal[i, :])/L, c=couleur, rib=0, m=:circle, ms=3, line=true)
 end
 p5
 yticks!([ 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7], ["0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7"])
 plot!(times[5:end-11], x -> 4.5 / L * sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
 annotate!((0.09, 1.06), text(L"\xi/L", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
-annotate!((0.07, 0.15), text("(b)", 12))
+annotate!((0.065, 0.05), text("(b)", 12))
+xlims!(0.2, 4E4)
 
 ## ---------------- 1/N scaling of P ---------------- ##
 ## ---------------- 1/N scaling of P ---------------- ##
@@ -214,6 +221,8 @@ annotate!((0.07, 0.15), text("(b)", 12))
 filename = "data/FSS_green.jld2"
 @load filename Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
 # hrun(runtimes)
+times[times_to_plot]
+
 Ps_avg = nanmean(Ps, 4)[:, :, :, 1]
 v0sigs
 
@@ -384,6 +393,5 @@ scatter(all_pos_detected_spinwave[ind_v0, ind_sig][rr],
     marker_z=mod.(all_thetas_detected_spinwave[ind_v0, ind_sig][rr], 2π),
     c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
 # savefig("figures_paper/spinwave_r$(rr)_v0$(v0s[ind_v0])_sig$(sigmas[ind_sig]).svg")
-
 
 

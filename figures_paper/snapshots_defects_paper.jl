@@ -53,3 +53,23 @@ for ind_r in 1:R
     display(p)
 end
 
+
+## ---------------- Plots manual pair of defect Appendix ---------------- ##
+## ---------------- Plots manual pair of defect Appendix ---------------- ##
+## ---------------- Plots manual pair of defect Appendix ---------------- ##
+## ---------------- Plots manual pair of defect Appendix ---------------- ##
+
+include("../parameters.jl")
+param[:params_init][:init_theta] = "pair"
+param[:params_init][:r0] = 32
+param[:v0] = 0.6
+param[:sigma] = 0.05
+param[:Ntarget] = Int(1E4)
+
+R = 5
+saving_times = [0, 100, 300, 500]
+saving_systems = Array{System}(undef, length(saving_times), R)
+
+system = System(param)
+plot_thetas(system, particles=true, vertical=false, defects=true)
+savefig("figures_paper/manually_created_pair.png")
