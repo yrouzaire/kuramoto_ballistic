@@ -5,102 +5,102 @@ include("methods.jl");
 
 ## ---------------- Proba Spinwaves ---------------- ##
 # Fixed important params 
-Ntarget = Int(4E3)
-aspect_ratio = 1
-rho = 1
-T = 0.1
-R0 = 1
-N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-init_pos = "random"
-init_theta = "hightemp"
+# Ntarget = Int(4E3)
+# aspect_ratio = 1
+# rho = 1
+# T = 0.1
+# R0 = 1
+# N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+# init_pos = "random"
+# init_theta = "hightemp"
 
-# Useless params
-r0 = round(Int,Lx/2)
-q = 1.0
-phonons = false
-if phonons @assert v0 == 0.0 "Phonons only make sense for immobile particles! " end
-if phonons @assert init_theta ≠ "single" "Phonons only make sense for PBC! " end
-if phonons @assert aspect_ratio == 1 "Phonons only implemented for square box ! (for now) " end
-phonon_amplitude = 1
-phonon_k = 1*(2pi/Lx) # wavenumber
-phonon_omega = 0 # "frequency" (up to a factor 2pi)
+# # Useless params
+# r0 = round(Int,Lx/2)
+# q = 1.0
+# phonons = false
+# if phonons @assert v0 == 0.0 "Phonons only make sense for immobile particles! " end
+# if phonons @assert init_theta ≠ "single" "Phonons only make sense for PBC! " end
+# if phonons @assert aspect_ratio == 1 "Phonons only implemented for square box ! (for now) " end
+# phonon_amplitude = 1
+# phonon_k = 1*(2pi/Lx) # wavenumber
+# phonon_omega = 0 # "frequency" (up to a factor 2pi)
 
-# Scanned params
-p_threshold = 0.5
+# # Scanned params
+# p_threshold = 0.5
 
-sigmas = collect(0:0.05:0.4)
-#sigmas = [0,0.1,0.2]
+# sigmas = collect(0:0.05:0.4)
+# #sigmas = [0,0.1,0.2]
 
-v0s =   logspace(1E-3, 3, 25, digits=3)
-# v0s = [0, 0.1, 0.2]
+# v0s =   logspace(1E-3, 3, 25, digits=3)
+# # v0s = [0, 0.1, 0.2]
 
-R_per_core = 20
-tmax = 1000 # max time
-times = tmax/20:tmax/50:tmax
+# R_per_core = 20
+# tmax = 1000 # max time
+# times = tmax/20:tmax/50:tmax
 
-m = 0 
-M = length(v0s)*length(sigmas)*R_per_core
-nb_detected_spinwave = zeros(Int,length(v0s),length(sigmas))
-times_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
-Ps_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
-thetas_detected_spinwave = [Vector{Float16}[] for i in each(v0s), j in each(sigmas)]
-pos_detected_spinwave = [Vector{Tuple{Number,Number}}[] for i in each(v0s), j in each(sigmas)]
-systems_detected_spinwave = [System[] for i in each(v0s), j in each(sigmas)]
+# m = 0 
+# M = length(v0s)*length(sigmas)*R_per_core
+# nb_detected_spinwave = zeros(Int,length(v0s),length(sigmas))
+# times_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
+# Ps_detected_spinwave = [[] for i in each(v0s), j in each(sigmas)]
+# thetas_detected_spinwave = [Vector{Float16}[] for i in each(v0s), j in each(sigmas)]
+# pos_detected_spinwave = [Vector{Tuple{Number,Number}}[] for i in each(v0s), j in each(sigmas)]
+# systems_detected_spinwave = [System[] for i in each(v0s), j in each(sigmas)]
 
 
-z = @elapsed for i in each(v0s)
-    for j in each(sigmas)
-        v0 = v0s[i]
-        sigma = sigmas[j]
+# z = @elapsed for i in each(v0s)
+#     for j in each(sigmas)
+#         v0 = v0s[i]
+#         sigma = sigmas[j]
 
-        params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-        params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
-        param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+#         params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+#         params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+#         param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
 
-        for r in 1:R_per_core
-            global m += 1
-            is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25)
-            if is_green_region
-                # println("v0 = $v0, σ = $sigma, r = $r : Simu #$m/$M")
-                system = System(param)
+#         for r in 1:R_per_core
+#             global m += 1
+#             is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25)
+#             if is_green_region
+#                 # println("v0 = $v0, σ = $sigma, r = $r : Simu #$m/$M")
+#                 system = System(param)
 
-                for tt in eachindex(times)
-                    evolve!(system, times[tt])
-                    n = number_defects(system)
-                    if n == 0
-                        P = round(polarOP(system)[1],digits=2)
-                        if P < p_threshold 
-                            println("SPINWAVE ! v0 = $v0, σ = $sigma, P = $P < $(p_threshold)")
-                            nb_detected_spinwave[i,j] += 1
-                            push!(times_detected_spinwave[i,j],times[tt])
-                            push!(Ps_detected_spinwave[i,j],P)
-                            push!(thetas_detected_spinwave[i,j],get_thetas(system))
-                            push!(pos_detected_spinwave[i,j],get_pos(system))
-                            push!(systems_detected_spinwave[i,j],system)
-                            # p=plot_thetas(system)
-                            # display(p)
-                        end
-                        # println("n=0, simulation stopped at t = $(times[tt])")
-                        break # en dehors du if parce que si n == 0 de toute facon continuer la simu n'a aucun sens 
-                    end
-                end
-            end
-        end
-    end
-end
-prinz(z)
+#                 for tt in eachindex(times)
+#                     evolve!(system, times[tt])
+#                     n = number_defects(system)
+#                     if n == 0
+#                         P = round(polarOP(system)[1],digits=2)
+#                         if P < p_threshold 
+#                             println("SPINWAVE ! v0 = $v0, σ = $sigma, P = $P < $(p_threshold)")
+#                             nb_detected_spinwave[i,j] += 1
+#                             push!(times_detected_spinwave[i,j],times[tt])
+#                             push!(Ps_detected_spinwave[i,j],P)
+#                             push!(thetas_detected_spinwave[i,j],get_thetas(system))
+#                             push!(pos_detected_spinwave[i,j],get_pos(system))
+#                             push!(systems_detected_spinwave[i,j],system)
+#                             # p=plot_thetas(system)
+#                             # display(p)
+#                         end
+#                         # println("n=0, simulation stopped at t = $(times[tt])")
+#                         break # en dehors du if parce que si n == 0 de toute facon continuer la simu n'a aucun sens 
+#                     end
+#                 end
+#             end
+#         end
+#     end
+# end
+# prinz(z)
 
-# systems_detected_spinwave
-# nb_detected_spinwave
-# pos_detected_spinwave
-# thetas_detected_spinwave
-# Ps_detected_spinwave
-# times_detected_spinwave
+# # systems_detected_spinwave
+# # nb_detected_spinwave
+# # pos_detected_spinwave
+# # thetas_detected_spinwave
+# # Ps_detected_spinwave
+# # times_detected_spinwave
 
-filename = "data/proba_spinwaves_scan_phase_space_r$real.jld2"
-JLD2.@save filename nb_detected_spinwave times_detected_spinwave systems_detected_spinwave Ps_detected_spinwave thetas_detected_spinwave pos_detected_spinwave R_per_core sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtime = z
+# filename = "data/proba_spinwaves_scan_phase_space_r$real.jld2"
+# JLD2.@save filename nb_detected_spinwave times_detected_spinwave systems_detected_spinwave Ps_detected_spinwave thetas_detected_spinwave pos_detected_spinwave R_per_core sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtime = z
 
 
 # ## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
@@ -726,78 +726,86 @@ JLD2.@save filename nb_detected_spinwave times_detected_spinwave systems_detecte
 
 
 
-    ## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
+## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
 # Physical Params 
-# Ntarget = Int(1E3)
-# aspect_ratio = 1
-# T = 0.1
-# sigma = 0.0
-# v0 = 1.0
-# R0 = 1
-# rhoc = 4.51 / pi
+Ntarget = Int(1E4)
+aspect_ratio = 1
+T = 0.1
+sigma = 0.0
+v0 = 1.0
+R0 = 1
+rhoc = 4.51 / pi
 
-# # Initialisation parameters
-# init_pos = "random"
-# init_theta = "hightemp"
-# r0 = 20.0
-# q = 1.0
-# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+# Initialisation parameters
+init_pos = "random"
+init_theta = "hightemp"
+r0 = 20.0
+q = 1.0
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
-# # Simulation parameters
-# v0s = logspace(1e-3, 0.3, 20, digits=4)
-# rhos = collect(1:0.05:rhoc)
+# Simulation parameters
+v0s = logspace(1e-3, 0.3, 20, digits=4)
+rhos = collect(1:0.05:rhoc)
 
-# seuil = 0.5 # above P = 0.5, we consider the system to be ordered
-# tmax = 3000
-# times = 0:tmax/10:tmax
+seuil = 0.5 # above P = 0.5, we consider the system to be ordered
+tmax = 3000
+times = 0:tmax/20:tmax
 
-# critical_velocity = v0s[end] * ones(length(rhos))
-# z = @elapsed for k in each(rhos)
-#     rho = rhos[k]
-#     for i in each(v0s)
-#         v0 = v0s[i]
-#         println("ρ = $rho, v0 = $v0")
-#         sigma = 0
-#         N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-#         dt = determine_dt(T, sigma, v0, N, rho)
+critical_velocity = v0s[end] * ones(length(rhos))
+z = @elapsed for k in each(rhos)
+    rho = rhos[k]
+    for i in each(v0s)
+        v0 = v0s[i]
+        println("ρ = $rho, v0 = $v0")
+        sigma = 0
+        N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+        dt = determine_dt(T, sigma, v0, N, rho)
 
-#         param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#             :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-#             :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
+        # Phonons parameters, for immobile particles (v = 0) only
+        phonons = false
+        phonon_amplitude = 1
+        phonon_k = 1*(2π/Lx) # wavenumber
+        phonon_omega = 0 # "frequency" (up to a factor 2π)
+        params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
 
-#         system = System(param)
 
-#         t = 0.0
-#         token = 1
+        param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+            :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+            :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons=>params_phonons)
 
-#         isordered = false
-#         while t < tmax
-#             t += dt
-#             update!(system, N, Lx, Ly, R0)
-#             if t ≥ times[token]
-#                 token = min(token + 1, length(times))
-#                 P = polarOP(system)[1]
-#                 if P > seuil
-#                     isordered = true
-#                     break # gets out of the while loop only 
-#                 end
-#             end
-#         end
-#         if isordered
-#             critical_velocity[k] = v0
-#             P = polarOP(system)[1]
-#             println("Critical velocity found for ρ = $rho : $v0 because P = $P")
-#             break # gets out of the for loop scanning v0s
-#         end
-#     end
-# end
-# prinz(z)
+        system = System(param)
 
-# # comments = "Critical velocity vc against the density ρ. 
-# #             From hightemp to make sure the system really has crossed the frontier.
-# #             Indeed, here since there is no σ to pertube the dynamics, 
-# #             I prefer to start from a disordered state and see whether it can order."
-# comments = ""
-# filename = "data/critical_velocity_r$real.jld2"
-# JLD2.@save filename Ntarget aspect_ratio rhos times tmax critical_velocity T v0s sigmas seuil comments rhoc runtime = z
+        t = 0.0
+        token = 1
+
+        isordered = false
+        while t < tmax
+            t += dt
+            update!(system)
+            if t ≥ times[token]
+                token = min(token + 1, length(times))
+                P = polarOP(system)[1]
+                if P > seuil
+                    isordered = true
+                    break # gets out of the while loop only 
+                end
+            end
+        end
+        if isordered
+            critical_velocity[k] = v0
+            P = polarOP(system)[1]
+            println("Critical velocity found for ρ = $rho : $v0 because P = $P")
+            break # gets out of the for loop scanning v0s
+        end
+    end
+end
+prinz(z)
+
+# comments = "Critical velocity vc against the density ρ. 
+#             From hightemp to make sure the system really has crossed the frontier.
+#             Indeed, here since there is no σ to pertube the dynamics, 
+#             I prefer to start from a disordered state and see whether it can order."
+comments = ""
+filename = "data/critical_velocity_N1E4_r$real.jld2"
+JLD2.@save filename Ntarget aspect_ratio rhos times tmax critical_velocity T v0s sigmas seuil comments rhoc runtime = z
 

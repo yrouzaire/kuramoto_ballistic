@@ -355,7 +355,7 @@ for i in 2:length(v0s)
     end
 end
 mu = 1 / 2
-plot!(times[2:700], x -> exp(0.5 * lambertw(2π * x / mu)), c=:black)
+# plot!(times[2:700], x -> exp(0.5 * lambertw(2π * x / mu)), c=:black)
 xlims!(0.9, 1E3)
 ylims!(0, 30)
 xticks!([1, 10, 100, 1000], [L"10^0", L"10^1", L"10^2", L"10^3"])

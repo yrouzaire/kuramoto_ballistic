@@ -31,7 +31,8 @@ sigmas
 v0s
 
 #
-proba_spinwave = all_nb_detected_spinwave / Rtot + all_nb_detected_spinwave_complement / Rtot_complement
+proba_spinwave = all_nb_detected_spinwave / Rtot 
+proba_spinwave = 0all_nb_detected_spinwave / Rtot + all_nb_detected_spinwave_complement / Rtot_complement
 
 
 all_nb_detected_spinwave
@@ -67,6 +68,7 @@ xticks!([1E-2, 1E-1, 1E-0], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
 # critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
 annotate!((0.05, 0.98), text(L"\sigma", 17, :left, :top, :white))
 annotate!((0.96, 0.03), text(L"v_0", 17, :right, :bottom, :white))
+title!(L"ρ = 1, N = 10^4")
 # savefig(pwd()*"/figures_paper/proba_spinwave.svg")
 
 
@@ -87,10 +89,18 @@ end
 p
 
 
-p = plot(xlabel=L"v_0", ylabel=L"\langle t \rangle" * "(spinwave)", size=(500, 400), yaxis=:log)
+p = plot(xlabel=L"v_0", ylabel=L"\langle t_{creation} \rangle", size=(450, 400), yaxis=:log)
 plot!(p, v0s, nanmean(mean_time_detected_spinwave, 2)[:, 1], rib=0, m=:circle)
-plot!(v0s, x->8.5E2exp(-x/1.25), c=:black, lw=0.8)
+plot!(v0s, x->8.5E2exp(-x/1.25), c=:black, lw=0.8, label=L"\exp(-v_0/1.25)")
 p
+
+
+## ---------------- Profiles : dependence on sigma and v0 ---------------- ##
+## ---------------- Profiles : dependence on sigma and v0 ---------------- ##
+## ---------------- Profiles : dependence on sigma and v0 ---------------- ##
+## ---------------- Profiles : dependence on sigma and v0 ---------------- ##
+
+# probas_renormalized = proba_spinwave 
 
 
 # savefig("figures/proba_spinwave.png")
