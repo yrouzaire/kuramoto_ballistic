@@ -2,7 +2,7 @@ cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
 include("../methods.jl");
 using Plots, ColorSchemes, LaTeXStrings
-gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 cols = cgrad([:black, :blue, :green, :orange, :red, :black]);
 plot()
 &
@@ -59,3 +59,17 @@ scatter!([1,1.1,1.2], [0.06,0.025,0.018], m=true, ms=3, c=:black,label="From cri
 # 0.23^2
 # 0.16^2
 # 0.135^2
+
+##
+filename = "data/critical_velocity_N1E4.jld2"
+@load filename critical_velocities_fusion times v0s rhos tmax #runtimes
+critical_velocities_avg = nanmean(critical_velocities_fusion, 2)[:, 1]
+critical_velocities_std = nanstd(critical_velocities_fusion, 2)[:, 1]
+
+# p = plot(uaxis=:log, legend=false, xlabel=L"ρ", ylabel=L"v_c")
+plot!((rhos), (critical_velocities_avg) .- 0(v0s[1]), m=true, rib=critical_velocities_std)
+plot!(rhos, x -> 0.3(rhoc - x) / x, c=:black, l=:solid)
+xlims!(0.96,1.44)
+# plot!(rhos, x -> 0.6(rhoc - x)^3 / x^3, c=:black, l=:dash)
+# scatter!([1, 1.1, 1.2], [0.06, 0.025, 0.018], m=true, ms=3, c=:black, label="From crit. σ simu")
+
