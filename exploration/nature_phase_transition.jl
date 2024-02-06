@@ -1,4 +1,4 @@
-cd("D:/Documents/Research/projects/kuramoto_ballistic")
+cd("/Users/yrouzaire/Documents/Recherche/GitHub/kuramoto_ballistic")
 using JLD2, StatsBase, Distributions, LinearAlgebra, Parameters, Random, BenchmarkTools, Hungarian
 include("../methods.jl");
 # const global R0 = 1
@@ -28,6 +28,7 @@ phsp = heatmap(v0s[2:end], sigmas, Ps_avg[1, 1, 1, 2:end, :, 1, end, 1]',
 filename = "data/nature_phase_transition_horizontal.jld2"
 @load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
 # histogram(runtimes / 3600 /24, bins=20)
+v0sigs
 v0sigs_horizontal = v0sigs[1:end]
 scatter!(phsp,v0sigs_horizontal[1:1:end],c=:black,m=:circle,ms=3.5)
 Ps_avg_horizontal = nanmean(Ps, 3)[:,:,1]

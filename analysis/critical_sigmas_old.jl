@@ -13,7 +13,7 @@ filename = "data/critical_sigma.jld2"
 hrun(runtimes)
 critical_sigmas_avg = nanmean(critical_sigmas_fusion, 3)[:, :, 1]
 ## Plotting
-p1 = plot(xaxis=:log, legend=:topleft, xlabel=L"v_0", ylabel=L"\sigma_c")
+p1 = plot(uaxis=:log, legend=:topleft, xlabel=L"v_0", ylabel=L"\sigma_c")
 for i in each(rhos)
     if rhos[i] ≈ 4.51 / π
         lab = L"ρ_c ≈ 1.44"
@@ -48,7 +48,7 @@ critical_velocity_std = nanstd(critical_velocity_fusion, 2)[:, 1]
 
 rhoc = 4.51 / π
 nc = 4.51
-p = plot(uaxis=:log, legend=:topright)#, xlabel=L"ρ", ylabel=L"v_c")
+p = plot(uaxis=:log, legend=:topright, xlabel=L"ρ", ylabel=L"v_c")
 plot!((rhos), (critical_velocity_avg) .- 0(v0s[1]), m=true, rib=critical_velocity_std, label=L"N = 10^3")
 # R0 = 1
 # plot!(rhos, x -> 3E-2 / π / R0 / x^2 * (nc^2 - π * R0^2 * x^2), c=:black, l=:solid)

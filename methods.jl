@@ -473,7 +473,6 @@ function cg(system::System{T}) where {T<:AbstractFloat}
     return fine_grid
 end
 
-
 ## Time Evolution
 construct_cell_list(system) = construct_cell_list(get_pos(system), system.N, system.Lx, system.Ly, system.R0)
 function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, R0::Number)::Tuple{Vector{Int},Matrix{Int}} where {T<:AbstractFloat}
@@ -483,6 +482,15 @@ function construct_cell_list(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, 
     list = -ones(Int, N) # list[n] contains the index of the particle to which particle n points. -1 if it points to no one
     for n in 1:N
         cellx, celly = floor(Int,pos[n][1]/R0) + 1, floor(Int,pos[n][2]/R0) + 1 # cell to which particle n belongs
+        
+        #= The reason for the min() is that if the particle is exactly at the border, 
+            this functions returns a cell that does not exist. 
+            For some reason it still happens even though the mod0 function 
+            should take care of those cases. I don't have the time to look for a proper fix, 
+            but I've made sure that the problem is indeed cellx = nb_cells_x + 1. =#
+        cellx = min(cellx, nb_cells_x)
+        celly = min(celly, nb_cells_y)
+
         list[n] = head[cellx, celly]
         head[cellx, celly] = n
     end
@@ -504,7 +512,6 @@ function get_neighbouring_cells(cellx::Int, celly::Int, nb_cells_x::Int, nb_cell
     if cellx == 1 push!(neighbouring_cells, [nb_cells_x-1, celly], [nb_cells_x-1, mod1(celly+1, nb_cells_y)], [nb_cells_x-1, mod1(celly-1, nb_cells_y)]) end
     if celly == 1 push!(neighbouring_cells, [cellx, nb_cells_y-1], [mod1(cellx+1, nb_cells_x), nb_cells_y-1], [mod1(cellx-1, nb_cells_x), nb_cells_y-1]) end    
     # Note that this problem does not exist for the last row, which only interacts with the first row and not the second one 
-    
     return neighbouring_cells
 
     # Code below as fast but less clear
@@ -528,27 +535,39 @@ function get_list_neighbours(pos::Vector{Tuple{T,T}}, N::Int, Lx::Int, Ly::Int, 
     nb_cells_x, nb_cells_y = size(head)
     R02 = R0^2
 
-    for n in 1:N
-        cellx, celly = Int(div(pos[n][1], R0)) + 1, Int(div(pos[n][2], R0)) + 1 # cell to which particle n belongs
-        poscur = pos[n]
-        ind_neighbours_n = Int[]
-        sizehint!(ind_neighbours_n, 10) # average number of neighbours is ~ 4ρ
-        for (i, j) in get_neighbouring_cells(cellx, celly, nb_cells_x, nb_cells_y)
-            # After some investigation, the line above is not slow, what takes time is the cell algo itself
-            next = head[i, j]
-            if next ≠ -1
-                if 0 < dist2(poscur, pos[next], Lx, Ly) ≤ R02
-                    push!(ind_neighbours_n, next)
-                end
-                while list[next] ≠ -1
-                    if 0 < dist2(poscur, pos[list[next]], Lx, Ly) ≤ R02
-                        push!(ind_neighbours_n, list[next])
+    try 
+        for n in 1:N
+            poscur = pos[n]
+            poscur = (mod0(poscur[1], Lx), mod0(poscur[2], Ly)) 
+            #= The line above is necessary because, for some reason, 
+            some particles have a position exactly equal to Lx or Ly, 
+            even though I use mod0 in the update_positions function 
+            to handle this issue... so I duplicate. =#
+
+            cellx, celly = Int(div(poscur[1], R0)) + 1, Int(div(poscur[2], R0)) + 1 # cell to which particle n belongs
+            ind_neighbours_n = Int[]
+            sizehint!(ind_neighbours_n, 10) # average number of neighbours is ~ 4ρ
+            for (i, j) in get_neighbouring_cells(cellx, celly, nb_cells_x, nb_cells_y)
+                # After some investigation, the line above is not slow, what takes time is the cell algo itself
+                next = head[i, j]
+                if next ≠ -1
+                    if 0 < dist2(poscur, pos[next], Lx, Ly) ≤ R02
+                        push!(ind_neighbours_n, next)
                     end
-                    next = list[next]
-                end
+                    while list[next] ≠ -1
+                        if 0 < dist2(poscur, pos[list[next]], Lx, Ly) ≤ R02
+                            push!(ind_neighbours_n, list[next])
+                        end
+                        next = list[next]
+                    end
+                end 
             end
+            ind_neighbours[n] = ind_neighbours_n
         end
-        ind_neighbours[n] = ind_neighbours_n
+    catch
+        println("System size : $(Lx) and $(Ly)")
+        println("Maximum x value : $(maximum([el[1] for el in pos]))")
+        println("Maximum y value : $(maximum([el[2] for el in pos]))")
     end
     return ind_neighbours
 end
@@ -624,7 +643,7 @@ function update_positions!(system::System{T}) where {T<:AbstractFloat}
         #= Use of custom modulo function above is required because
             if a particle passes from +ε to -ε in the x or y direction, 
             with ε < EPSILON(AbstractFloat), then the result of the standard  
-            mod functuion is contra-intuitive. This issue has already been debated, 
+            mod function is contra-intuitive. This issue has already been debated, 
             cf. https://github.com/JuliaLang/julia/issues/36310. 
             Since it appears that a simple fix does not exist, 
             I use the suggested workaround. 
@@ -632,6 +651,7 @@ function update_positions!(system::System{T}) where {T<:AbstractFloat}
             =#
     end
 end
+
 
 function update_positions_phonons!(system::System{T}) where {T<:AbstractFloat}
     Lx, Ly = system.Lx, system.Ly
@@ -1586,7 +1606,6 @@ function vector_of_vector2matrix(x::Vector{Vector{T}}) where {T<:AbstractFloat}
     return matrice
 end
 vecTuple2matrix(vec::Vector{Tuple{F,F}}) where {F<:AbstractFloat} = F.(vector_of_vector2matrix([[vec[n][1], vec[n][2]] for n in 1:length(vec)]))
-# vecTuple2matrix(get_pos(system))
 
 
 dist(a, b, Lx, Ly) = sqrt(dist2(a, b, Lx, Ly))

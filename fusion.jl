@@ -1,7 +1,7 @@
 using JLD2, Parameters
 include("methods.jl");
 
-base_filename = "data/critical_velocity_N1E4_complement" # look up in main_server.jl
+base_filename = "data/FSS_to_determine_transition" # look up in main_server.jl
 R = 40 # look up into bash_loog.sh
 indices = [];
 for r in 1:R
@@ -11,6 +11,7 @@ for r in 1:R
 end;
 println("There are $(length(indices))/$R files.")
 
+rhoc = 4.51 / pi
 
 
 ## Impact σ on R(t*) 
@@ -224,25 +225,25 @@ println("There are $(length(indices))/$R files.")
 
 
 # ## FSS
-# @load base_filename * "_r$(indices[1]).jld2" Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime
-# Ps = zeros(length(v0sigs), length(Ntargets), length(times),R)
-# ns = zeros(length(v0sigs), length(Ntargets), length(times),R)
-# xis = zeros(length(v0sigs), length(Ntargets), length(times),R)
-# Cs = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times),R)
-# runtimes = NaN*zeros(R)
+@load base_filename * "_r$(indices[1]).jld2" Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime
+Ps = zeros(length(v0sigs), length(Ntargets), length(times),R)
+ns = zeros(length(v0sigs), length(Ntargets), length(times),R)
+xis = zeros(length(v0sigs), length(Ntargets), length(times),R)
+Cs = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times),R)
+runtimes = NaN*zeros(R)
 
-# for r in indices
-#     println("r = $r")
-#     @load base_filename * "_r$r.jld2" runtime P C n xi 
-#     Ps[:,:,:,r] = P
-#     Cs[:,:,:,r] = C
-#     ns[:,:,:,r] = n
-#     xis[:,:,:,r] = xi
+for r in indices
+    println("r = $r")
+    @load base_filename * "_r$r.jld2" runtime P C n xi 
+    Ps[:,:,:,r] = P
+    Cs[:,:,:,r] = C
+    ns[:,:,:,r] = n
+    xis[:,:,:,r] = xi
 
-#     runtimes[r] = runtime
-# end
-# @save base_filename * ".jld2" Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
-# println("Fusionned data saved in $(base_filename*".jld2") .")
+    runtimes[r] = runtime
+end
+@save base_filename * ".jld2" Ntargets v0sigs Ps Cs ns xis params_init aspect_ratio times tmax T comments rho rhoc runtimes R
+println("Fusionned data saved in $(base_filename*".jld2") .")
 
 ## Phase Diagram
 # @load base_filename*"_r$(indices[1]).jld2" Ts inits Ns v0s rhos sigmas times_log tmax comments
@@ -308,16 +309,16 @@ println("There are $(length(indices))/$R files.")
 # println("Fusionned data saved in $(base_filename*".jld2") .")
 
 # ## Critical velocity
-@load base_filename * "_r$(indices[1]).jld2" Ntarget rhos times tmax T v0s seuil rhoc runtime comments
-critical_velocities_fusion = NaN*ones(length(rhos), R)
-runtimes = NaN * zeros(R)
-for r in indices
-    println("r = $r")
-    @load base_filename * "_r$r.jld2" critical_velocity
-    critical_velocities_fusion[:, r] = critical_velocity
-    runtimes[r] = runtime
-end
-@save base_filename * ".jld2" Ntarget rhos times tmax critical_velocities_fusion T v0s seuil rhoc runtimes comments R
-println("Fusionned data saved in $(base_filename*".jld2") .")
+# @load base_filename * "_r$(indices[1]).jld2" Ntarget rhos times tmax T v0s seuil rhoc runtime comments
+# critical_velocity_fusion = NaN*ones(length(rhos), R)
+# runtimes = NaN * zeros(R)
+# for r in indices
+#     println("r = $r")
+#     @load base_filename * "_r$r.jld2" critical_velocity runtime
+#     critical_velocity_fusion[:, r] = critical_velocity
+#     runtimes[r] = runtime
+# end
+# @save base_filename * ".jld2" Ntarget rhos times tmax critical_velocity_fusion T v0s seuil rhoc runtimes comments R Reff=length(indices)
+# println("Fusionned data saved in $(base_filename*".jld2") .")
 
 
