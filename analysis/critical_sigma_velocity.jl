@@ -15,7 +15,7 @@ rhoc = 4.51 / π
 ## ---------------------- Critical Velocity N=1E3 ---------------------- ##
 ## ---------------------- Critical Velocity N=1E3 ---------------------- ##
 ## ---------------------- Critical Velocity N=1E3 ---------------------- ##
-p = plot(uaxis=:log, legend=:topright, xlabel=L"ρ", ylabel=L"v_c")
+p = plot(uaxis=:log, legend=:top, xlabel=L"ρ", ylabel=L"v_c")
 
 filename = "data/critical_velocity_N1E3_extended2.jld2"
 @load filename critical_velocity_fusion times v0s rhos tmax R runtimes
@@ -23,7 +23,8 @@ filename = "data/critical_velocity_N1E3_extended2.jld2"
 critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
 critical_velocity_std = nanstd(critical_velocity_fusion, 2)[:, 1]
 # plot!((rhos), (critical_velocity_fusion[:, 1]), m=true, rib=0critical_velocity_std, label=L"N = 10^3")
-plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^3")
+hline!([0], c=:black, l=:solid, lw=0.7)
+plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^3", c=1)
 # plot!(0.5:0.01:1.5, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:dash)
 # plot!(0.5:0.01:1.5, x -> max(0, 0.2(1.16 - x) / x), c=:black, l=:solid)
 # ylims!(0, 0.02)
@@ -31,15 +32,18 @@ plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=
 critical_velocity_avg
 
 filename = "data/critical_velocity_N1E4_extended2.jld2"
-@load filename critical_velocity_fusion times v0s rhos tmax R runtimes
-hrun(runtimes)
-# critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
+@load filename critical_velocity_fusion times v0s rhos tmax R runtimes comments
+# hrun(runtimes)
+comments
+tmax
+critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
 critical_velocity_std = nanstd(critical_velocity_fusion, 2)[:, 1]
 # plot!((rhos), (critical_velocity_fusion[:, 1]), m=true, rib=0critical_velocity_std, label=L"N = 10^3")
-plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^4")
-plot!(0.5:0.01:1.5, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:solid)
+plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^4", c=2)
+plot!(0.5:0.01:1.6, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:solid, label=L"v_c(ρ)"*" (theory)")
 # ylims!(0, 0.02)
-
+xlims!(0.45, 1.65)
+vline!([1.435], c=:grey, l=:dash, label=L"ρ_{perco}", lw=0.7)
 
 ## -------------- Critical Sigmas Output Reconstitution -------------- ##
 ## -------------- Critical Sigmas Output Reconstitution -------------- ##

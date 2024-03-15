@@ -13,7 +13,7 @@ plot()
 
 ## ------------------------------ Cluster data analysis ------------------------------ ##
 filename = "data/proba_spinwaves_scan_phase_space2.jld2"
-filename = "data/proba_spinwaves_scan_phase_space_N4000_complement.jld2"
+# filename = "data/proba_spinwaves_scan_phase_space_N4000_complement.jld2"
 @load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
 all_nb_detected_spinwave_complement = all_nb_detected_spinwave
 Rtot_complement = Rtot
@@ -54,11 +54,14 @@ all_pos_detected_spinwave
 ## ---------------- Heatmap Probas ---------------- ##
 ## ---------------- Heatmap Probas ---------------- ##
 ## ---------------- Heatmap Probas ---------------- ##
+
+
 sigmas
 v0s
 colss = cgrad([:black, :red, :orange, :gold])
 plot(xaxis=:log, size=(470,400))
-heatmap!(v0s, sigmas, 100*proba_spinwave',clims=(0,10), c=colss,colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
+heatmap!(v0s, sigmas, 100 * proba_spinwave', clims=(0, 10),
+c=colss,colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
 plot!(v0s, x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=0.8)
 ylims!(-0.001,0.4)
 xlims!(minimum(v0s), 1.18maximum(v0s))
