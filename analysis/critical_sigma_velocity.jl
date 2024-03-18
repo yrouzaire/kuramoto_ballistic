@@ -15,7 +15,7 @@ rhoc = 4.51 / π
 ## ---------------------- Critical Velocity N=1E3 ---------------------- ##
 ## ---------------------- Critical Velocity N=1E3 ---------------------- ##
 ## ---------------------- Critical Velocity N=1E3 ---------------------- ##
-p = plot(uaxis=:log, legend=:top, xlabel=L"ρ", ylabel=L"v_c")
+p = plot(uaxis=:log, legend=:top)
 
 filename = "data/critical_velocity_N1E3_extended2.jld2"
 @load filename critical_velocity_fusion times v0s rhos tmax R runtimes
@@ -31,6 +31,10 @@ plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=
 
 critical_velocity_avg
 
+ylims!(-0.02, 0.5)
+annotate!((0.95, 0.07), text(L"ρ", 17, :right, :bottom))
+annotate!((0.26, 0.88), text(L"v_c", 17, :right, :bottom))
+
 filename = "data/critical_velocity_N1E4_extended2.jld2"
 @load filename critical_velocity_fusion times v0s rhos tmax R runtimes comments
 # hrun(runtimes)
@@ -40,10 +44,13 @@ critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
 critical_velocity_std = nanstd(critical_velocity_fusion, 2)[:, 1]
 # plot!((rhos), (critical_velocity_fusion[:, 1]), m=true, rib=0critical_velocity_std, label=L"N = 10^3")
 plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^4", c=2)
-plot!(0.5:0.01:1.6, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:solid, label=L"v_c(ρ)"*" (theory)")
+plot!(0.5:0.01:1.6, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:solid)#, label=L"v_c(ρ)"*" (theory)")
 # ylims!(0, 0.02)
 xlims!(0.45, 1.65)
-vline!([1.435], c=:grey, l=:dash, label=L"ρ_{perco}", lw=0.7)
+vline!([1.435], c=:grey, l=:dash, lw=0.7)
+annotate!(1.5, 0.23, text(L"ρ_{perco}=1.44", 10, :center, :center, 90.0, :grey))
+
+# savefig("figures_paper/fig1/critical_velocity_rho.svg")
 
 ## -------------- Critical Sigmas Output Reconstitution -------------- ##
 ## -------------- Critical Sigmas Output Reconstitution -------------- ##

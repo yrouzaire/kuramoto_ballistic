@@ -137,24 +137,8 @@ end
 cols_P = cgrad([:red, :orange, :green])
 
 ##
-# p1 = plot(axis=:log,legend=false)
-# for i in each(v0sigs_horizontal)
-#     couleur = cols_P[Ps_avg_horizontal[i,end]]
-#     plot!(times, Ps_avg_horizontal[i, :], c=couleur, rib=0, m=:circle,
-#         ms=3, line=true, label="σ = $(round(v0sigs_horizontal[i][1],digits=2))")
-# end
-# plot!(times[5:end-8], x ->7E-2sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
-# annotate!((0.2, 0.05), text("(d)", 12))
-# yticks!([0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], ["0.02", "0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7", "", "", "1"])
-# xticks!([1, 10, 100, 1000, 1E4, 1E5], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}", L"10^{5}"])
-# annotate!((0.07,0.92), text(L"P", 15, :center, :black))
-# annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
-# xlims!(0.9, 1E5)
-# p1
-
-##
 L = sqrt(Ntarget / rho)
-p2 = plot(xscale=:log10, yscale=:log10, legend=:top,
+p1 = plot(xscale=:log10, yscale=:log10, legend=:top,
     yticks=([1E-5, 1E-4, 1E-3, 1E-2], [L"10^{-5}", L"10^{-4}", L"10^{-3}", L"10^{-2}"]),
     xticks=([1, 10, 100, 1000, 1E4], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"]))
 for i in each(v0sigs_horizontal)
@@ -167,8 +151,8 @@ ylims!(1E-5, 1E-1)
 annotate!((0.15, 0.93), text(L"n/L^2", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
 plot!(times[5:end-8], x -> 1.3E-2log(10x) / x, line=:dash, c=:black, label=L"\log(t)/t")
-annotate!((0.92, 0.93), text("(b)", 15))
-p2
+annotate!((0.92, 0.93), text("(a)", 15))
+p1
 
 ##
 rr = 0:round(Int, L / 2)
@@ -188,7 +172,7 @@ annotate!((0.92, 0.93), text("(c)", 15))
 p3
 
 ## #
-p4 = plot(xaxis=:log, legend=false, size=(290,180))#:topright)
+inset_xi = plot(xaxis=:log, legend=false, size=(250,250))#:topright)
 for i in each(v0sigs_horizontal)
         couleur = cols_P[Ps_avg_horizontal[i,end]]
     data = remove_negative(xis_avg_horizontal[i, 2:end-4] .* sqrt.(ns_avg_horizontal[i, 2:end-4])) / L
@@ -196,31 +180,32 @@ for i in each(v0sigs_horizontal)
 end
 ylims!(0.38,0.62)
 yticks!([0.4, 0.5, 0.6])
-annotate!((0.2, 0.89), text(L"ξ\,\sqrt{n}/L", 12, :center))
+annotate!((0.23, 0.89), text(L"ξ\,\sqrt{n}/L", 12, :center))
 annotate!((0.93, 0.08), text(L"t", 12, :center))
 xticks!([1, 10, 100, 1000, 1E4], [L"10^{0}", "", L"10^{2}", "", L"10^{4}"])
-p4
-# savefig(p4, "figures_paper/inset_xi.svg")
+inset_xi
+savefig(inset_xi, "figures_paper/fig2/inset_xi.svg")
 
 ##
-p5 = plot(axis=:log,legend=false)
+p2 = plot(axis=:log,legend=:top)
 for i in each(v0sigs_horizontal)
     couleur = cols_P[Ps_avg_horizontal[i, end]]
     v00 = sqrt(v0sigs_horizontal[i][1])
     # plot!(times, remove_negative(xis_avg_horizontal[i, :]) / L / v00, c=couleur, rib=0, m=:circle, ms=3, line=true)
     plot!(times, remove_negative(xis_avg_horizontal[i, :])/L, c=couleur, rib=0, m=:circle, ms=3, line=true)
 end
-p5
-yticks!([ 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7], ["0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7"])
-plot!(times[5:end-11], x -> 4.5 / L * sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
-annotate!((0.09, 1.06), text(L"\xi/L", 15, :center, :black))
+p2
+yticks!([0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7], ["0.03", "", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "", "0.5", "", "0.7"])
+plot!(times[5:end-13], x -> 4.3 / L * sqrt(x / log(8x)), line=:dash, c=:black, label=L"\sqrt{t/\log(t)}")
+annotate!((0.09, 0.93), text(L"\xi/L", 15, :center, :black))
 annotate!((0.94, 0.1), text(L"t", 15, :top, :black))
-annotate!((0.065, 0.05), text("(b)", 12))
-xlims!(0.2, 4E4)
+annotate!((.92, .93), text("(b)", 15))
+xlims!(0.2, 14E4)
+ylims!(0.022, 0.7)
+xticks!([1, 10, 100, 1000, 1E4, 1E5], [L"10^{0}", L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}", L"10^{5}"])
 
 
-plot(p5, p2, p3, p3, layout=(1,4), size=(1600, 400))
-
+##
 ## ---------------- 1/N scaling of P ---------------- ##
 ## ---------------- 1/N scaling of P ---------------- ##
 ## ---------------- 1/N scaling of P ---------------- ##
@@ -236,7 +221,7 @@ v0sigs
 
 times_to_plot = [10, 15, 20, 23, 26, 30]
 
-inset_FSS_time = plot(axis=:log, legend=:bottomleft, size=(250, 250), box=false)
+inset_FSS_time = plot(axis=:log, legend=:bottomleft, size=(250, 200), box=false)
 for t in times_to_plot
     plot!(Ntargets, Ps_avg[2, :, t], rib=0, m=true)# label="t = $(round(Int,times[t]))")
     # plot!(1 ./ Ntargets, Ps_avg[2, :, t], rib=0, m=true)# label="t = $(round(Int,times[t]))")
@@ -257,7 +242,7 @@ annotate!((0.87, -0.006), text(L"N", 15, :center, :bottom, :black))
 
 ylims!(0.04, 1.1)
 inset_FSS_time
-# savefig(inset_FSS_time, "figures_paper/inset_FSS_time.svg")
+# savefig(inset_FSS_time, "figures_paper/fig2/inset_FSS_time.svg")
 
 ##
 filename = "data/FSS_to_determine_transition.jld2"
@@ -271,26 +256,26 @@ Ps_std = nanstd(Ps, 4)[:, :, :, 1]
 ns_avg = nanmean(ns, 4)[:, :, :, 1]
 xis_avg = nanmean(xis, 4)[:, :, :, 1]
 
-p = plot(axis=:log, legend=false, xlabel=L"N", ylabel=L"P")
+p4 = plot(axis=:log, legend=:top)
 for i in each(v0sigs)
     couleur = cols_P[Ps_avg[i, end, end]]
     # couleur = cols_P[Ps_avg_horizontal[i, end]]
-    plot!(Ntargets, Ps_avg[i, :, end], label="v0sig = $(v0sigs[i])", rib=0Ps_std[i, :, end], m=true, c=couleur)
+    plot!(Ntargets, Ps_avg[i, :, end], rib=0Ps_std[i, :, end], m=true, c=couleur)
 end
-ylims!(0.03, 1.15)
+ylims!(0.03, 1.4)
 yticks!([0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], ["0.03", "0.04", "0.05", "", "0.07", "", "", "0.1", "0.2", "0.3", "0.4", "0.5", "", "0.7", "", "", "1"])
-plot!(Ntargets[2:end-1], x-> 3x ^ -0.5, c=:black, line=:dot, label=L"N^{-1/2}")
-p
+plot!(Ntargets[2:end-1], x-> 3.7x ^ -0.5, c=:black, line=:dot, label=L"N^{-1/2}")
+p4
+annotate!((0.92, 0.93), text("(d)", 15))
+annotate!((0.08, 0.9), text(L"P", 15, :center, :bottom, :black))
+annotate!((0.9, 0), text(L"N", 15, :center, :bottom, :black))
 
 
 ##
+fig2=plot(p1, p2, p3, p4, layout=(1, 4), size=(1600, 400));
+savefig(fig2, "figures_paper/fig2/fig2.svg")
 
-plot(p2, p5, p3, pFSS, layout=(2, 2), size=(800, 800))
-# savefig("figures_paper/figure_through_transition.svg")
-
-plot(p2, p5, p3,p1, pFSS, layout=(1,5), size=(2000, 400))
-# savefig("figures_paper/figure_through_transition_horizontal.svg")
-# savefig("figures_paper/figure_through_transition_horizontal.pdf")
+## Critical Density
 
 
 ## ---------------- R(t) defects  ---------------- ##
