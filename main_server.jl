@@ -665,76 +665,76 @@ include("methods.jl");
 
 
 ## ---------------- Finite Size Scaling ---------------- ##
-comments = "The goal of this script is to evaluate the change in polarisation for given (v0, σ) when L varies."
-# Physical Params 
-aspect_ratio = 1
-T = 0.1
-R0 = 1
-rho = 1.0
-rhoc = 4.51 / pi
+# comments = "The goal of this script is to evaluate the change in polarisation for given (v0, σ) when L varies."
+# # Physical Params 
+# aspect_ratio = 1
+# T = 0.1
+# R0 = 1
+# rho = 1.0
+# rhoc = 4.51 / pi
 
-# Initialisation parameters
-init_pos = "random"
-init_theta = "hightemp"
-r0 = 20.0
-q = 1.0
-params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+# # Initialisation parameters
+# init_pos = "random"
+# init_theta = "hightemp"
+# r0 = 20.0
+# q = 1.0
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
-# Simulation parameters
-v0s = [0.097, 0.143, 021, 0.311, 0.459, 0.677, 1]
-v0s = [1]
-v0sigs = [(v, 0.1) for v in v0s]
-Ntargets = Int.(logspace(50,1E4,5,digits=0))
+# # Simulation parameters
+# v0s = [0.097, 0.143, 021, 0.311, 0.459, 0.677, 1]
+# v0s = [1]
+# v0sigs = [(v, 0.1) for v in v0s]
+# Ntargets = Int.(logspace(50,1E4,5,digits=0))
 
-tmax = Ntargets[end]
-# times = collect(0:tmax/30:tmax) # linear time
-times = logspace(1,tmax,30,digits=1) # log time
+# tmax = Ntargets[end]
+# # times = collect(0:tmax/30:tmax) # linear time
+# times = logspace(1,tmax,30,digits=1) # log time
 
-P = zeros(length(v0sigs), length(Ntargets), length(times))
-C = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times))
-xi = zeros(length(v0sigs), length(Ntargets), length(times))
-n = zeros(length(v0sigs), length(Ntargets), length(times))
+# P = zeros(length(v0sigs), length(Ntargets), length(times))
+# C = Array{Vector{Float64}}(undef, length(v0sigs), length(Ntargets), length(times))
+# xi = zeros(length(v0sigs), length(Ntargets), length(times))
+# n = zeros(length(v0sigs), length(Ntargets), length(times))
 
-z = @elapsed for i in each(v0sigs), nn in each(Ntargets)
-    v0, sigma = v0sigs[i]
-    Ntarget = Ntargets[nn]
-    println("v0 = $v0, σ = $sigma, Ntarget = $Ntarget")
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    dt = determine_dt(T, sigma, v0, N, rho)
-    params_phonons = Dict(:phonons => false, :phonon_amplitude => 1, :phonon_k => 1, :phonon_omega => 1)
-    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+# z = @elapsed for i in each(v0sigs), nn in each(Ntargets)
+#     v0, sigma = v0sigs[i]
+#     Ntarget = Ntargets[nn]
+#     println("v0 = $v0, σ = $sigma, Ntarget = $Ntarget")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#     dt = determine_dt(T, sigma, v0, N, rho)
+#     params_phonons = Dict(:phonons => false, :phonon_amplitude => 1, :phonon_k => 1, :phonon_omega => 1)
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
 
 
-    system = System(param)
+#     system = System(param)
 
-    t = 0.0
-    token = 1
-    tmax_for_this_N = min(4E-2 * N * log(N), tmax) # relaxation time ~ N log N,4E-2 benchmarked (actual value 2.5E-2 but I take margin)
+#     t = 0.0
+#     token = 1
+#     tmax_for_this_N = min(4E-2 * N * log(N), tmax) # relaxation time ~ N log N,4E-2 benchmarked (actual value 2.5E-2 but I take margin)
 
-    for tt in eachindex(times)
-        evolve!(system, times[tt]) # evolves the systems up to times[tt]
+#     for tt in eachindex(times)
+#         evolve!(system, times[tt]) # evolves the systems up to times[tt]
         
-        P[i,nn,tt]  = polarOP(system)[1]
-        corr_tmp    = corr(system)
-        C[i,nn,tt]  = corr_tmp
-        xi[i,nn,tt] = corr_length(corr_tmp)
-        n[i,nn,tt]  = number_defects(system)
+#         P[i,nn,tt]  = polarOP(system)[1]
+#         corr_tmp    = corr(system)
+#         C[i,nn,tt]  = corr_tmp
+#         xi[i,nn,tt] = corr_length(corr_tmp)
+#         n[i,nn,tt]  = number_defects(system)
 
-        if times[tt] >= tmax_for_this_N
-            P[i, nn, tt:end] .= polarOP(system)[1]
-            corr_tmp = corr(system)
-            xi[i, nn, tt:end] .= corr_length(corr_tmp)
-            n[i, nn, tt:end] .= number_defects(system)
-            for ttt in tt+1:length(times)
-                C[i, nn, ttt] = corr_tmp
-            end
-            break # stops the running simulation, gets out of the for loop
-        end
-    end
-end
-prinz(100z)
+#         if times[tt] >= tmax_for_this_N
+#             P[i, nn, tt:end] .= polarOP(system)[1]
+#             corr_tmp = corr(system)
+#             xi[i, nn, tt:end] .= corr_length(corr_tmp)
+#             n[i, nn, tt:end] .= number_defects(system)
+#             for ttt in tt+1:length(times)
+#                 C[i, nn, ttt] = corr_tmp
+#             end
+#             break # stops the running simulation, gets out of the for loop
+#         end
+#     end
+# end
+# prinz(z)
 
 # filename = "data/FSS_to_determine_transition_r$real.jld2"
 # JLD2.@save filename Ntargets v0sigs P C n xi params_init aspect_ratio rho times tmax T comments rhoc runtime = z
@@ -746,99 +746,115 @@ prinz(100z)
 ## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
 ## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
 # Physical Params 
-# Ntarget = Int(1E5)
-# aspect_ratio = 1
-# T = 0.1
-# sigma = 0.0
-# v0 = 1.0
-# R0 = 1
-# rhoc = 4.51 / pi
+Ntarget = Int(1E4)
+aspect_ratio = 1
+T = 0.1
+v0 = 1.0
+R0 = 1
+rhoc = 4.51 / pi
 
-# # Initialisation parameters
-# init_pos = "random"
-# init_theta = "hightemp"
-# r0 = 20.0
-# q = 1.0
-# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+# Initialisation parameters
+init_pos = "random"
+init_theta = "hightemp"
+r0 = 20.0
+q = 1.0
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
-# # Simulation parameters
-# v0s = (logspace(1e-2, 1, 20, digits=4))
-# rhos = collect(0.5:0.1:1.6)
+# Simulation parameters
+v0s = (logspace(1e-2, 1, 20, digits=4))
+
+rhos = collect(0.8:0.1:1.7)
 # rhos = [1,1.2,1.4]
-# # rhos = [1.1]
+rhos = [1.1, 1.4]
+
+sigmas = collect(0:0.1:0.4)
+sigmas = [0]
 
 
-
-# seuil = 0.5 # above P = 0.5, we consider the system to be ordered
-# tmax = 5000
-# times = 0:tmax/20:tmax
-
-# critical_velocity = NaN * ones(length(rhos))
-# z = @elapsed for k in each(rhos)
-#     rho = rhos[k]
-#     isordered = falses(length(v0s))
-#     for i in each(v0s)
-#         v0 = v0s[i]
-#         println("ρ = $rho, v0 = $v0")
-#         sigma = 0
-#         N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-#         dt = determine_dt(T, sigma, v0, N, rho)
-
-#         # Phonons parameters, for immobile particles (v = 0) only
-#         phonons = false
-#         phonon_amplitude = 1
-#         phonon_k = 1 * (2π / Lx) # wavenumber
-#         phonon_omega = 0 # "frequency" (up to a factor 2π)
-#         params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+seuil = 0.5 # above P = 0.5, we consider the system to be ordered
+tmax = 5000
+times = collect(0:tmax/20:tmax)
 
 
-#         param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#             :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-#             :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+critical_velocity = NaN * ones(length(rhos), length(sigmas))
+z = @elapsed for k in each(rhos), j in each(sigmas)
+    rho = rhos[k]
+    sigma = sigmas[j]
 
-#         system = System(param)
+    isordered = falses(length(v0s))
+    for i in each(v0s)
+        v0 = v0s[i]
+        # put a lower bound on the velocity, because we know approx where the critical velocity is, and increasing sigma can only make it larger. 
+        lower_bound_velocity = max(max(0.2*(rhoc/rho - 1), 0) - 0.2 , 0 )
+        if v0 < lower_bound_velocity
+            println("v0 = $v0 < $lower_bound_velocity (hardcoded lower bound), so we skip this value.")
+            continue
+        end
+           
+        v0 = v0s[i]
+        println("ρ = $rho, v0 = $v0, σ = $sigma")
+        N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+        dt = determine_dt(T, sigma, v0, N, rho)
 
-#         t = 0.0
-#         token = 1
+        # Phonons parameters, for immobile particles (v = 0) only
+        phonons = false
+        phonon_amplitude = 1
+        phonon_k = 1 * (2π / Lx) # wavenumber
+        phonon_omega = 0 # "frequency" (up to a factor 2π)
+        params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+
+
+        param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+            :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+            :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+
+        system = System(param)
+
+        t = 0.0
+        token = 1
        
-#         while t < tmax
-#             t += dt
-#             update!(system)
-#             if t ≥ times[token]
-#                 token = min(token + 1, length(times))
-#                 P = polarOP(system)[1]
-#                 if P > seuil
-#                     isordered[i] = true
-#                     println("The system is ordered for ρ = $rho : $v0 at time $(round(t, digits=2))")
-#                     break # stops the running simulation, gets out of the while loop
-#                 end
-#             end
-#         end
-#         if isordered[i] == true
-#             if i == 1
-#                 critical_velocity[k] = 0
-#             else
-#                 critical_velocity[k] = v0s[i-1]
-#             end
-#             P = polarOP(system)[1]
-#             println("Critical velocity found for ρ = $rho : $v0 because P = $P at final time $(round(tmax, digits=2))")
-#             break # gets out of the for loop scanning v0s, we found the largest v0 for which the system does not get ordered
-#         end
-#     end # end of for loop scanning v0s
-#     if sum(isordered) == 0 # if the system is disordered for all v0s
-#         critical_velocity[k] = v0s[end]
-#         println("The system is ordered for all v0s for ρ = $rho, so critical velocity is 0. ")
-#     end
-# end
-# prinz(z)
+        while t < tmax
+            t += dt
+            update!(system)
+            if t ≥ times[token]
+                token = min(token + 1, length(times))
+                P = polarOP(system)[1]
+                if P > seuil
+                    isordered[i] = true
+                    println("The system is ordered for ρ = $rho at time $(round(t, digits=2)): the critical velocity is $v0 (P = $P)")
+                    break # stops the running simulation, gets out of the while loop
+                end
+            end
+        end
+        if isordered[i] == true
+            if i == 1
+                critical_velocity[k, j] = 0
+            else
+                critical_velocity[k, j] = v0s[i-1]
+            end
+            P = polarOP(system)[1]
+            break # gets out of the for loop scanning v0s, we found the largest v0 for which the system does not get ordered
+        end
+    end # end of for loop scanning v0s
+    if sum(isordered) == 0 # if the system is disordered for all v0s
+        critical_velocity[k, j] = v0s[end]
+        println("The system is ordered for all v0s for ρ = $rho, so critical velocity is 0. ")
+    end
+end
+prinz(6.19*3600 /2*80)
+prinz(z)
+critical_velocity
 
-
-# comments = "Critical velocity vc against the density ρ.  
-#             For each ρ, from hightemp, I increase v0 until the system gets ordered 
-#             at some point during the simulation. "
+comments = "Critical velocity vc against the density ρ.  
+            For each ρ, from hightemp, I increase v0 until the system gets ordered 
+            at some point during the simulation. Because we already have an idea of 
+            what the ciritical velocity is for sigma = 0, we can put a lower bound on v0 
+            (being conservative, we take 0.2*(rhoc/rho - 1) - 0.2 ), and skip v0 values 
+            below this bound. Increasing sigma can only make the critical velocity larger
+            so we are safe on that side."
             
-# filename = "data/critical_velocity_N1E5_r$real.jld2"
-# JLD2.@save filename Ntarget aspect_ratio rhos v0s times tmax critical_velocity T seuil comments rhoc runtime = z
+filename = "data/critical_velocity_sigmas_rhos_N1E4_r$real.jld2"
+JLD2.@save filename Ntarget aspect_ratio rhos v0s sigmas times tmax critical_velocity T seuil comments rhoc runtime = z
 
 ## ---------------- Critical sigmas ---------------- ##
 ## ---------------- Critical sigmas ---------------- ##

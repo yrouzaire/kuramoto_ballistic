@@ -35,6 +35,34 @@ ylims!(-0.02, 0.5)
 annotate!((0.95, 0.07), text(L"ρ", 17, :right, :bottom))
 annotate!((0.26, 0.88), text(L"v_c", 17, :right, :bottom))
 
+
+
+## ---------------------- Critical Velocity N=1E4 ---------------------- ##
+## ---------------------- Critical Velocity N=1E4 ---------------------- ##
+## ---------------------- Critical Velocity N=1E4 ---------------------- ##
+## ---------------------- Critical Velocity N=1E4 ---------------------- ##
+
+filename = "data/Acritical_velocity_sigmas_rhos_N1E4.jld2"
+@load filename Ntarget critical_velocity_fusion critical_velocity_fusion_avg aspect_ratio rhos v0s sigmas times tmax T seuil comments rhoc runtimes
+R = 40
+# hrun(runtimes)
+sigmas
+critical_velocity_avg = nanmean(critical_velocity_fusion, 3)[:,:,1]
+critical_velocity_std = nanstd(critical_velocity_fusion,3)[:, :, 1]
+p = plot(uaxis=:log, legend=:top)
+# plot!((rhos), (critical_velocity_fusion[:, 1]), m=true, rib=0critical_velocity_std, label=L"N = 10^3")
+hline!([0], c=:black, l=:solid, lw=0.7)
+plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^3", c=1)
+# plot!(0.5:0.01:1.5, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:dash)
+# plot!(0.5:0.01:1.5, x -> max(0, 0.2(1.16 - x) / x), c=:black, l=:solid)
+# ylims!(0, 0.02)
+
+critical_velocity_avg
+
+ylims!(-0.02, 0.5)
+annotate!((0.95, 0.07), text(L"ρ", 17, :right, :bottom))
+annotate!((0.26, 0.88), text(L"v_c", 17, :right, :bottom))
+
 filename = "data/critical_velocity_N1E4_extended2.jld2"
 @load filename critical_velocity_fusion times v0s rhos tmax R runtimes comments
 # hrun(runtimes)
@@ -44,7 +72,8 @@ critical_velocity_avg = nanmean(critical_velocity_fusion, 2)[:, 1]
 critical_velocity_std = nanstd(critical_velocity_fusion, 2)[:, 1]
 # plot!((rhos), (critical_velocity_fusion[:, 1]), m=true, rib=0critical_velocity_std, label=L"N = 10^3")
 plot!((rhos), (critical_velocity_avg), m=true, rib=critical_velocity_std, label=L"N = 10^4", c=2)
-plot!(0.5:0.01:1.6, x -> max(0, 0.2(1.435 - x) / x), c=:black, l=:solid)#, label=L"v_c(ρ)"*" (theory)")
+plot!(0.5:0.01:1.6, x -> max(0, 0.22(1.435 - x) / x), c=:black, l=:solid)#, label=L"v_c(ρ)"*" (theory)")
+
 # ylims!(0, 0.02)
 xlims!(0.45, 1.65)
 vline!([1.435], c=:grey, l=:dash, lw=0.7)

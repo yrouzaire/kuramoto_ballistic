@@ -28,18 +28,18 @@ filename = "data/snapshots/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_time$(tmax).jld2"
 
 filename = "data/snapshots/snapshot_v2_σ0.3_ρ1_time50.jld2"
 @load filename system tmax param
-plot_thetas(system, particles=true, vertical=true, defects=true)
-savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_particles_time$(tmax).svg")
+plot_thetas(system, particles=false, vertical=true, defects=true)
+# savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_particles_time$(tmax).svg")
 
 pyplot(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 
 plot_thetas(system, particles=false, vertical=false, defects=true)
-savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_time$(tmax).svg")
+# savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_time$(tmax).svg")
 
 filename = "data/snapshots/snapshot_v2_σ0.3_ρ1_time500.jld2"
 @load filename system tmax param
 plot_thetas(system, particles=false, vertical=false, defects=true)
-savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_time$(tmax).svg")
+# savefig("figures_paper/snapshot_v$(v0)_σ$(sigma)_ρ$(rho)_time$(tmax).svg")
 
 
 filename = "data/snapshots/snapshot_v2_σ0.3_ρ1_time1000.jld2"

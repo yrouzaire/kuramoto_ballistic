@@ -30,7 +30,7 @@ filename = "data/nature_phase_transition_horizontal.jld2"
 # histogram(runtimes / 3600 /24, bins=20)
 v0sigs
 v0sigs_horizontal = v0sigs[1:end]
-scatter!(phsp,v0sigs_horizontal[1:1:end],c=:black,m=:circle,ms=3.5)
+scatter!(phsp,v0sigs_horizontal[1:1:end],c=:black,m=:circle,ms=4)
 Ps_avg_horizontal = nanmean(Ps, 3)[:,:,1]
 ns_avg_horizontal = nanmean(ns, 3)[:,:,1]
 xis_avg_horizontal = nanmean(xis, 3)[:,:,1]
@@ -54,7 +54,7 @@ filename = "data/nature_phase_transition_vertical.jld2"
 @load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
 # histogram(runtimes / 3600 /24, bins=20)
 v0sigs_vertical = v0sigs
-scatter!(phsp,v0sigs_vertical,c=:black,m=:utriangle,ms=4)
+scatter!(phsp,v0sigs_vertical,c=:black,m=:utriangle,ms=6)
 ylims!(0,0.4)
 xlims!(1E-3,3)
 # savefig(phsp,"figures/nature_phase_transition/vizu_phase_space_scan_transition.png")
