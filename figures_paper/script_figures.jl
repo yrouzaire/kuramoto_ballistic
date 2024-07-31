@@ -49,6 +49,7 @@ p_phase_space_n_rho1 = heatmap(v0s[2:end], sigmas, log10.(ns_avg[1, 1, 1, 2:end,
     colorbartitle="n", colorbar=true, colorbar_titlefont=font(12), colorbar_titlefontrotation=90)
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 p_phase_space_n_rho1
+vline!([1], c=:black, l=:dash, lw=0.8)
 
 ##
 p_phase_space_n_rho1 = heatmap(v0s[2:end], sigmas, log10.(ns_avg[1, 1, 1, 2:end, :, 1, end, 1]' .+ 1),
@@ -100,23 +101,100 @@ annotate!((0.89, 0.03), text(L"\sqrt{v_0}", 15, :center, :bottom, :black))
 ## ----------------  Critical Velocities ---------------- ##
 ## ----------------  Critical Velocities ---------------- ##
 
-filename = "data/critical_velocity_sigmas_rhos_N1E4.jld2"
+
+filename = "data/critical_velocity_N1E4_extended2.jld2"
+@load filename Ntarget critical_velocity_fusion rhos v0s times tmax T seuil comments rhoc runtimes
+critical_velocity_fusion_avg_sigma0 = nanmean(critical_velocity_fusion, 2)[:, 1]
+critical_velocity_fusion_std_sigma0 = nanstd(critical_velocity_fusion, 2)[:, 1]
+rhos0 = rhos
+
+filename = "data/critical_velocity_sigma0.1_rhos_N1E4.jld2"
 @load filename Ntarget critical_velocity_fusion critical_velocity_fusion_avg aspect_ratio rhos v0s sigmas times tmax T seuil comments rhoc runtimes
-hrun(runtimes)
-Ntarget
-p=plot()
-for i in each(sigmas)
-    plot!(rhos, critical_velocity_fusion_avg[:, i], rib=0, m=true)
-end
+critical_velocity_fusion_avg_sigma01 = critical_velocity_fusion_avg
+critical_velocity_fusion_std_sigma01 = nanstd(critical_velocity_fusion, 3)[:, 1, 1]
+rhos01 = rhos
+
+filename = "data/critical_velocity_sigma0.1_complement_rhos_N1E4.jld2"
+@load filename Ntarget critical_velocity_fusion critical_velocity_fusion_avg aspect_ratio rhos v0s sigmas times tmax T seuil comments rhoc runtimes
+critical_velocity_fusion_avg_sigma01_complement = critical_velocity_fusion_avg
+critical_velocity_fusion_std_sigma01_complement = nanstd(critical_velocity_fusion, 3)[:, 1, 1]
+rhos01_complement = rhos
+
+filename = "data/critical_velocity_sigma0.2_rhos_N1E4.jld2"
+@load filename Ntarget critical_velocity_fusion critical_velocity_fusion_avg aspect_ratio rhos v0s sigmas times tmax T seuil comments rhoc runtimes
+critical_velocity_fusion_avg_sigma02 = critical_velocity_fusion_avg
+critical_velocity_fusion_std_sigma02 = nanstd(critical_velocity_fusion, 3)[:, 1, 1]
+rhos02 = rhos
+
+p = plot(legend_title=L"σ", legend=:topright, size=(400, 400))
+plot!(rhos0, critical_velocity_fusion_avg_sigma0, rib=critical_velocity_fusion_std_sigma0, m=true, c=1)
+plot!(rhos01, critical_velocity_fusion_avg_sigma01, rib=critical_velocity_fusion_std_sigma01, m=true, c=2)
+plot!(rhos01_complement, critical_velocity_fusion_avg_sigma01_complement, rib=critical_velocity_fusion_std_sigma01_complement, m=true, c=2)
+plot!([rhos01[end], rhos01_complement[1]], [critical_velocity_fusion_avg_sigma01[end], critical_velocity_fusion_avg_sigma01_complement[1]], c=2, rib=critical_velocity_fusion_std_sigma01_complement)
+plot!(rhos02, critical_velocity_fusion_avg_sigma02, rib=critical_velocity_fusion_std_sigma02, m=true, c=3)
+hline!([0], c=:black, l=:solid, lw=0.7)
+vline!([1.435], c=:grey, l=:dash, lw=0.7)
+annotate!(1.35, 0.58, text(L"ρ_{perco}", 10, :center, :center, 90.0, :grey))
+annotate!((0.95, 0.07), text(L"ρ", 17, :right, :bottom))
+annotate!((0.26, 0.88), text(L"v_c", 17, :right, :bottom))
+plot!([NaN,NaN], [NaN,NaN], c=1, l=:solid, rib=0, label="0")
+plot!([NaN,NaN], [NaN,NaN], c=2, l=:solid, rib=0, label="0.1")
+plot!([NaN,NaN], [NaN,NaN], c=3, l=:solid, rib=0, label="0.2")
+
+xxx = minimum(rhos02):0.01:maximum(rhos02)
+plot!(xxx, x -> max(0, 0.2(1.435 - x)) / x, c=:black, l=:dash)
+plot!(xxx, x -> max(0, 0.2(2 - x)) / x, c=:black, l=:dash)
+plot!(xxx, x -> max(0, 0.3(2.4 - x)) / x, c=:black, l=:dash)
+# savefig(p, "figures_paper/critical_velocities.svg")
 p
 
 
+## Inset with the critical velocity dependance on sigma
+filename = "data/critical_sigma.jld2"
+@load filename critical_sigmas_fusion times sigmas v0s rhos tmax R #runtimes
+critical_sigmas_avg = nanmean(critical_sigmas_fusion, 3)[:, :, 1]
+rhos
+v0s
+sigmas_to_consider = [0, 0.1, 0.2]
+crit_vel_sigma = zeros(length(rhos), length(sigmas_to_consider))
+for i in each(rhos)
+    for j in each(sigmas_to_consider)
+        println(i, " ", j)
+        ind = findfirst(x -> x > sigmas_to_consider[j], critical_sigmas_avg[:, j])
+        x1 = v0s[ind]
+        y1 = critical_sigmas_avg[i, j]
+        if ind < length(v0s)
+            x2 = v0s[ind + 1]
+            y2 = critical_sigmas_avg[i, ind + 1]
+
+            tmp = mean([x1, x2])
+            # tmp = mean([sqrt(a), sqrt(b)]) ^2
+            # tmp = mean([sqrt(a), sqrt(b)]) ^2
+            # a = (y2 - y1) / (x2 - x1)
+            # b = y1 - a * x1
+            # crit_vel_sigma[i, j] = (sigmas[j] - b) / a
+        else
+            x2 = v0s[ind-1]
+            y2 = critical_sigmas_avg[i, ind-1]
+
+            tmp = mean([x1, x2])
+            # tmp = mean([sqrt(a), sqrt(b)]) ^2
+            # tmp = mean([sqrt(a), sqrt(b)]) ^2
+            # a = (y2 - y1) / (x2 - x1)
+            # b = y1 - a * x1
+            # crit_vel_sigma[i, j] = (sigmas[j] - b) / a
+        end
+
+        crit_vel_sigma[i, j] = tmp
+    end
+end
+
 
 ## ---------------- Through the transition ---------------- ##
 ## ---------------- Through the transition ---------------- ##
 ## ---------------- Through the transition ---------------- ##
 ## ---------------- Through the transition ---------------- ##
-gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
+    gr(box=true, fontfamily="sans-serif", label=nothing, palette=ColorSchemes.tab10.colors[1:10], grid=false, markerstrokewidth=0, linewidth=1.3, size=(400, 400), thickness_scaling=1.5);
 
 filename = "data/phase_space_rho_sig_v0_N1E3_tmax2500.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
@@ -262,7 +340,7 @@ annotate!((0.9, 0), text(L"N", 15, :center, :bottom, :black))
 
 ##
 fig2=plot(p2, p1, p3, p4, layout=(1, 4), size=(1600, 400));
-savefig(fig2, "figures_paper/fig2/fig2.svg")
+# savefig(fig2, "figures_paper/fig2/fig2.svg")
 
 ## Critical Density
 
@@ -300,37 +378,38 @@ all_rr_avg = nanmean(all_rr_, 5)[:, :, :, :, 1]
 ## R(t) 
 ind_T = 2
 
-phistogram = plot(size=(230, 350), legend=(0.43, 0.4), legend_title=L"v_0")
-histogram!(log10.(all_times_collision[1, 1, ind_T, :]), bins=30, c=1, lw=0.2, label=L"0.5")
-histogram!(log10.(all_times_collision[5, 1, ind_T, :]), bins=15, c=5, lw=0.2, label=L"2.5")
-histogram!(log10.(all_times_collision[end, 1, ind_T, :]) , bins=8, c=10, lw=0.2, label=L"5")
+phistogram = plot(size=(200, 300), legend=(0.43, 0.4), legend_title=L"v_0")
+histogram!(log10.(all_times_collision[1, 1, ind_T, :]), bins=20, c=1, lw=0.2, label=L"0.5")
+histogram!(log10.(all_times_collision[5, 1, ind_T, :]), bins=10, c=5, lw=0.2, label=L"2.5")
+histogram!(log10.(all_times_collision[end, 1, ind_T, :]) , bins=5, c=10, lw=0.2, label=L"5")
 
-## Histograms mean_annihilation_time
-p = plot(legend=:outerright)
-for i in 1:1:length(v0s)
-    v0 = v0s[i]
-    lab = "v0 = $v0"
-    data = log10.(all_times_collision[i, 1, ind_T, :]) * sqrt(v0)
-    # histogram!(data, bins=20, lw=0.2, label=L"5")
+# ## Histograms mean_annihilation_time
+# p = plot(legend=:outerright)
+# for i in 1:1:length(v0s)
+#     v0 = v0s[i]
+#     lab = "v0 = $v0"
+#     data = log10.(all_times_collision[i, 1, ind_T, :]) * sqrt(v0)
+#     # histogram!(data, bins=20, lw=0.2, label=L"5")
     
-    # fit the data
-    h = fit(Histogram, data, nbins=10)
-    h = normalize(h, mode=:density)
-    plot!(h.edges, h.weights, label = lab, rib=0)
+#     # fit the data
+#     h = fit(Histogram, data, nbins=10)
+#     h = normalize(h, mode=:density)
+#     plot!(h.edges, h.weights, label = lab, rib=0)
 
 
-end
-p
-##
+# end
+# p
 
 
 
-ylims!(0, 93)
-xticks!(1:3, [L"10^{1}", L"10^{2}", L"10^{3}"])
-# xlims!(1, 4)
-annotate!((0.5, 0.9), text("Distribution of " * L"\tau", 11, :center, :bottom, :black))
-annotate!((0.93, 0.02), text(L"\tau", 13, :center, :bottom, :black))
 
+ylims!(0, 150)
+xticks!(1:4, [L"10^{1}", L"10^{2}", L"10^{3}", L"10^{4}"])
+xlims!(1, 4)
+annotate!((0.25, 0.88), text(L"\mathbb{P}(\tau)", 13, :center, :bottom, :black))
+annotate!((0.9, 0.02), text(L"\tau", 13, :center, :bottom, :black))
+
+savefig(phistogram, "figures_paper/Rt_inset.svg")
 ##
 p = plot(xaxis=:log, legend=:bottomleft, legend_title=L"v_0")
 for i in each(v0s)
@@ -427,4 +506,38 @@ scatter(all_pos_detected_spinwave[ind_v0, ind_sig][rr],
     c=cols, markersize=2, aspect_ratio=1, legend=false, axis=false)
 # savefig("figures_paper/spinwave_r$(rr)_v0$(v0s[ind_v0])_sig$(sigmas[ind_sig]).svg")
 
+## ---------------- Plots Proba spinwaves ---------------- ##
+## ---------------- Plots Proba spinwaves ---------------- ##
+## ---------------- Plots Proba spinwaves ---------------- ##
+## ---------------- Plots Proba spinwaves ---------------- ##
 
+filename = "data/proba_spinwaves_scan_phase_space_N4000.jld2"
+# filename = "data/proba_spinwaves.jld2"
+@load filename R_per_core Rtot R all_nb_detected_spinwave all_times_detected_spinwave all_Ps_detected_spinwave all_thetas_detected_spinwave all_pos_detected_spinwave sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtimes
+proba_spinwave = all_nb_detected_spinwave / Rtot
+hrun(runtimes)
+
+Ntarget
+Rtot
+tmax
+sigmas
+v0s
+
+#
+proba_spinwave = all_nb_detected_spinwave / Rtot
+proba_spinwave = all_nb_detected_spinwave / Rtot + all_nb_detected_spinwave_complement / Rtot_complement
+
+
+colss = cgrad([:black, :red, :orange, :gold])
+plot(xaxis=:log, size=(470, 400))
+heatmap!(v0s, sigmas, 100 * proba_spinwave', clims=(0, 10),
+    c=colss, colorbartitle=L"\mathbb{P}\," * "(TPS) [%]")
+plot!(v0s, x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=0.8)
+ylims!(-0.001, 0.4)
+xlims!(minimum(v0s), 1.18maximum(v0s))
+xticks!([1E-2, 1E-1, 1E-0], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
+# xticks!([1E-2, 2E-2, 3E-2, 4E-2, 5E-2, 6E-2, 7E-2, 8E-2, 9E-2, 1E-1, 2E-1, 3E-1, 4E-1, 5E-1, 6E-1, 7E-1, 8E-1, 9E-1, 1E-0, 2, 3], 
+#     [L"10^{-2}", "", "", "", "", "", "", "", "", L"10^{-1}", "", "", "", "", "", "", "", "", L"10^{0}", "", ""])
+# critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
+annotate!((0.05, 0.98), text(L"\sigma", 17, :left, :top, :white))
+annotate!((0.96, 0.03), text(L"v_0", 17, :right, :bottom, :white))

@@ -761,14 +761,14 @@ q = 1.0
 params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
 # Simulation parameters
-v0s = (logspace(1e-2, 1, 20, digits=4))
+v0s = (logspace(1e-2, 0.9, 30, digits=4))
 
-rhos = collect(0.8:0.1:1.7)
-# rhos = [1,1.2,1.4]
-rhos = [1.1, 1.4]
+# rhos = collect(0.8:0.1:1.7)
+rhos = collect(1.7:0.1:2.5)
+# rhos = [1.8]
 
-sigmas = collect(0:0.1:0.4)
-sigmas = [0]
+# sigmas = collect(0:0.1:0.4)
+sigmas = [0.1]
 
 
 seuil = 0.5 # above P = 0.5, we consider the system to be ordered
@@ -785,11 +785,11 @@ z = @elapsed for k in each(rhos), j in each(sigmas)
     for i in each(v0s)
         v0 = v0s[i]
         # put a lower bound on the velocity, because we know approx where the critical velocity is, and increasing sigma can only make it larger. 
-        lower_bound_velocity = max(max(0.2*(rhoc/rho - 1), 0) - 0.2 , 0 )
-        if v0 < lower_bound_velocity
-            println("v0 = $v0 < $lower_bound_velocity (hardcoded lower bound), so we skip this value.")
-            continue
-        end
+        # lower_bound_velocity = max(max(0.2*(rhoc/rho - 1), 0) , 0 )
+        # if v0 < lower_bound_velocity
+        #     println("v0 = $v0 < $lower_bound_velocity (hardcoded lower bound), so we skip this value.")
+        #     continue
+        # end
            
         v0 = v0s[i]
         println("ρ = $rho, v0 = $v0, σ = $sigma")
@@ -841,9 +841,7 @@ z = @elapsed for k in each(rhos), j in each(sigmas)
         println("The system is ordered for all v0s for ρ = $rho, so critical velocity is 0. ")
     end
 end
-prinz(6.19*3600 /2*80)
 prinz(z)
-critical_velocity
 
 comments = "Critical velocity vc against the density ρ.  
             For each ρ, from hightemp, I increase v0 until the system gets ordered 
@@ -853,7 +851,7 @@ comments = "Critical velocity vc against the density ρ.
             below this bound. Increasing sigma can only make the critical velocity larger
             so we are safe on that side."
             
-filename = "data/critical_velocity_sigmas_rhos_N1E4_r$real.jld2"
+filename = "data/critical_velocity_sigma0.1_complement_rhos_N1E4_r$real.jld2"
 JLD2.@save filename Ntarget aspect_ratio rhos v0s sigmas times tmax critical_velocity T seuil comments rhoc runtime = z
 
 ## ---------------- Critical sigmas ---------------- ##

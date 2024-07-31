@@ -32,7 +32,7 @@ v0s
 
 #
 proba_spinwave = all_nb_detected_spinwave / Rtot 
-proba_spinwave = 0all_nb_detected_spinwave / Rtot + all_nb_detected_spinwave_complement / Rtot_complement
+proba_spinwave = all_nb_detected_spinwave / Rtot + all_nb_detected_spinwave_complement / Rtot_complement
 
 
 all_nb_detected_spinwave
@@ -61,7 +61,7 @@ v0s
 colss = cgrad([:black, :red, :orange, :gold])
 plot(xaxis=:log, size=(470,400))
 heatmap!(v0s, sigmas, 100 * proba_spinwave', clims=(0, 10),
-c=colss,colorbartitle=L"\mathbb{P}" * "(spinwave) [%]")
+c=colss,colorbartitle=L"\mathbb{P}\," * "(TPS) [%]")
 plot!(v0s, x -> 1 / 2 * max(0, x - (0.23)^2), c=:white, lw=0.8)
 ylims!(-0.001,0.4)
 xlims!(minimum(v0s), 1.18maximum(v0s))
@@ -71,7 +71,7 @@ xticks!([1E-2, 1E-1, 1E-0], [L"10^{-2}", L"10^{-1}", L"10^{0}"])
 # critere : is_green_region = sigma < 1 / 2 * max(0, sqrt(v0) - 0.25) , at rho=1
 annotate!((0.05, 0.98), text(L"\sigma", 17, :left, :top, :white))
 annotate!((0.96, 0.03), text(L"v_0", 17, :right, :bottom, :white))
-title!(L"ρ = 1, N = 10^4")
+# title!(L"ρ = 1, N = 10^4")
 # savefig(pwd()*"/figures_paper/proba_spinwave.svg")
 
 

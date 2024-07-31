@@ -1,7 +1,7 @@
-using JLD2, Parameters
+using JLD2, Parameters, StatsBase
 include("methods.jl");
 
-base_filename = "data/critical_velocity_sigmas_rhos_N1E4" # look up in main_server.jl
+base_filename = "data/critical_velocity_sigma0.1_complement_rhos_N1E4" # look up in main_server.jl
 R = 40 # look up into bash_loog.sh
 indices = [];
 for r in 1:R
@@ -25,9 +25,10 @@ for r in indices
     runtimes[r] = runtime
 end
 
-critical_velocity_fusion_avg = mean(critical_velocity_fusion, dims=3)[:,:,1]
+critical_velocity_fusion_avg = nanmean(critical_velocity_fusion, 3)[:,:,1]
+critical_velocity_fusion_std = nanstd(critical_velocity_fusion,3)[:, :, 1]
 
-@save base_filename * ".jld2" Ntarget critical_velocity_fusion critical_velocity_fusion_avg aspect_ratio rhos v0s sigmas times tmax T seuil comments rhoc runtimes
+@save base_filename * ".jld2" Ntarget critical_velocity_fusion critical_velocity_fusion_avg critical_velocity_fusion_std aspect_ratio rhos v0s sigmas times tmax T seuil comments rhoc runtimes
 println("Fusionned data saved in $(base_filename*".jld2") .")
 
 

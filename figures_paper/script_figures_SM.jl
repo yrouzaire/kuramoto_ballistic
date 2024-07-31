@@ -13,6 +13,13 @@ plot()
 ## ---------------- Phase Spaces P and n ---------------- ##
 ## ---------------- Phase Spaces P and n ---------------- ##
 ## ---------------- Phase Spaces P and n ---------------- ##
+filename = "data/nature_phase_transition_horizontal.jld2"
+@load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
+v0sigs_horizontal = v0sigs
+
+filename = "data/nature_phase_transition_vertical.jld2"
+@load filename v0sigs Ps Cs ns xis rho T Ntarget params_init aspect_ratio times tmax comments rhoc runtimes R
+v0sigs_vertical = v0sigs
 
 filename = "data/phase_space_rho_sig_v0_N1E3_tmax2500.jld2"
 @load filename Ps Cs ns runtimes Ts Ns v0s rhos sigmas times_log tmax comments R
@@ -22,6 +29,14 @@ Ps_std = nanstd(Ps, 8) # N rho T v0 sigma init t R
 ns_avg = nanmean(ns, 8) # N rho T v0 sigma init t R
 ns_std = nanstd(ns, 8) # N rho T v0 sigma init t R
 
+P12 = zeros(length(rhos), length(v0s))
+for i in 1:length(rhos), j in 1:length(v0s)
+    ind = findfirst(x -> x <= 0.5, Ps_avg[1, i, 1, j, :, 1, end, 1])
+    if ind == nothing
+        ind = length(sigmas)
+    end
+    P12[i, j] = sigmas[ind]
+end
 ##
 
 p_phase_space_rho1 = heatmap(v0s[2:end], sigmas, Ps_avg[1, 1, 1, 2:end, :, 1, end, 1]',
@@ -29,9 +44,11 @@ p_phase_space_rho1 = heatmap(v0s[2:end], sigmas, Ps_avg[1, 1, 1, 2:end, :, 1, en
     size=(420, 420), xlabel=L"v_0", ylabel="σ",
     colorbartitle="P", colorbar=false, colorbar_titlefont=font(12), colorbar_titlefontrotation=90)
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
-# scatter!(v0sigs_horizontal[1:1:end], c=:black, m=:circle, ms=3)
-xlims!(minimum(v0s[2:end]), maximum(v0s[2:end]))
-ylims!(minimum(sigmas), maximum(sigmas))
+plot!(v0s[2:end], P12[1, 2:end], c=:white, line=:dash, lw=1.5)
+scatter!(v0sigs_horizontal[1:1:end], c=:black, m=:circle, ms=3)
+scatter!(v0sigs_vertical[1:1:end], c=:black, m=:utriangle, ms=4)
+ylims!(extrema(sigmas))
+xlims!(extrema(v0s[2:end]))
 # scatter!((0.2, 0.3), c=:black, m=:square, ms=5)
 # scatter!((2, 0.3), c=:black, m=:star5, ms=9)
 title!("ρ = 1")
@@ -43,9 +60,12 @@ p_phase_space_rho19 = heatmap(v0s[2:end], sigmas, Ps_avg[1, end, 1, 2:end, :, 1,
     xaxis=:log, c=cgrad([:red, :orange, :green]), clims=(0, 1),
     size=(500, 420), xlabel=L"v_0", yticks=false,
     colorbartitle="P", colorbar=:right, colorbar_titlefont=font(12))
-xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
-title!("ρ = 1.9")
-annotate!((0.1, 0.9), text("(b)", 15))
+    xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
+    title!("ρ = 1.9")
+    annotate!((0.1, 0.9), text("(b)", 15))
+    ylims!(extrema(sigmas))
+    xlims!(extrema(v0s[2:end]))
+    plot!(v0s[2:end], P12[end, 2:end], c=:white, line=:dash, lw=1.5)
 
 # #
 
@@ -56,6 +76,9 @@ p_phase_space_n_rho1 = heatmap(v0s[2:end], sigmas, log10.(ns_avg[1, 1, 1, 2:end,
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 p_phase_space_n_rho1
 annotate!((0.1, 0.9), text("(c)", 15))
+plot!(v0s[2:end], P12[1, 2:end], c=:white, line=:dash, lw=1.5)
+ylims!(extrema(sigmas))
+xlims!(extrema(v0s[2:end]))
 
 
 # #
@@ -66,6 +89,9 @@ p_phase_space_n_rho19 = heatmap(v0s[2:end], sigmas, log10.(ns_avg[1, end, 1, 2:e
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 p_phase_space_n_rho19
 annotate!((0.1, 0.9), text("(d)", 15))
+ylims!(extrema(sigmas))
+xlims!(extrema(v0s[2:end]))
+plot!(v0s[2:end], P12[end, 2:end], c=:white, line=:dash, lw=1.5)
 
 
 
@@ -79,6 +105,9 @@ p_phase_space_stdn_rho1 = heatmap(v0s[2:end], sigmas, log.(data),
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 p_phase_space_stdn_rho1
 annotate!((0.1, 0.9), text("(e)", 15))
+plot!(v0s[2:end], P12[1, 2:end], c=:white, line=:dash, lw=1.5)
+ylims!(extrema(sigmas))
+xlims!(extrema(v0s[2:end]))
 
 
 # #
@@ -91,6 +120,9 @@ p_phase_space_stdn_rho19 = heatmap(v0s[2:end], sigmas, log.(data),
 xticks!([1E-3, 1E-2, 1E-1, 1], [L"10^{-3}", L"10^{-2}", L"10^{-1}", L"10^{0}"])
 p_phase_space_stdn_rho19
 annotate!((0.1, 0.9), text("(f)", 15))
+plot!(v0s[2:end], P12[end, 2:end], c=:white, line=:dash, lw=1.5)
+ylims!(extrema(sigmas))
+xlims!(extrema(v0s[2:end]))
 
 
 # #
@@ -385,7 +417,9 @@ hrun(runtimes)
 
 Ps_avg = nanmean(Ps, 4)[:, :, :, 1]
 v0sigs
+Ntargets
 
+R
 times_to_plot = [10, 15, 20, 23, 26, 30]
 
 FSS_time = plot(axis=:log, legend=:bottomleft, size=(400, 400), box=false)
