@@ -11,3 +11,4 @@ archives/kuramoto_ballistic - Struct/
 *.mp4
 *.jld
 *.jld2
+*.toml
