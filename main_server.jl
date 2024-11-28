@@ -3,7 +3,197 @@ include("IDrealisation.jl");
 using JLD2, LinearAlgebra, Statistics, Hungarian
 include("methods.jl");
 
+
+## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
+## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
+## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
+## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
+
+comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
+# Physical Params 
+Ntarget = Int(4E3)
+aspect_ratio = 1
+R0 = 1
+rho = 1
+rhoc = 4.51 / pi
+init_theta = "pair"
+init_pos = "random"
+distribution_type = "uniform"
+q = 1.0
+r0 = 28
+phonons = false;
+phonon_amplitude = 1;
+phonon_k = 1;
+phonon_omega = 0;
+params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
+
+R_per_core = 1
+
+tmax = 30
+times = collect(0:5:tmax) # linear time
+
+sigmas = [0, 0.05, 0.1, 0.2, 0.3]
+# sigmas = [0.1]
+
+# Ts = [0.1, 0.2, 0.3, 0.4]
+Ts = [0, 0.1]
+
+# v0s = collect(0.5:0.25:3)
+v0s = [1, 1.5, 2]
+
+xy_pos = Array{Vector{Tuple{Number,Number}}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
+xy_neg = Array{Vector{Tuple{Number,Number}}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
+rr = Array{Vector{Number}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
+times_collision = times[end] * ones(length(v0s), length(sigmas), length(Ts), R_per_core)
+
+z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_core
+    v0 = v0s[i]
+    sigma = sigmas[j]
+    T = Ts[k]
+
+    println("v0 = $v0, σ = $sigma, T = $T")
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+
+    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0, :distribution_type => distribution_type,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+
+    t = 0.0
+    system = System(param)
+
+    # t = 0
+    defects_pos, defects_neg = spot_defects(system)
+    xy_pos_tmp = [defects_pos[1][1:2]]
+    xy_neg_tmp = [defects_neg[1][1:2]]
+    r_tmp = [dist(defects_pos[1][1:2], defects_neg[1][1:2], Lx, Ly)]
+
+    for tt in 2:length(times)
+        evolve!(system, times[tt])
+
+        defects_pos, defects_neg = spot_defects(system)
+        @assert length(defects_pos) == length(defects_neg)
+        if length(defects_pos) == 1
+            push!(xy_pos_tmp, defects_pos[1][1:2])
+            push!(xy_neg_tmp, defects_neg[1][1:2])
+            push!(r_tmp, dist(defects_pos[1][1:2], defects_neg[1][1:2], Lx, Ly))
+        elseif length(defects_pos) > 1
+            #= If there are more than one defect, 
+            consider the closest defect as the most probable. =#
+            distance_pos_tmp = Inf
+            index_closest_pos_tmp = -1
+            for i in each(defects_pos)
+                d = dist(defects_pos[i][1:2], xy_pos_tmp[end], Lx, Ly)
+                if d < distance_pos_tmp
+                    distance_pos_tmp = d
+                    index_closest_pos_tmp = i
+                end
+            end
+            distance_neg_tmp = Inf
+            index_closest_neg_tmp = -1
+            for i in each(defects_neg)
+                d = dist(defects_neg[i][1:2], xy_neg_tmp[end], Lx, Ly)
+                if d < distance_neg_tmp
+                    distance_neg_tmp = d
+                    index_closest_neg_tmp = i
+                end
+            end
+            push!(xy_pos_tmp, defects_pos[index_closest_pos_tmp][1:2])
+            push!(xy_neg_tmp, defects_neg[index_closest_neg_tmp][1:2])
+            push!(r_tmp, dist(defects_pos[index_closest_pos_tmp][1:2], defects_neg[index_closest_neg_tmp][1:2], Lx, Ly))
+        elseif length(defects_pos) == 0
+            println("No defects ! Simulation stopped at t = $(times[tt]).")
+            times_collision[i, j, k, r] = times[tt]
+            break
+        end
+    end
+    xy_pos[i, j, k, r] = xy_pos_tmp
+    xy_neg[i, j, k, r] = xy_neg_tmp
+    rr[i, j, k, r] = r_tmp
+end
+prinz(z)
+
+
+filename = "data/mobility_defects_sigma_v0_distribution_sigmas_$(distribution_type)_r$real.jld2"
+JLD2.@save filename sigmas v0s Ts xy_pos xy_neg rr times_collision R_per_core params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtime = z distribution_type
+
+
+
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+
+# comments = "The goal of this script is to pass through the transition line, 
+# in both direction (keeping σ or v0 constant) and to compute correlation functions.
+# Here for T = 0.0 and ρ = 1."
+# # Physical Params 
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# T = 0.0
+# R0 = 1
+# rho = 1
+# rhoc = 4.51 / pi
+
+# # Initialisation parameters
+# init_pos = "random"
+# init_theta = "hightemp"
+# r0 = 20.0
+# q = 1.0
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+# params_phonons = Dict(:phonons => false, :phonon_amplitude => 1, :phonon_k => 1, :phonon_omega => 1)
+
+# # Simulation parameters
+# v0sigs = [(v,0.1) for v in logspace(0.03,1,10,digits=3)]
+# # v0sigs = vcat([(0.2,sigm) for sigm in 0:0.025:0.225],[(v,0.1) for v in logspace(0.03,1,10,digits=3)])
+# tmax = 3E1
+# # times = collect(0:tmax/30:tmax) # linear time
+# times = logspace(1,tmax,3,digits=1) # log time
+
+# P = zeros(length(v0sigs), length(times))
+# C = Array{Vector{Float64}}(undef, length(v0sigs), length(times))
+# xi = zeros(length(v0sigs), length(times))
+# n = zeros(length(v0sigs), length(times))
+
+# z = @elapsed for i in each(v0sigs)
+#     v0, sigma = v0sigs[i]
+#     println("v0 = $v0, σ = $sigma, $(100i/length(v0sigs))%")
+#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#     dt = determine_dt(T, sigma, v0, N, rho)
+
+#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+
+#     system = System(param)
+    
+#     t = 0.0
+#     token = 1
+ 
+#     for tt in eachindex(times)
+#         evolve!(system, times[tt]) # evolves the systems up to times[tt]
+        
+#         P[i,tt]  = polarOP(system)[1]
+#         corr_tmp = corr(system)
+#         C[i,tt]  = corr_tmp
+#         xi[i,tt] = corr_length(corr_tmp)
+#         n[i,tt]  = number_defects(system)
+#     end
+
+# end
+# prinz(z)
+
+# filename = "data/nature_phase_transition_horizontal_T0_r$real.jld2"
+# JLD2.@save filename Ntarget v0sigs rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z
+
+
+
 ## ---------------- Proba Spinwaves ---------------- ##
+## ---------------- Proba Spinwaves ---------------- ##
+## ---------------- Proba Spinwaves ---------------- ##
+## ---------------- Proba Spinwaves ---------------- ##
+
 # Fixed important params 
 # Ntarget = Int(4E3)
 # aspect_ratio = 1
@@ -103,113 +293,11 @@ include("methods.jl");
 # JLD2.@save filename nb_detected_spinwave times_detected_spinwave systems_detected_spinwave Ps_detected_spinwave thetas_detected_spinwave pos_detected_spinwave R_per_core sigmas v0s tmax times p_threshold init_pos init_theta Ntarget rho T aspect_ratio runtime = z
 
 
-# ## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
-# comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
-# # Physical Params 
-# Ntarget = Int(4E3)
-# aspect_ratio = 1
-# R0 = 1
-# rho = 1 
-# rhoc = 4.51 / pi
-# init_theta = "pair"
-# init_pos = "random"
-# q = 1.0
-# r0 = 28
-# phonons = false ; phonon_amplitude = 1 ; phonon_k = 1  ; phonon_omega = 0 
-# params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
-# params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
-
-# R_per_core = 10
-
-# tmax = 2000
-# times = collect(0:5:tmax) # linear time
-
-# sigmas = [0,0.05,0.1]
-# # sigmas = [0.1]
-
-# Ts = [0.1,0.2,0.3,0.4]
-# Ts = [0.1]
-
-# v0s = collect(0.5:0.25:3)
-# # v0s = [5]
-
-# xy_pos = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
-# xy_neg = Array{Vector{Tuple{Number,Number}}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
-# rr = Array{Vector{Number}}(undef,length(v0s),length(sigmas),length(Ts),R_per_core)
-# times_collision = times[end]*ones(length(v0s),length(sigmas),length(Ts),R_per_core)
-
-# z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_core
-#     v0 = v0s[i]
-#     sigma = sigmas[j]
-# 	T = Ts[k]
-
-#     println("v0 = $v0, σ = $sigma, T = $T")
-#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-    
-#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
-
-#     t = 0.0
-#     system = System(param)
-
-#     # t = 0
-#     defects_pos, defects_neg =  spot_defects(system)
-#     xy_pos_tmp = [defects_pos[1][1:2]]
-#     xy_neg_tmp = [defects_neg[1][1:2]]
-#     r_tmp = [dist(defects_pos[1][1:2],defects_neg[1][1:2],Lx,Ly)]
-
-#     for tt in 2:length(times)
-#         evolve!(system, times[tt])
-
-#         defects_pos, defects_neg =  spot_defects(system)
-#         @assert length(defects_pos) == length(defects_neg)
-#         if length(defects_pos) == 1
-#             push!(xy_pos_tmp,defects_pos[1][1:2])
-#             push!(xy_neg_tmp,defects_neg[1][1:2])
-#             push!(r_tmp,dist(defects_pos[1][1:2],defects_neg[1][1:2],Lx,Ly))
-#         elseif length(defects_pos) > 1 
-#             #= If there are more than one defect, 
-#             consider the closest defect as the most probable. =#
-#             distance_pos_tmp = Inf 
-#             index_closest_pos_tmp = -1
-#             for i in each(defects_pos)
-#                 d = dist(defects_pos[i][1:2], xy_pos_tmp[end], Lx, Ly)
-#                 if d < distance_pos_tmp
-#                     distance_pos_tmp = d
-#                     index_closest_pos_tmp = i
-#                 end
-#             end
-#             distance_neg_tmp = Inf 
-#             index_closest_neg_tmp = -1
-#             for i in each(defects_neg)
-#                 d = dist(defects_neg[i][1:2], xy_neg_tmp[end], Lx, Ly)
-#                 if d < distance_neg_tmp
-#                     distance_neg_tmp = d
-#                     index_closest_neg_tmp = i
-#                 end
-#             end
-#             push!(xy_pos_tmp,defects_pos[index_closest_pos_tmp][1:2])
-#             push!(xy_neg_tmp,defects_neg[index_closest_neg_tmp][1:2])
-#             push!(r_tmp,dist(defects_pos[index_closest_pos_tmp][1:2],defects_neg[index_closest_neg_tmp][1:2],Lx,Ly))
-#         elseif length(defects_pos) == 0 
-#             println("No defects ! Simulation stopped at t = $(times[tt]).")
-#             times_collision[i,j,k,r] = times[tt]
-#             break
-#         end
-#     end
-#     xy_pos[i,j,k,r] = xy_pos_tmp
-#     xy_neg[i,j,k,r] = xy_neg_tmp
-#     rr[i,j,k,r] = r_tmp
-# end
-# prinz(z) 
-
-
-# filename = "data/mobility_defects_sigma_v0_r$real.jld2"
-# JLD2.@save filename sigmas v0s Ts xy_pos xy_neg rr times_collision R_per_core params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtime = z
-
 # ## ---------------- MSD Tracking defects  ---------------- ##
+# ## ---------------- MSD Tracking defects  ---------------- ##
+# ## ---------------- MSD Tracking defects  ---------------- ##
+# ## ---------------- MSD Tracking defects  ---------------- ##
+
 # comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # # Physical Params 
 # Ntarget = Int(4E3)
@@ -230,8 +318,8 @@ include("methods.jl");
 # tmax = 1000
 # times = 0:5:tmax # linear time
 
-# # sigmas = [0,0.1]
-# sigmas = collect(0:0.05:0.3)
+# # sigmas = collect(0:0.05:0.3)
+# sigmas = [0,0.1]
 
 # # Ts = [0,0.1,0.2,0.3,0.4]
 # Ts = [0.1]
@@ -268,6 +356,10 @@ include("methods.jl");
 
 
 # ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+
 # comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # # Physical Params 
 # Ntarget = Int(1E4)
@@ -316,6 +408,10 @@ include("methods.jl");
 # JLD2.@save filename qs R0s Ts inits_pos dfts params_init Ntarget v0 sigma aspect_ratio times tmax comments rhoc runtime = z
 
 # ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for immobile particles ---------------- ##
+
 # comments = "From the defects data, one will be able to infer : \n
 # A. the separating distance between the two defects R(t) \n
 # B. the MSD and diffusion coeff of an individual defect. "
@@ -367,6 +463,10 @@ include("methods.jl");
 
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+
 # comments = "From the defects data, one will be able to infer : \n
 # A. the separating distance between the two defects R(t) \n
 # B. the MSD and diffusion coeff of an individual defect. "
@@ -421,6 +521,10 @@ include("methods.jl");
 
 
 # # ## ---------------- Impact of init on XY Model ---------------- ##
+# # ## ---------------- Impact of init on XY Model ---------------- ##
+# # ## ---------------- Impact of init on XY Model ---------------- ##
+# # ## ---------------- Impact of init on XY Model ---------------- ##
+
 # comments = "Investigates the impact of initialisation for the spatial location of the 
 # spins in the XY model. "
 # # Physical Params 
@@ -483,6 +587,10 @@ include("methods.jl");
 # JLD2.@save filename inits_pos R0s Ts P C n xi E Ntarget v0 sigma rho params_init aspect_ratio times tmax comments runtime = z
 
 # ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+# ## ---------------- Tracking a pair of defects for mobile particles ---------------- ##
+
 # comments = "From the defects data, one will be able to infer : \n
 # A. the separating distance between the two defects R(t) \n
 # B. the MSD and diffusion coeff of an individual defect. "
@@ -536,70 +644,11 @@ include("methods.jl");
 # JLD2.@save filename Ntarget v0sigs rho params_init T dfts aspect_ratio times tmax comments rhoc runtime = z
 
 
-# ## ---------------- Nature of the Phase Transition ---------------- ##
-# comments = "The goal of this script is to pass through the transition line, 
-# in both direction (keeping σ or v0 constant) and to compute correlation functions.
-# Here for T = 0.1 and ρ = 1."
-# # Physical Params 
-# Ntarget = Int(1E4)
-# aspect_ratio = 1
-# T = 0.1
-# R0 = 1
-# rho = 1
-# rhoc = 4.51 / pi
-
-# # Initialisation parameters
-# init_pos = "random"
-# init_theta = "hightemp"
-# r0 = 20.0
-# q = 1.0
-# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-
-# # Simulation parameters
-# v0sigs = [(v,0.1) for v in logspace(0.03,1,10,digits=3)]
-# # v0sigs = vcat([(0.2,sigm) for sigm in 0:0.025:0.225],[(v,0.1) for v in logspace(0.03,1,10,digits=3)])
-# tmax = 3E1
-# # times = collect(0:tmax/30:tmax) # linear time
-# times = logspace(1,tmax,30,digits=1) # log time
-
-# P = zeros(length(v0sigs), length(times))
-# C = Array{Vector{Float64}}(undef, length(v0sigs), length(times))
-# xi = zeros(length(v0sigs), length(times))
-# n = zeros(length(v0sigs), length(times))
-
-# z = @elapsed for i in each(v0sigs)
-#     v0, sigma = v0sigs[i]
-#     println("v0 = $v0, σ = $sigma, $(100i/length(v0sigs))%")
-#     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-#     dt = determine_dt(T, sigma, v0, N, rho)
-
-#     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-#         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init)
-
-#     system = System(param)
-    
-#     t = 0.0
-#     token = 1
- 
-#     for tt in eachindex(times)
-#         evolve(system, times[tt]) # evolves the systems up to times[tt]
-        
-#         P[i,tt]  = polarOP(system)[1]
-#         corr_tmp = corr(system)
-#         C[i,tt]  = corr_tmp
-#         xi[i,tt] = corr_length(corr_tmp)
-#         n[i,tt]  = number_defects(system)
-#     end
-
-# end
-# prinz(z)
-
-# filename = "data/nature_phase_transition_horizontal _r$real.jld2"
-# JLD2.@save filename Ntarget v0sigs rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z
-
-
 # ## ---------------- No Hysteresis and Nature Phases ---------------- ##
+# ## ---------------- No Hysteresis and Nature Phases ---------------- ##
+# ## ---------------- No Hysteresis and Nature Phases ---------------- ##
+# ## ---------------- No Hysteresis and Nature Phases ---------------- ##
+
 # comments = "The goal of this script is to show that there is no hysteresis 
 # and to compute correlation functions at steady state to determine the nature
 # of both phases and the transition between them."
@@ -665,6 +714,10 @@ include("methods.jl");
 
 
 ## ---------------- Finite Size Scaling ---------------- ##
+## ---------------- Finite Size Scaling ---------------- ##
+## ---------------- Finite Size Scaling ---------------- ##
+## ---------------- Finite Size Scaling ---------------- ##
+
 # comments = "The goal of this script is to evaluate the change in polarisation for given (v0, σ) when L varies."
 # # Physical Params 
 # aspect_ratio = 1
@@ -746,113 +799,113 @@ include("methods.jl");
 ## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
 ## ---------------- Critical velocity at sigma = 0 for ρ < ρc ---------------- ##
 # Physical Params 
-Ntarget = Int(1E4)
-aspect_ratio = 1
-T = 0.1
-v0 = 1.0
-R0 = 1
-rhoc = 4.51 / pi
+# Ntarget = Int(1E4)
+# aspect_ratio = 1
+# T = 0.1
+# v0 = 1.0
+# R0 = 1
+# rhoc = 4.51 / pi
 
-# Initialisation parameters
-init_pos = "random"
-init_theta = "hightemp"
-r0 = 20.0
-q = 1.0
-params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+# # Initialisation parameters
+# init_pos = "random"
+# init_theta = "hightemp"
+# r0 = 20.0
+# q = 1.0
+# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 
-# Simulation parameters
-v0s = (logspace(1e-2, 0.9, 30, digits=4))
+# # Simulation parameters
+# v0s = (logspace(1e-2, 0.9, 30, digits=4))
 
-# rhos = collect(0.8:0.1:1.7)
-rhos = collect(1.7:0.1:2.5)
-# rhos = [1.8]
+# # rhos = collect(0.8:0.1:1.7)
+# rhos = collect(1.7:0.1:2.5)
+# # rhos = [1.8]
 
-# sigmas = collect(0:0.1:0.4)
-sigmas = [0.1]
-
-
-seuil = 0.5 # above P = 0.5, we consider the system to be ordered
-tmax = 5000
-times = collect(0:tmax/20:tmax)
+# # sigmas = collect(0:0.1:0.4)
+# sigmas = [0.1]
 
 
-critical_velocity = NaN * ones(length(rhos), length(sigmas))
-z = @elapsed for k in each(rhos), j in each(sigmas)
-    rho = rhos[k]
-    sigma = sigmas[j]
+# seuil = 0.5 # above P = 0.5, we consider the system to be ordered
+# tmax = 5000
+# times = collect(0:tmax/20:tmax)
 
-    isordered = falses(length(v0s))
-    for i in each(v0s)
-        v0 = v0s[i]
-        # put a lower bound on the velocity, because we know approx where the critical velocity is, and increasing sigma can only make it larger. 
-        # lower_bound_velocity = max(max(0.2*(rhoc/rho - 1), 0) , 0 )
-        # if v0 < lower_bound_velocity
-        #     println("v0 = $v0 < $lower_bound_velocity (hardcoded lower bound), so we skip this value.")
-        #     continue
-        # end
+
+# critical_velocity = NaN * ones(length(rhos), length(sigmas))
+# z = @elapsed for k in each(rhos), j in each(sigmas)
+#     rho = rhos[k]
+#     sigma = sigmas[j]
+
+#     isordered = falses(length(v0s))
+#     for i in each(v0s)
+#         v0 = v0s[i]
+#         # put a lower bound on the velocity, because we know approx where the critical velocity is, and increasing sigma can only make it larger. 
+#         # lower_bound_velocity = max(max(0.2*(rhoc/rho - 1), 0) , 0 )
+#         # if v0 < lower_bound_velocity
+#         #     println("v0 = $v0 < $lower_bound_velocity (hardcoded lower bound), so we skip this value.")
+#         #     continue
+#         # end
            
-        v0 = v0s[i]
-        println("ρ = $rho, v0 = $v0, σ = $sigma")
-        N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-        dt = determine_dt(T, sigma, v0, N, rho)
+#         v0 = v0s[i]
+#         println("ρ = $rho, v0 = $v0, σ = $sigma")
+#         N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+#         dt = determine_dt(T, sigma, v0, N, rho)
 
-        # Phonons parameters, for immobile particles (v = 0) only
-        phonons = false
-        phonon_amplitude = 1
-        phonon_k = 1 * (2π / Lx) # wavenumber
-        phonon_omega = 0 # "frequency" (up to a factor 2π)
-        params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+#         # Phonons parameters, for immobile particles (v = 0) only
+#         phonons = false
+#         phonon_amplitude = 1
+#         phonon_k = 1 * (2π / Lx) # wavenumber
+#         phonon_omega = 0 # "frequency" (up to a factor 2π)
+#         params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
 
 
-        param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-            :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
-            :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+#         param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+#             :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#             :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
 
-        system = System(param)
+#         system = System(param)
 
-        t = 0.0
-        token = 1
+#         t = 0.0
+#         token = 1
        
-        while t < tmax
-            t += dt
-            update!(system)
-            if t ≥ times[token]
-                token = min(token + 1, length(times))
-                P = polarOP(system)[1]
-                if P > seuil
-                    isordered[i] = true
-                    println("The system is ordered for ρ = $rho at time $(round(t, digits=2)): the critical velocity is $v0 (P = $P)")
-                    break # stops the running simulation, gets out of the while loop
-                end
-            end
-        end
-        if isordered[i] == true
-            if i == 1
-                critical_velocity[k, j] = 0
-            else
-                critical_velocity[k, j] = v0s[i-1]
-            end
-            P = polarOP(system)[1]
-            break # gets out of the for loop scanning v0s, we found the largest v0 for which the system does not get ordered
-        end
-    end # end of for loop scanning v0s
-    if sum(isordered) == 0 # if the system is disordered for all v0s
-        critical_velocity[k, j] = v0s[end]
-        println("The system is ordered for all v0s for ρ = $rho, so critical velocity is 0. ")
-    end
-end
-prinz(z)
+#         while t < tmax
+#             t += dt
+#             update!(system)
+#             if t ≥ times[token]
+#                 token = min(token + 1, length(times))
+#                 P = polarOP(system)[1]
+#                 if P > seuil
+#                     isordered[i] = true
+#                     println("The system is ordered for ρ = $rho at time $(round(t, digits=2)): the critical velocity is $v0 (P = $P)")
+#                     break # stops the running simulation, gets out of the while loop
+#                 end
+#             end
+#         end
+#         if isordered[i] == true
+#             if i == 1
+#                 critical_velocity[k, j] = 0
+#             else
+#                 critical_velocity[k, j] = v0s[i-1]
+#             end
+#             P = polarOP(system)[1]
+#             break # gets out of the for loop scanning v0s, we found the largest v0 for which the system does not get ordered
+#         end
+#     end # end of for loop scanning v0s
+#     if sum(isordered) == 0 # if the system is disordered for all v0s
+#         critical_velocity[k, j] = v0s[end]
+#         println("The system is ordered for all v0s for ρ = $rho, so critical velocity is 0. ")
+#     end
+# end
+# prinz(z)
 
-comments = "Critical velocity vc against the density ρ.  
-            For each ρ, from hightemp, I increase v0 until the system gets ordered 
-            at some point during the simulation. Because we already have an idea of 
-            what the ciritical velocity is for sigma = 0, we can put a lower bound on v0 
-            (being conservative, we take 0.2*(rhoc/rho - 1) - 0.2 ), and skip v0 values 
-            below this bound. Increasing sigma can only make the critical velocity larger
-            so we are safe on that side."
+# comments = "Critical velocity vc against the density ρ.  
+#             For each ρ, from hightemp, I increase v0 until the system gets ordered 
+#             at some point during the simulation. Because we already have an idea of 
+#             what the ciritical velocity is for sigma = 0, we can put a lower bound on v0 
+#             (being conservative, we take 0.2*(rhoc/rho - 1) - 0.2 ), and skip v0 values 
+#             below this bound. Increasing sigma can only make the critical velocity larger
+#             so we are safe on that side."
             
-filename = "data/critical_velocity_sigma0.1_complement_rhos_N1E4_r$real.jld2"
-JLD2.@save filename Ntarget aspect_ratio rhos v0s sigmas times tmax critical_velocity T seuil comments rhoc runtime = z
+# filename = "data/critical_velocity_sigma0.1_complement_rhos_N1E4_r$real.jld2"
+# JLD2.@save filename Ntarget aspect_ratio rhos v0s sigmas times tmax critical_velocity T seuil comments rhoc runtime = z
 
 ## ---------------- Critical sigmas ---------------- ##
 ## ---------------- Critical sigmas ---------------- ##

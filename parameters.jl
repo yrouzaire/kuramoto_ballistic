@@ -2,7 +2,8 @@
 Ntarget = Int(1E4)
 aspect_ratio = 1
 rho = 1
-T = 0.1
+T = 0.
+distribution_type = "gaussian" # choose among "gaussian" = "normal", "uniform", "laplace"="exponential", "lorentzian"="cauchy"
 sigma = 0.3
 v0 = 0.55
 R0 = 1
@@ -34,5 +35,5 @@ times = collect(0:1:tmax) # linear time
 params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
 param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-:rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+:rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0, :distribution_type => distribution_type,
 :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
