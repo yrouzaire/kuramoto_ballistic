@@ -12,3 +12,5 @@ archives/kuramoto_ballistic - Struct/
 *.jld
 *.jld2
 *.toml
+Manifest.toml
+Project.toml
