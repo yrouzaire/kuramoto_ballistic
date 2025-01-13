@@ -9,183 +9,184 @@ include("methods.jl");
 ## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
 ## ---------------- MSD Specifically Tracking a Pair of defects  ---------------- ##
 
-comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
-# Physical Params 
-Ntarget = Int(4E3)
-aspect_ratio = 1
-R0 = 1
-rho = 1
-rhoc = 4.51 / pi
-init_theta = "pair"
-init_pos = "random"
-distribution_type = "uniform"
-q = 1.0
-r0 = 28
-phonons = false;
-phonon_amplitude = 1;
-phonon_k = 1;
-phonon_omega = 0;
-params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
-params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
-
-R_per_core = 1
-
-tmax = 30
-times = collect(0:5:tmax) # linear time
-
-sigmas = [0, 0.05, 0.1, 0.2, 0.3]
-# sigmas = [0.1]
-
-# Ts = [0.1, 0.2, 0.3, 0.4]
-Ts = [0, 0.1]
-
-# v0s = collect(0.5:0.25:3)
-v0s = [1, 1.5, 2]
-
-xy_pos = Array{Vector{Tuple{Number,Number}}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
-xy_neg = Array{Vector{Tuple{Number,Number}}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
-rr = Array{Vector{Number}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
-times_collision = times[end] * ones(length(v0s), length(sigmas), length(Ts), R_per_core)
-
-z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_core
-    v0 = v0s[i]
-    sigma = sigmas[j]
-    T = Ts[k]
-
-    println("v0 = $v0, σ = $sigma, T = $T")
-    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-
-    params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0, :distribution_type => distribution_type,
-        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
-
-    t = 0.0
-    system = System(param)
-
-    # t = 0
-    defects_pos, defects_neg = spot_defects(system)
-    xy_pos_tmp = [defects_pos[1][1:2]]
-    xy_neg_tmp = [defects_neg[1][1:2]]
-    r_tmp = [dist(defects_pos[1][1:2], defects_neg[1][1:2], Lx, Ly)]
-
-    for tt in 2:length(times)
-        evolve!(system, times[tt])
-
-        defects_pos, defects_neg = spot_defects(system)
-        @assert length(defects_pos) == length(defects_neg)
-        if length(defects_pos) == 1
-            push!(xy_pos_tmp, defects_pos[1][1:2])
-            push!(xy_neg_tmp, defects_neg[1][1:2])
-            push!(r_tmp, dist(defects_pos[1][1:2], defects_neg[1][1:2], Lx, Ly))
-        elseif length(defects_pos) > 1
-            #= If there are more than one defect, 
-            consider the closest defect as the most probable. =#
-            distance_pos_tmp = Inf
-            index_closest_pos_tmp = -1
-            for i in each(defects_pos)
-                d = dist(defects_pos[i][1:2], xy_pos_tmp[end], Lx, Ly)
-                if d < distance_pos_tmp
-                    distance_pos_tmp = d
-                    index_closest_pos_tmp = i
-                end
-            end
-            distance_neg_tmp = Inf
-            index_closest_neg_tmp = -1
-            for i in each(defects_neg)
-                d = dist(defects_neg[i][1:2], xy_neg_tmp[end], Lx, Ly)
-                if d < distance_neg_tmp
-                    distance_neg_tmp = d
-                    index_closest_neg_tmp = i
-                end
-            end
-            push!(xy_pos_tmp, defects_pos[index_closest_pos_tmp][1:2])
-            push!(xy_neg_tmp, defects_neg[index_closest_neg_tmp][1:2])
-            push!(r_tmp, dist(defects_pos[index_closest_pos_tmp][1:2], defects_neg[index_closest_neg_tmp][1:2], Lx, Ly))
-        elseif length(defects_pos) == 0
-            println("No defects ! Simulation stopped at t = $(times[tt]).")
-            times_collision[i, j, k, r] = times[tt]
-            break
-        end
-    end
-    xy_pos[i, j, k, r] = xy_pos_tmp
-    xy_neg[i, j, k, r] = xy_neg_tmp
-    rr[i, j, k, r] = r_tmp
-end
-prinz(z)
-
-
-filename = "data/mobility_defects_sigma_v0_distribution_sigmas_$(distribution_type)_r$real.jld2"
-JLD2.@save filename sigmas v0s Ts xy_pos xy_neg rr times_collision R_per_core params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtime = z distribution_type
-
-
-
-# ## ---------------- Nature of the Phase Transition ---------------- ##
-# ## ---------------- Nature of the Phase Transition ---------------- ##
-# ## ---------------- Nature of the Phase Transition ---------------- ##
-# ## ---------------- Nature of the Phase Transition ---------------- ##
-
-# comments = "The goal of this script is to pass through the transition line, 
-# in both direction (keeping σ or v0 constant) and to compute correlation functions.
-# Here for T = 0.0 and ρ = 1."
+# comments = "From the defect data one can infer the MSD and diffusion coeff of an individual defect. "
 # # Physical Params 
-# Ntarget = Int(1E4)
+# Ntarget = Int(4E3)
 # aspect_ratio = 1
-# T = 0.0
 # R0 = 1
 # rho = 1
 # rhoc = 4.51 / pi
-
-# # Initialisation parameters
+# init_theta = "pair"
 # init_pos = "random"
-# init_theta = "hightemp"
-# r0 = 20.0
+# distribution_type = "gaussian"
 # q = 1.0
-# params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
-# params_phonons = Dict(:phonons => false, :phonon_amplitude => 1, :phonon_k => 1, :phonon_omega => 1)
+# r0 = 28
+# phonons = false;
+# phonon_amplitude = 1;
+# phonon_k = 1;
+# phonon_omega = 0;
+# params_phonons = Dict(:phonons => phonons, :phonon_amplitude => phonon_amplitude, :phonon_k => phonon_k, :phonon_omega => phonon_omega)
+# params_init = Dict(:init_pos => NaN, :init_theta => init_theta, :r0 => NaN, :q => q)
 
-# # Simulation parameters
-# v0sigs = [(v,0.1) for v in logspace(0.03,1,10,digits=3)]
-# # v0sigs = vcat([(0.2,sigm) for sigm in 0:0.025:0.225],[(v,0.1) for v in logspace(0.03,1,10,digits=3)])
-# tmax = 3E1
-# # times = collect(0:tmax/30:tmax) # linear time
-# times = logspace(1,tmax,3,digits=1) # log time
+# R_per_core = 1
 
-# P = zeros(length(v0sigs), length(times))
-# C = Array{Vector{Float64}}(undef, length(v0sigs), length(times))
-# xi = zeros(length(v0sigs), length(times))
-# n = zeros(length(v0sigs), length(times))
+# tmax = 30
+# times = collect(0:5:tmax) # linear time
 
-# z = @elapsed for i in each(v0sigs)
-#     v0, sigma = v0sigs[i]
-#     println("v0 = $v0, σ = $sigma, $(100i/length(v0sigs))%")
+# sigmas = [0, 0.05, 0.1, 0.2, 0.3]
+# sigmas = [0.1]
+
+# # Ts = [0.1, 0.2, 0.3, 0.4]
+# Ts = [0, 0.1]
+
+# v0s = collect(0.5:0.5:5)
+# v0s = [1, 1.5]
+
+# xy_pos = Array{Vector{Tuple{Number,Number}}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
+# xy_neg = Array{Vector{Tuple{Number,Number}}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
+# rr = Array{Vector{Number}}(undef, length(v0s), length(sigmas), length(Ts), R_per_core)
+# times_collision = times[end] * ones(length(v0s), length(sigmas), length(Ts), R_per_core)
+
+# z = @elapsed for i in each(v0s), j in each(sigmas), k in each(Ts), r in 1:R_per_core
+#     v0 = v0s[i]
+#     sigma = sigmas[j]
+#     T = Ts[k]
+
+#     println("v0 = $v0, σ = $sigma, T = $T")
 #     N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
-#     dt = determine_dt(T, sigma, v0, N, rho)
 
+#     params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
 #     param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
-#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+#         :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0, :distribution_type => distribution_type,
 #         :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
 
-#     system = System(param)
-    
 #     t = 0.0
-#     token = 1
- 
-#     for tt in eachindex(times)
-#         evolve!(system, times[tt]) # evolves the systems up to times[tt]
-        
-#         P[i,tt]  = polarOP(system)[1]
-#         corr_tmp = corr(system)
-#         C[i,tt]  = corr_tmp
-#         xi[i,tt] = corr_length(corr_tmp)
-#         n[i,tt]  = number_defects(system)
-#     end
+#     system = System(param)
 
+#     # t = 0
+#     defects_pos, defects_neg = spot_defects(system)
+#     xy_pos_tmp = [defects_pos[1][1:2]]
+#     xy_neg_tmp = [defects_neg[1][1:2]]
+#     r_tmp = [dist(defects_pos[1][1:2], defects_neg[1][1:2], Lx, Ly)]
+
+#     for tt in 2:length(times)
+#         evolve!(system, times[tt])
+
+#         defects_pos, defects_neg = spot_defects(system)
+#         @assert length(defects_pos) == length(defects_neg)
+#         if length(defects_pos) == 1
+#             push!(xy_pos_tmp, defects_pos[1][1:2])
+#             push!(xy_neg_tmp, defects_neg[1][1:2])
+#             push!(r_tmp, dist(defects_pos[1][1:2], defects_neg[1][1:2], Lx, Ly))
+#         elseif length(defects_pos) > 1
+#             #= If there are more than one defect, 
+#             consider the closest defect as the most probable. =#
+#             distance_pos_tmp = Inf
+#             index_closest_pos_tmp = -1
+#             for i in each(defects_pos)
+#                 d = dist(defects_pos[i][1:2], xy_pos_tmp[end], Lx, Ly)
+#                 if d < distance_pos_tmp
+#                     distance_pos_tmp = d
+#                     index_closest_pos_tmp = i
+#                 end
+#             end
+#             distance_neg_tmp = Inf
+#             index_closest_neg_tmp = -1
+#             for i in each(defects_neg)
+#                 d = dist(defects_neg[i][1:2], xy_neg_tmp[end], Lx, Ly)
+#                 if d < distance_neg_tmp
+#                     distance_neg_tmp = d
+#                     index_closest_neg_tmp = i
+#                 end
+#             end
+#             push!(xy_pos_tmp, defects_pos[index_closest_pos_tmp][1:2])
+#             push!(xy_neg_tmp, defects_neg[index_closest_neg_tmp][1:2])
+#             push!(r_tmp, dist(defects_pos[index_closest_pos_tmp][1:2], defects_neg[index_closest_neg_tmp][1:2], Lx, Ly))
+#         elseif length(defects_pos) == 0
+#             println("No defects ! Simulation stopped at t = $(times[tt]).")
+#             times_collision[i, j, k, r] = times[tt]
+#             break
+#         end
+#     end
+#     xy_pos[i, j, k, r] = xy_pos_tmp
+#     xy_neg[i, j, k, r] = xy_neg_tmp
+#     rr[i, j, k, r] = r_tmp
 # end
 # prinz(z)
 
-# filename = "data/nature_phase_transition_horizontal_T0_r$real.jld2"
-# JLD2.@save filename Ntarget v0sigs rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z
+
+# filename = "data/mobility_defects_sigma_v0_distribution_sigmas_$(distribution_type)_T0_r$(real).jld2"
+# JLD2.@save filename sigmas v0s Ts xy_pos xy_neg rr times_collision R_per_core params_init Ntarget R0 q init_theta init_pos aspect_ratio times tmax comments rhoc runtime = z distribution_type
+
+
+
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+# ## ---------------- Nature of the Phase Transition ---------------- ##
+
+comments = "The goal of this script is to pass through the transition line, 
+in both direction (keeping σ or v0 constant) and to compute correlation functions.
+Here for T = 0.0 and ρ = 1."
+# Physical Params 
+Ntarget = Int(1E4)
+aspect_ratio = 1
+T = 0.1
+R0 = 1
+rho = 1
+rhoc = 4.51 / pi
+
+# Initialisation parameters
+init_pos = "random"
+init_theta = "hightemp"
+r0 = 20.0
+q = 1.0
+params_init = Dict(:init_pos => init_pos, :init_theta => init_theta, :r0 => r0, :q => q)
+params_phonons = Dict(:phonons => false, :phonon_amplitude => 1, :phonon_k => 1, :phonon_omega => 1)
+
+# Simulation parameters
+v0sigs = [(v,0.1) for v in logspace(0.03,1,10,digits=3)]
+# v0sigs = vcat([(0.2,sigm) for sigm in 0:0.025:0.225],[(v,0.1) for v in logspace(0.03,1,10,digits=3)])
+tmax = 3E1
+# times = collect(0:tmax/30:tmax) # linear time
+times = logspace(1,tmax,3,digits=1) # log time
+
+P = zeros(length(v0sigs), length(times))
+C = Array{Vector{Float64}}(undef, length(v0sigs), length(times))
+xi = zeros(length(v0sigs), length(times))
+n = zeros(length(v0sigs), length(times))
+
+z = @elapsed for i in each(v0sigs)
+    v0, sigma = v0sigs[i]
+    println("v0 = $v0, σ = $sigma, $(100i/length(v0sigs))%")
+    N, Lx, Ly = effective_number_particle(Ntarget, rho, aspect_ratio)
+    dt = determine_dt(T, sigma, v0, N, rho)
+
+    param = Dict(:Ntarget => Ntarget, :aspect_ratio => aspect_ratio,
+        :rho => rho, :T => T, :R0 => R0, :sigma => sigma, :v0 => v0,
+        :N => N, :Lx => Lx, :Ly => Ly, :params_init => params_init, :params_phonons => params_phonons)
+    param[:distribution_type] = "uniform"
+
+    system = System(param)
+    
+    t = 0.0
+    token = 1
+ 
+    for tt in eachindex(times)
+        evolve!(system, times[tt]) # evolves the systems up to times[tt]
+        
+        P[i,tt]  = polarOP(system)[1]
+        corr_tmp = corr(system)
+        C[i,tt]  = corr_tmp
+        xi[i,tt] = corr_length(corr_tmp)
+        n[i,tt]  = number_defects(system)
+    end
+
+end
+prinz(z)
+
+filename = "data/nature_phase_transition_horizontal_uniform_r$real.jld2"
+JLD2.@save filename Ntarget v0sigs rho params_init T P C n xi aspect_ratio times tmax comments rhoc runtime = z
 
 
 
